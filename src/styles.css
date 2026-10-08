@@ -277,7 +277,7 @@ label textarea {
 }
 .header-top {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   padding: 14px 24px;
   gap: 24px;
@@ -285,13 +285,14 @@ label textarea {
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .header-logo img {
-  width: 52px;
-  height: 44px;
+  width: 72px;
+  height: 62px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 .brand-text {
   font-family: var(--font-display);
@@ -1017,9 +1018,13 @@ label textarea {
 }
 @media (max-width: 1023px) {
   .header-top {
-    grid-template-columns: 170px minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 12px;
     padding-inline: 18px;
+  }
+  .header-logo img {
+    width: 56px;
+    height: 48px;
   }
   .header-nav {
     gap: 20px;
@@ -1078,8 +1083,8 @@ label textarea {
     padding: 10px 14px;
   }
   .header-logo img {
-    width: 40px;
-    height: 38px;
+    width: 54px;
+    height: 48px;
   }
   .brand-text {
     font-size: 14px;
