@@ -5,7 +5,7 @@
 - [ ] Persistent checkout, receipt and secure tracking — structure verified (cart persists, checkout redirects signed-out shoppers to `/account?next=/checkout`, receipt and ref+phone tracker render); still needs one real order placed end to end
 - [ ] Staff sign-in, payment verification, order timeline and store editing — access gate verified and every transition is unit-tested; the dashboard itself still needs a staff account to exercise
 - [x] Customer accounts and information pages
-- [ ] End-to-end checks and mobile layout checks — desktop pass complete (21 pages crawled, 26 internal links, 0 console errors); a real device/mobile pass is still outstanding
+- [ ] End-to-end checks and mobile layout checks — desktop pass complete (21 pages crawled, 26 internal links, 0 console errors); the mobile work is queued as a task list in `MOBILE_TASKS.md`
 - [ ] Live inventory and MoMo recipient details (awaiting store-supplied information) — `ordering_enabled` stays off until MoMo recipient details are saved
 
 ## Verification run — 8 October 2026
