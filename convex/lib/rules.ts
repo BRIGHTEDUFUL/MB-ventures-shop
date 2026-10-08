@@ -1,0 +1,172 @@
+/**
+ * Pure order rules ported rule-for-rule from the Supabase Postgres functions
+ * (`place_store_order`, `staff_update_order`, `track_store_order`) that this
+ * backend replaces.
+ *
+ * These are the single source of truth for validation messages and fee
+ * calculation. The Convex mutations call them authoritatively; the browser
+ * uses them for *estimates* only (AGENTS.md: totals are estimates until the
+ * server computes them).
+ *
+ * Nothing in this file may import from `convex/` so it stays unit-testable.
+ */
+
+export type Zone = "central" | "greater" | "nationwide";
+export type Fulfillment = "delivery" | "pickup";
+export type PaymentMethod = "momo" | "cod";
+export type PaymentStatus = "pending" | "confirmed" | "rejected";
+export type OrderStatus =
+  "received" | "processing" | "ready" | "dispatched" | "completed" | "cancelled";
+
+export const ZONES: Zone[] = ["central", "greater", "nationwide"];
+export const ORDER_STATUSES: OrderStatus[] = [
+  "received",
+  "processing",
+  "ready",
+  "dispatched",
+  "completed",
+  "cancelled",
+];
+export const PAYMENT_STATUSES: PaymentStatus[] = ["pending", "confirmed", "rejected"];
+export const MOMO_PROVIDERS = ["MTN MoMo", "Telecel Cash", "AirtelTigo Money"] as const;
+
+/** Fees + MoMo recipient + ordering switch, whichever settings doc we pass in. */
+export interface FeeSettings {
+  central_fee: number;
+  greater_fee: number;
+  nationwide_fee: number;
+  free_threshold: number;
+  momo_number: string;
+  ordering_enabled: boolean;
+}
+
+export interface CheckoutInput {
+  customer_name: string;
+  phone: string;
+  email: string;
+  address: string;
+  fulfillment: Fulfillment;
+  zone: Zone;
+  payment_method: PaymentMethod;
+  provider?: string | undefined;
+  transaction_reference?: string | undefined;
+  items: { id: string; quantity: number }[];
+}
+
+/** Order snapshot the staff dashboard validates status changes against. */
+export interface OrderState {
+  fulfillment: Fulfillment;
+  payment_method: PaymentMethod;
+  status: OrderStatus;
+  payment_status: PaymentStatus;
+}
+
+export const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/** Postgres used `regexp_replace(phone,'[^0-9+]','','g')` everywhere. */
+export const normalizePhone = (raw: string) => raw.replace(/[^0-9+]/g, "");
+
+/** Postgres checked `email NOT LIKE '%@%.%'`. */
+export const isValidEmail = (email: string) => /.+@.+\..+/.test(email.trim());
+
+/**
+ * Delivery fee in cedis, or `null` when the zone is unusable
+ * (only possible for a delivery order under the free threshold).
+ */
+export function deliveryFee(
+  settings: FeeSettings,
+  zone: Zone,
+  subtotal: number,
+  fulfillment: Fulfillment,
+): number | null {
+  if (fulfillment === "pickup" || subtotal > settings.free_threshold) return 0;
+  if (zone === "central") return settings.central_fee;
+  if (zone === "greater") return settings.greater_fee;
+  if (zone === "nationwide") return settings.nationwide_fee;
+  return null;
+}
+
+/**
+ * Cedis still needed before delivery becomes free (browser-side estimate).
+ *
+ * `deliveryFee` charges while `subtotal <= free_threshold`, so a cart sitting
+ * exactly on the threshold is still one cedi short — hence the `+ 1`. Keeping
+ * this next to `deliveryFee` stops the cart hint and the server fee drifting.
+ */
+export function remainingForFreeDelivery(freeThreshold: number, subtotal: number) {
+  return Math.max(0, freeThreshold - subtotal + 1);
+}
+
+/** Returns the user-facing message, or `null` when the payload is valid. */
+export function validateCheckout(input: CheckoutInput, settings: FeeSettings): string | null {
+  if (!settings.ordering_enabled) return "Ordering is not open yet. Contact the Circle shop.";
+
+  if (
+    input.customer_name.trim().length < 2 ||
+    normalizePhone(input.phone).length < 9 ||
+    !isValidEmail(input.email)
+  ) {
+    return "Enter your name, phone and email.";
+  }
+
+  if (input.items.length < 1 || input.items.length > 50) {
+    return "Your cart is empty or too large.";
+  }
+  for (const line of input.items) {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 50) {
+      return "Invalid quantity.";
+    }
+  }
+
+  if (input.fulfillment === "pickup" && input.payment_method !== "momo") {
+    return "Pickup orders require Mobile Money.";
+  }
+
+  if (input.payment_method === "momo") {
+    const reference = (input.transaction_reference ?? "").trim();
+    const provider = input.provider ?? "";
+    const knownProvider = (MOMO_PROVIDERS as readonly string[]).includes(provider);
+    if (!settings.momo_number || reference.length < 5 || !knownProvider) {
+      return "Mobile Money details or reference are missing.";
+    }
+  }
+
+  if (input.fulfillment === "delivery" && input.address.trim().length < 5) {
+    return "Enter a delivery address.";
+  }
+
+  return null;
+}
+
+/**
+ * Staff status/payment transition rules
+ * (`public.staff_update_order`). Returns the message, or `null` when allowed.
+ */
+export function validateStatusChange(
+  order: OrderState,
+  newStatus: OrderStatus,
+  newPayment: PaymentStatus,
+): string | null {
+  if (
+    (order.status === "completed" || order.status === "cancelled") &&
+    newStatus !== order.status
+  ) {
+    return "This order is closed.";
+  }
+  if (!ORDER_STATUSES.includes(newStatus)) return "Invalid status.";
+  if (!PAYMENT_STATUSES.includes(newPayment)) return "Invalid status.";
+  if (newStatus === "ready" && order.fulfillment !== "pickup") {
+    return "Status does not match fulfillment.";
+  }
+  if (newStatus === "dispatched" && order.fulfillment !== "delivery") {
+    return "Status does not match fulfillment.";
+  }
+  const advancing = ["processing", "ready", "dispatched", "completed"].includes(newStatus);
+  if (order.payment_method === "momo" && advancing && newPayment !== "confirmed") {
+    return "Verify Mobile Money before processing.";
+  }
+  if (newStatus === "completed" && newPayment !== "confirmed") {
+    return "Confirm payment before completing the order.";
+  }
+  return null;
+}

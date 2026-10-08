@@ -1,0 +1,387 @@
+import { ConvexError, v } from "convex/values";
+import { mutation } from "./_generated/server";
+import { logActivity } from "./lib/activity";
+import { requireAdmin, requireStaff } from "./lib/auth";
+import { getSettings } from "./lib/settings";
+import { isValidEmail, round2 } from "./lib/rules";
+import { recordStockChange } from "./inventory";
+
+/** Product create/update from the staff product editor. */
+export const saveProduct = mutation({
+  args: {
+    isNew: v.boolean(),
+    id: v.string(),
+    name: v.string(),
+    brand: v.string(),
+    category: v.string(),
+    price: v.number(),
+    original_price: v.optional(v.union(v.number(), v.null())),
+    stock: v.number(),
+    description: v.string(),
+    image_key: v.string(),
+    gallery: v.array(v.string()),
+    specs: v.record(v.string(), v.string()),
+    verified: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireStaff(ctx);
+
+    const slug = args.id.trim().toLowerCase();
+    if (slug === "") throw new ConvexError({ message: "Enter a product name." });
+    if (!(args.price > 0)) throw new ConvexError({ message: "Enter a price above zero." });
+    if (!Number.isInteger(args.stock) || args.stock < 0) {
+      throw new ConvexError({ message: "Stock must be a whole number." });
+    }
+    if (
+      args.original_price !== null &&
+      args.original_price !== undefined &&
+      args.original_price <= args.price
+    ) {
+      throw new ConvexError({ message: "Original price must be higher than the sale price." });
+    }
+    if (args.image_key === "") throw new ConvexError({ message: "Add a main photo." });
+    if (args.name.trim() === "") throw new ConvexError({ message: "Enter a product name." });
+    if (args.description.trim().length < 10) {
+      throw new ConvexError({ message: "Write a short description (at least 10 characters)." });
+    }
+    if (args.category === "") throw new ConvexError({ message: "Choose a category." });
+    const category = await ctx.db
+      .query("categories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.category))
+      .first();
+    if (category === null) throw new ConvexError({ message: "Choose a valid category." });
+
+    const existing = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+
+    const row = {
+      slug,
+      name: args.name.trim(),
+      brand: args.brand.trim(),
+      category: args.category,
+      price: args.price,
+      original_price: args.original_price ?? null,
+      stock: args.stock,
+      description: args.description.trim(),
+      image_key: args.image_key,
+      gallery: args.gallery,
+      specs: args.specs,
+      verified: args.verified,
+    };
+
+    if (args.isNew) {
+      if (existing !== null) {
+        throw new ConvexError({ message: "A product with this link name already exists." });
+      }
+      await ctx.db.insert("products", row);
+      if (args.stock > 0) {
+        await recordStockChange(ctx, {
+          product_slug: slug,
+          product_name: row.name,
+          previous_stock: 0,
+          new_stock: args.stock,
+          reason: "Opening stock on product creation",
+          actor_id: actorId,
+        });
+      }
+    } else {
+      if (existing === null) throw new ConvexError({ message: "Product not found." });
+      await ctx.db.patch(existing._id, row);
+      if (existing.stock !== args.stock) {
+        await recordStockChange(ctx, {
+          product_slug: slug,
+          product_name: row.name,
+          previous_stock: existing.stock,
+          new_stock: args.stock,
+          reason: "Stock edited on the product form",
+          actor_id: actorId,
+        });
+      }
+    }
+
+    await logActivity(
+      ctx,
+      actorId,
+      args.isNew ? "product.create" : "product.update",
+      `${args.isNew ? "Added" : "Updated"} product “${row.name}” (${moneyHint(row.price)}).`,
+    );
+    return { ok: true };
+  },
+});
+
+const moneyHint = (price: number) => `GH₵ ${round2(price)}`;
+
+/** Past orders keep their own item snapshots, so removing a listing is safe. */
+export const deleteProduct = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    const actorId = await requireStaff(ctx);
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", args.id))
+      .first();
+    if (product !== null) {
+      await ctx.db.delete(product._id);
+      await logActivity(
+        ctx,
+        actorId,
+        "product.delete",
+        `Removed product “${product.name}” from the catalogue.`,
+      );
+    }
+    return { ok: true };
+  },
+});
+
+/**
+ * Bulk catalogue actions from the products list: verify/unverify, move
+ * category, adjust price by % or fixed amount, set stock (stock take).
+ * Price moves keep the "was price" rule by clearing a sale price that is no
+ * longer above the new price.
+ */
+export const bulkUpdate = mutation({
+  args: {
+    ids: v.array(v.string()),
+    changes: v.object({
+      category: v.optional(v.string()),
+      verified: v.optional(v.boolean()),
+      price_percent: v.optional(v.number()),
+      price_amount: v.optional(v.number()),
+      stock: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireStaff(ctx);
+    if (args.ids.length === 0 || args.ids.length > 200) {
+      throw new ConvexError({ message: "Select between 1 and 200 products." });
+    }
+    const c = args.changes;
+    const touchesPrice =
+      (c.price_percent !== undefined && c.price_percent !== 0) ||
+      (c.price_amount !== undefined && c.price_amount !== 0);
+    const touches =
+      c.category !== undefined || c.verified !== undefined || c.stock !== undefined || touchesPrice;
+    if (!touches) throw new ConvexError({ message: "Nothing to change." });
+    if (
+      c.price_percent !== undefined &&
+      (Number.isNaN(c.price_percent) || Math.abs(c.price_percent) > 90)
+    ) {
+      throw new ConvexError({ message: "Price change must be between -90% and +90%." });
+    }
+    if (c.stock !== undefined && (!Number.isInteger(c.stock) || c.stock < 0)) {
+      throw new ConvexError({ message: "Stock must be a whole number." });
+    }
+    if (c.category !== undefined) {
+      const category = await ctx.db
+        .query("categories")
+        .withIndex("by_slug", (q) => q.eq("slug", c.category as string))
+        .first();
+      if (category === null) throw new ConvexError({ message: "Choose a valid category." });
+    }
+
+    let updated = 0;
+    let clearedSales = 0;
+    for (const id of args.ids) {
+      const product = await ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", id))
+        .first();
+      if (product === null) continue;
+
+      const patch: Partial<{
+        price: number;
+        original_price: number | null;
+        verified: boolean;
+        category: string;
+        stock: number;
+      }> = {};
+      if (touchesPrice) {
+        let price = product.price;
+        if (c.price_percent !== undefined && c.price_percent !== 0) {
+          price = round2(price * (1 + c.price_percent / 100));
+        }
+        if (c.price_amount !== undefined && c.price_amount !== 0) {
+          price = round2(price + c.price_amount);
+        }
+        if (!(price > 0)) {
+          throw new ConvexError({ message: `Price for “${product.name}” would drop to zero.` });
+        }
+        patch.price = price;
+        if (product.original_price != null && product.original_price <= price) {
+          patch.original_price = null;
+          clearedSales += 1;
+        }
+      }
+      if (c.verified !== undefined) patch.verified = c.verified;
+      if (c.category !== undefined) patch.category = c.category;
+      if (c.stock !== undefined) patch.stock = c.stock;
+
+      await ctx.db.patch(product._id, patch);
+      if (c.stock !== undefined && c.stock !== product.stock) {
+        await recordStockChange(ctx, {
+          product_slug: product.slug,
+          product_name: product.name,
+          previous_stock: product.stock,
+          new_stock: c.stock,
+          reason: "Bulk stock set",
+          actor_id: actorId,
+        });
+      }
+      updated += 1;
+    }
+
+    const parts: string[] = [];
+    if (c.verified !== undefined) parts.push(c.verified ? "verified" : "marked as sample");
+    if (c.category !== undefined) parts.push(`moved to “${c.category}”`);
+    if (touchesPrice) {
+      parts.push(
+        `price changed ${c.price_percent ? `${c.price_percent > 0 ? "+" : ""}${c.price_percent}%` : `${c.price_amount! > 0 ? "+" : ""}GH₵ ${c.price_amount}`}`,
+      );
+    }
+    if (c.stock !== undefined) parts.push(`stock set to ${c.stock}`);
+    await logActivity(
+      ctx,
+      actorId,
+      "product.bulk",
+      `Updated ${updated} product${updated === 1 ? "" : "s"}: ${parts.join(", ")}.${
+        clearedSales > 0 ? ` Cleared the sale price on ${clearedSales}.` : ""
+      }`,
+    );
+    return { ok: true, updated, clearedSales };
+  },
+});
+
+/**
+ * Storefront settings any staff member may edit: hero copy + images,
+ * announcement bar, contact details, WhatsApp, homepage featured picks and
+ * the ordering switch (money details are validated against, not edited here).
+ */
+export const saveSettings = mutation({
+  args: {
+    hero_title: v.string(),
+    hero_subtitle: v.string(),
+    phone: v.string(),
+    email: v.string(),
+    address: v.string(),
+    hours: v.string(),
+    announcement: v.string(),
+    whatsapp: v.string(),
+    hero_image: v.string(),
+    setup_image: v.string(),
+    ordering_enabled: v.boolean(),
+    featured_ids: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireStaff(ctx);
+
+    if (args.hero_title.trim() === "") {
+      throw new ConvexError({ message: "Enter a headline for the home page." });
+    }
+    if (args.phone.trim() === "" || args.address.trim() === "") {
+      throw new ConvexError({ message: "Enter the shop phone number and address." });
+    }
+    if (args.email.trim() !== "" && !isValidEmail(args.email)) {
+      throw new ConvexError({ message: "Enter a valid email address." });
+    }
+    if (args.featured_ids.length > 12) {
+      throw new ConvexError({ message: "Pick at most 12 featured products." });
+    }
+    for (const id of args.featured_ids) {
+      const product = await ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", id))
+        .first();
+      if (product === null) {
+        throw new ConvexError({ message: "One of the featured products no longer exists." });
+      }
+    }
+
+    const settings = await getSettings(ctx);
+    if (args.ordering_enabled && (!settings.momo_number.trim() || !settings.momo_name.trim())) {
+      throw new ConvexError({
+        message: "Enter verified Mobile Money recipient details first (Admin → Money).",
+      });
+    }
+
+    await ctx.db.patch(settings._id, {
+      hero_title: args.hero_title.trim(),
+      hero_subtitle: args.hero_subtitle.trim(),
+      phone: args.phone.trim(),
+      email: args.email.trim(),
+      address: args.address.trim(),
+      hours: args.hours.trim(),
+      announcement: args.announcement.trim(),
+      whatsapp: args.whatsapp.trim(),
+      hero_image: args.hero_image,
+      setup_image: args.setup_image,
+      ordering_enabled: args.ordering_enabled,
+      featured_ids: args.featured_ids,
+    });
+
+    await logActivity(
+      ctx,
+      actorId,
+      "settings.update",
+      `Updated storefront settings (ordering ${args.ordering_enabled ? "open" : "closed"}).`,
+    );
+    return { ok: true };
+  },
+});
+
+/**
+ * Money settings — delivery fees, free-delivery threshold and the Mobile
+ * Money recipient. Admin-only: these change what customers are charged.
+ */
+export const saveFinanceSettings = mutation({
+  args: {
+    central_fee: v.number(),
+    greater_fee: v.number(),
+    nationwide_fee: v.number(),
+    free_threshold: v.number(),
+    momo_number: v.string(),
+    momo_name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireAdmin(ctx);
+
+    for (const [label, value] of [
+      ["Central delivery fee", args.central_fee],
+      ["Greater Accra delivery fee", args.greater_fee],
+      ["Nationwide delivery fee", args.nationwide_fee],
+      ["Free-delivery threshold", args.free_threshold],
+    ] as const) {
+      if (Number.isNaN(value) || value < 0) {
+        throw new ConvexError({ message: `${label} cannot be negative.` });
+      }
+    }
+    if (args.momo_number.trim() !== "" && args.momo_number.replace(/[^0-9]/g, "").length < 9) {
+      throw new ConvexError({ message: "Enter a valid Mobile Money number." });
+    }
+
+    const settings = await getSettings(ctx);
+    if (settings.ordering_enabled && (!args.momo_number.trim() || !args.momo_name.trim())) {
+      throw new ConvexError({
+        message: "Turn off ordering before clearing Mobile Money details.",
+      });
+    }
+
+    await ctx.db.patch(settings._id, {
+      central_fee: args.central_fee,
+      greater_fee: args.greater_fee,
+      nationwide_fee: args.nationwide_fee,
+      free_threshold: args.free_threshold,
+      momo_number: args.momo_number.trim(),
+      momo_name: args.momo_name.trim(),
+    });
+
+    await logActivity(
+      ctx,
+      actorId,
+      "settings.finance",
+      `Updated delivery fees (Central GH₵ ${args.central_fee}, Greater GH₵ ${args.greater_fee}, Nationwide GH₵ ${args.nationwide_fee}) and free threshold GH₵ ${args.free_threshold}.`,
+    );
+    return { ok: true };
+  },
+});

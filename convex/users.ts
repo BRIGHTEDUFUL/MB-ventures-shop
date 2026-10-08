@@ -1,0 +1,210 @@
+import { ConvexError, v } from "convex/values";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { logActivity } from "./lib/activity";
+import {
+  currentUserId,
+  getRole,
+  isStaff as userHasStaffRole,
+  requireAdmin,
+  requireStaff,
+} from "./lib/auth";
+import { isValidEmail } from "./lib/rules";
+
+/** The signed-in profile for the account page and checkout prefill. */
+export const me = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await currentUserId(ctx);
+    if (userId === null) return null;
+    const user = await ctx.db.get(userId);
+    if (user === null) return null;
+    return {
+      id: user._id as string,
+      email: user.email ?? "",
+      name: user.name ?? "",
+      phone: user.phone ?? "",
+    };
+  },
+});
+
+/** Replaces the `is_staff()` RPC used to gate the staff dashboard. */
+export const isStaff = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await currentUserId(ctx);
+    if (userId === null) return false;
+    return await userHasStaffRole(ctx, userId);
+  },
+});
+
+/** `"admin" | "staff"` for the signed-in user, `null` when they have no role. */
+export const myRole = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await currentUserId(ctx);
+    if (userId === null) return null;
+    return await getRole(ctx, userId);
+  },
+});
+
+export type TeamMember = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: "admin" | "staff";
+};
+
+/** Everyone with shop access (staff see the roster; only admins may edit it). */
+export const team = query({
+  args: {},
+  handler: async (ctx): Promise<TeamMember[]> => {
+    await requireStaff(ctx);
+    const roles = await ctx.db.query("user_roles").collect();
+    const members = await Promise.all(
+      roles.map(async (roleRow) => {
+        const user = await ctx.db.get(roleRow.user_id);
+        if (user === null) return null;
+        return {
+          id: user._id as string,
+          name: user.name?.trim() ?? "",
+          email: user.email?.trim() ?? "",
+          phone: user.phone?.trim() ?? "",
+          role: roleRow.role,
+        } satisfies TeamMember;
+      }),
+    );
+    return members
+      .filter((member): member is TeamMember => member !== null)
+      .sort((a, b) =>
+        a.role === b.role ? a.name.localeCompare(b.name) : a.role === "admin" ? -1 : 1,
+      );
+  },
+});
+
+async function countAdmins(ctx: MutationCtx): Promise<number> {
+  const roles = await ctx.db.query("user_roles").collect();
+  return roles.filter((r) => r.role === "admin").length;
+}
+
+/** Give an existing account staff or admin access (admin-only, by email). */
+export const addStaff = mutation({
+  args: {
+    email: v.string(),
+    role: v.union(v.literal("admin"), v.literal("staff")),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireAdmin(ctx);
+    const email = args.email.trim().toLowerCase();
+    if (!isValidEmail(email)) throw new ConvexError({ message: "Enter a valid email address." });
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", email))
+      .first();
+    if (user === null) {
+      throw new ConvexError({
+        message: `No account found for ${email}. Ask them to create an account first, then add them here.`,
+      });
+    }
+    if (user._id === actorId) throw new ConvexError({ message: "You already have access." });
+    const existing = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", user._id))
+      .first();
+    if (existing !== null) {
+      throw new ConvexError({ message: `${email} already has ${existing.role} access.` });
+    }
+
+    await ctx.db.insert("user_roles", { user_id: user._id, role: args.role });
+    await logActivity(ctx, actorId, "role.grant", `Granted ${args.role} access to ${email}.`);
+    return { ok: true };
+  },
+});
+
+/** Switch an account between staff and admin (admin-only). */
+export const setRole = mutation({
+  args: {
+    user_id: v.string(),
+    role: v.union(v.literal("admin"), v.literal("staff")),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireAdmin(ctx);
+    const userId = ctx.db.normalizeId("users", args.user_id);
+    if (userId === null) throw new ConvexError({ message: "Account not found." });
+    const target = await ctx.db.get(userId);
+    const who = target?.email?.trim() || target?.name?.trim() || "an account";
+    const roleRow = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+    if (roleRow === null) throw new ConvexError({ message: "That account has no shop access." });
+    if (roleRow.role === args.role) return { ok: true };
+    if (roleRow.role === "admin" && (await countAdmins(ctx)) <= 1) {
+      throw new ConvexError({
+        message: "At least one admin must remain. Promote someone else first.",
+      });
+    }
+
+    await ctx.db.patch(roleRow._id, { role: args.role });
+    await logActivity(ctx, actorId, "role.change", `Changed ${who} to ${args.role} access.`);
+    return { ok: true };
+  },
+});
+
+/** Remove shop access entirely (admin-only; you cannot remove yourself). */
+export const revokeRole = mutation({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    const actorId = await requireAdmin(ctx);
+    const userId = ctx.db.normalizeId("users", args.user_id);
+    if (userId === null) throw new ConvexError({ message: "Account not found." });
+    if (userId === actorId) {
+      throw new ConvexError({ message: "You cannot remove your own access." });
+    }
+    const target = await ctx.db.get(userId);
+    const who = target?.email?.trim() || target?.name?.trim() || "a team member";
+    const roleRow = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+    if (roleRow === null) return { ok: true };
+    if (roleRow.role === "admin" && (await countAdmins(ctx)) <= 1) {
+      throw new ConvexError({
+        message: "At least one admin must remain. Promote someone else first.",
+      });
+    }
+
+    await ctx.db.delete(roleRow._id);
+    await logActivity(ctx, actorId, "role.revoke", `Removed shop access for ${who}.`);
+    return { ok: true };
+  },
+});
+
+/**
+ * Grants staff access to an existing account.
+ * Run once per account: `npx convex run users:grantStaff '{"email":"owner@example.com"}'`
+ */
+export const grantStaff = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const email = args.email.trim().toLowerCase();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", email))
+      .first();
+    if (user === null) {
+      throw new ConvexError({
+        message: `No account found for ${email}. Create the account first, then grant access.`,
+      });
+    }
+    const existing = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", user._id))
+      .first();
+    if (existing !== null) return { ok: true, role: existing.role };
+
+    await ctx.db.insert("user_roles", { user_id: user._id, role: "admin" });
+    return { ok: true, role: "admin" as const };
+  },
+});
