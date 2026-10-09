@@ -28,8 +28,9 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
+          username: ${{ secrets.HOSTINGER_USERNAME || 'root' }}
           password: ${{ secrets.HOSTINGER_PASSWORD }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: ${{ secrets.HOSTINGER_PORT || 22 }}
           script: |
             echo "🧹 Starting CLEAN deployment..."
@@ -37,8 +38,8 @@ jobs:
             cd ${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}
 
             echo "🛑 Stopping PM2 processes..."
-            pm2 stop mb-ventures-gh || true
-            pm2 delete mb-ventures-gh || true
+            pm2 stop mbventuresghana || pm2 stop mb-ventures-gh || true
+            pm2 delete mbventuresghana || pm2 delete mb-ventures-gh || true
 
             echo "🗑️ Removing old files..."
             rm -rf node_modules
@@ -56,7 +57,9 @@ jobs:
             npm ci
 
             echo "🔧 Setting up environment..."
-            bash scripts/setup-production-env.sh
+            if [ -f "scripts/setup-production-env.sh" ]; then
+              bash scripts/setup-production-env.sh
+            fi
 
             echo "🏗️ Building application..."
             npm run build
@@ -69,4 +72,4 @@ jobs:
             echo ""
             pm2 status
             echo ""
-            pm2 logs mb-ventures-gh --lines 20 --nostream
+            pm2 logs mbventuresghana --lines 20 --nostream || pm2 logs mb-ventures-gh --lines 20 --nostream

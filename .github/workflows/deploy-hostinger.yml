@@ -1,55 +1,97 @@
 name: Deploy to Hostinger
 
-# This workflow is DISABLED — Hostinger's built-in Git auto-deployment
-# handles deploys automatically when code is pushed to main.
-# See: Hostinger panel → Websites → mbventuresghana.com → Git
-#
-# To re-enable SSH-based deploys, add these secrets to the GitHub repo:
-#   HOSTINGER_HOST, HOSTINGER_USERNAME, HOSTINGER_PASSWORD, HOSTINGER_PATH
-
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type "DEPLOY" to confirm manual SSH deployment'
-        required: true
-        default: ""
+      force_clean:
+        description: 'Clean install dependencies (run npm ci from scratch)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  deploy:
+  build-and-test:
+    name: Build & Verify
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm == 'DEPLOY'
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build application
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Build application bundle
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_CONVEX_URL: https://necessary-newt-861.convex.cloud
+          VITE_SITE_URL: https://mbventuresghana.com
 
-      - name: Deploy to Hostinger via SSH
+      - name: Deploy Convex Backend
+        if: env.CONVEX_DEPLOY_KEY != ''
+        run: npx convex deploy
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+
+  deploy-ssh:
+    name: Deploy to Hostinger VPS
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: ${{ secrets.HOSTINGER_HOST != '' }}
+
+    steps:
+      - name: Deploy via SSH to Hostinger
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
+          username: ${{ secrets.HOSTINGER_USERNAME || 'root' }}
           password: ${{ secrets.HOSTINGER_PASSWORD }}
-          port: 22
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT || 22 }}
           script: |
-            cd ${{ secrets.HOSTINGER_PATH }}
-            git pull origin main
-            npm ci
+            set -e
+            echo "🚀 Starting deployment on Hostinger server..."
+            
+            TARGET_DIR="${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}"
+            if [ ! -d "$TARGET_DIR" ]; then
+              echo "Directory $TARGET_DIR not found, checking current directory..."
+              TARGET_DIR="$(pwd)"
+            fi
+            
+            cd "$TARGET_DIR"
+            echo "📂 Working directory: $(pwd)"
+            
+            echo "🔄 Fetching latest changes from GitHub..."
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "📦 Installing dependencies..."
+            npm ci --omit=dev || npm install --production
+            
+            echo "🏗️ Building application bundle..."
             npm run build
-            pm2 restart mb-ventures-gh || pm2 start ecosystem.config.js
+            
+            echo "⚡ Reloading PM2 process..."
+            pm2 reload ecosystem.config.js --env production || \
+            pm2 restart mbventuresghana || \
+            pm2 restart mb-ventures-gh || \
+            pm2 start ecosystem.config.js
+            
             pm2 save
-            echo "✅ Deployment complete!"
+            echo "✅ Hostinger deployment successfully completed!"
             pm2 status
