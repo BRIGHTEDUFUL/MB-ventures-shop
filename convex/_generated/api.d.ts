@@ -38,6 +38,7 @@ import type * as emails_templates_orderReceived from "../emails/templates/orderR
 import type * as emails_templates_paymentConfirmed from "../emails/templates/paymentConfirmed.js";
 import type * as emails_transport from "../emails/transport.js";
 import type * as emails_webhook from "../emails/webhook.js";
+import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as lib_activity from "../lib/activity.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   "emails/templates/paymentConfirmed": typeof emails_templates_paymentConfirmed;
   "emails/transport": typeof emails_transport;
   "emails/webhook": typeof emails_webhook;
+  health: typeof health;
   http: typeof http;
   inventory: typeof inventory;
   "lib/activity": typeof lib_activity;
