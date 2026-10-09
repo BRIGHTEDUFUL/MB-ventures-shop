@@ -106,6 +106,12 @@ export type StockChangeResult = {
   on_hand: number;
   /** True when `operation_key` had already been applied — nothing moved. */
   skipped: boolean;
+  /**
+   * The ledger row this call wrote, or `null` when nothing moved. Callers that
+   * need to link back to a movement (a reversal stamping the row it undoes)
+   * read it here rather than re-querying and racing the next write.
+   */
+  movement_id: Id<"inventory_history"> | null;
 };
 
 const assertCount = (label: string, value: number): void => {
@@ -147,6 +153,7 @@ export async function applyStockChange(
         reserved: product.reserved ?? 0,
         on_hand: onHand(product),
         skipped: true,
+        movement_id: seen._id,
       };
     }
   }
@@ -243,8 +250,9 @@ export async function applyStockChange(
   // alone still writes its copy and version through `patch`, but must not
   // claim a stock change happened.
   const moved = next.stock !== before.stock || next.reserved !== before.reserved;
+  let movement_id: Id<"inventory_history"> | null = null;
   if (moved) {
-    await ctx.db.insert("inventory_history", {
+    movement_id = await ctx.db.insert("inventory_history", {
       product_slug: product.slug,
       product_name: product.name,
       previous_stock: before.stock,
@@ -265,5 +273,11 @@ export async function applyStockChange(
     });
   }
 
-  return { stock: next.stock, reserved: next.reserved, on_hand: afterHand, skipped: false };
+  return {
+    stock: next.stock,
+    reserved: next.reserved,
+    on_hand: afterHand,
+    skipped: false,
+    movement_id,
+  };
 }

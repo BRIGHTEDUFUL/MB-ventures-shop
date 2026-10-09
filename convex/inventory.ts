@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./lib/permissions";
 import { logActivity } from "./lib/activity";
 import { LIMITS } from "./catalogue";
@@ -75,6 +76,82 @@ export const adjust = mutation({
   },
 });
 
+/**
+ * Undo one movement.
+ *
+ * Corrections are never edits: the original row keeps its numbers and stays in
+ * the log, and the undo is a *new* row pointing back at it (`reverses`), with
+ * the original stamped `reversed_by` so it cannot be undone twice. That keeps
+ * the ledger append-only while still letting a shop fix a mis-typed count.
+ *
+ * Only movements that change what is on the shelf can be reversed — an order
+ * reservation is not a mistake to correct here, it is undone by cancelling the
+ * order, and reversing one would hand out units that are still promised.
+ */
+export const reverse = mutation({
+  args: { movement_id: v.string(), note: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const actorId = await requirePermission(ctx, "inventory.adjust");
+    const movementId = ctx.db.normalizeId("inventory_history", args.movement_id);
+    if (movementId === null) throw new ConvexError({ message: "Movement not found." });
+    const original = await ctx.db.get(movementId);
+    if (original === null) throw new ConvexError({ message: "Movement not found." });
+    if (original.reversed_by !== undefined) {
+      throw new ConvexError({ message: "That movement has already been reversed." });
+    }
+
+    const type = original.movement_type;
+    if (type === "reserve" || type === "release" || type === "commit") {
+      throw new ConvexError({
+        message:
+          "Order movements cannot be reversed here — cancel or amend the order instead, so its stock follows the order's own state.",
+      });
+    }
+
+    const note = (args.note ?? "").trim();
+    if (note.length > 200)
+      throw new ConvexError({ message: "Keep the note under 200 characters." });
+
+    // Undo exactly what the row did: it moved `new_stock` back to
+    // `previous_stock`. Going through the choke point means the reversal is
+    // validated (never below zero) and gets its own ledger row.
+    const delta = original.previous_stock - original.new_stock;
+    if (delta === 0) throw new ConvexError({ message: "That movement did not change stock." });
+
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", original.product_slug))
+      .first();
+    if (product === null) throw new ConvexError({ message: "Product not found." });
+
+    const result = await applyStockChange(ctx, {
+      slug: original.product_slug,
+      command: { kind: "adjust", delta },
+      movement_type: "reversal",
+      source: "attendant",
+      reason: `Reversed: ${original.reason}`,
+      actor_id: actorId,
+      ...(note !== "" ? { note } : {}),
+      reverses: movementId,
+      // A double tap cannot undo it twice, even before the stamp lands.
+      operation_key: `reverse:${movementId}`,
+    });
+
+    // The undo is a *new* row; the original only gains the pointer to it.
+    // Its numbers are never rewritten, which is what keeps the ledger honest.
+    if (result.movement_id !== null) {
+      await ctx.db.patch(movementId, { reversed_by: result.movement_id });
+    }
+    await logActivity(
+      ctx,
+      actorId,
+      "inventory.reverse",
+      `Reversed a movement on ${product.name} (${original.previous_stock} → ${original.new_stock}).`,
+    );
+    return { ok: true, stock: result.stock };
+  },
+});
+
 export type InventoryEntry = {
   id: string;
   product_slug: string;
@@ -84,7 +161,30 @@ export type InventoryEntry = {
   reason: string;
   actor_name: string;
   created_at: string;
+  /** Movement type when the row predates the typed ledger it reads as null. */
+  movement_type: string | null;
+  /** True when something already undid this movement. */
+  reversed: boolean;
+  /** Order/stocktake reference, when the movement has one. */
+  reference: string | null;
 };
+
+/** One ledger row as the movement log shows it. */
+function entryDTO(row: Doc<"inventory_history">, actor_name: string): InventoryEntry {
+  return {
+    id: row._id,
+    product_slug: row.product_slug,
+    product_name: row.product_name,
+    previous_stock: row.previous_stock,
+    new_stock: row.new_stock,
+    reason: row.reason,
+    actor_name,
+    created_at: new Date(row._creationTime).toISOString(),
+    movement_type: row.movement_type ?? null,
+    reversed: row.reversed_by !== undefined,
+    reference: row.reference ?? null,
+  };
+}
 
 /** Newest-first stock movement log, optionally for a single product. */
 export const history = query({
@@ -105,16 +205,7 @@ export const history = query({
     return await Promise.all(
       rows.map(async (row) => {
         const actor = row.actor_id ? await ctx.db.get(row.actor_id) : null;
-        return {
-          id: row._id,
-          product_slug: row.product_slug,
-          product_name: row.product_name,
-          previous_stock: row.previous_stock,
-          new_stock: row.new_stock,
-          reason: row.reason,
-          actor_name: actor?.name?.trim() || actor?.email?.trim() || "System",
-          created_at: new Date(row._creationTime).toISOString(),
-        };
+        return entryDTO(row, actor?.name?.trim() || actor?.email?.trim() || "System");
       }),
     );
   },
@@ -126,16 +217,7 @@ export async function recentStockChanges(ctx: QueryCtx, limit: number): Promise<
   return await Promise.all(
     rows.map(async (row) => {
       const actor = row.actor_id ? await ctx.db.get(row.actor_id) : null;
-      return {
-        id: row._id,
-        product_slug: row.product_slug,
-        product_name: row.product_name,
-        previous_stock: row.previous_stock,
-        new_stock: row.new_stock,
-        reason: row.reason,
-        actor_name: actor?.name?.trim() || actor?.email?.trim() || "System",
-        created_at: new Date(row._creationTime).toISOString(),
-      };
+      return entryDTO(row, actor?.name?.trim() || actor?.email?.trim() || "System");
     }),
   );
 }

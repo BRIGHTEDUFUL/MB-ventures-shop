@@ -183,7 +183,32 @@ a configuration decision, not "you are not staff".
 
 ---
 
+## D10 — a correction is a new row, never an edit
+
+**Context.** The shop needs an error-correction tool: staff mis-type counts and
+must be able to undo them, but a ledger that lets someone rewrite yesterday's
+rows explains nothing about where today's number came from.
+
+**Decision.** `inventory.reverse` writes a _second_ movement (`movement_type:
+"reversal"`, `reverses: <original id>`) whose delta restores what the original
+did, and stamps the original row with `reversed_by`. The original's numbers are
+never rewritten, so both rows stay readable. Reversing is keyed
+`reverse:<movement id>`, so a double tap cannot undo it twice, and a row that is
+already stamped refuses with its own message.
+
+**Alternative rejected.** Patching the original row back to `previous_stock`.
+Rejected: the log would show a change that "did not happen" and hide the mistake
+entirely — the opposite of an audit trail.
+
+**Consequence.** Only shelf movements can be reversed. `reserve` / `release` /
+`commit` are owned by an order and refuse with "cancel or amend the order
+instead", because reversing one would hand out units that are still promised.
+A reversal goes through the choke point like any other write, so it cannot drive
+available below zero — it fails with the usual "only _n_ on hand" instead.
+
+---
+
 **Status:** D1–D3, D6, D7 implemented (milestone M2). D4, D5 implemented in the
-order path; D9 implemented (M3). The migration that backfills `reserved` and
-`stock_state` for existing rows is milestone M4 and has not run yet — until it
-does, dev data still reads on hand as `stock` alone for open orders.
+order path; D9 implemented (M3). D10 implemented (M6, part 1). The backfill of
+`reserved` / `stock_state` ran on dev (M4): dry-run → real → verify
+(`verified: true`), re-run a no-op, health scan 0 findings.
