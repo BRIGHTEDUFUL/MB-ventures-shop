@@ -7,7 +7,7 @@ import { ProductCard, SectionHeading, PageError, PageNotFound } from "@/componen
 import { useCart } from "@/components/store-provider";
 import { money, storeQuery, pageHead } from "@/lib/store";
 import { heroProductIds, TRUST_ICONS } from "@/lib/home-content";
-import { images } from "@/lib/store-images";
+import { images, imageSize } from "@/lib/store-images";
 
 /** Fixed positions over the hero photo, one per hotspot we actually render. */
 const HOTSPOT_POSITIONS = ["hotspot-one", "hotspot-two", "hotspot-three"] as const;
@@ -64,6 +64,7 @@ function Index() {
       <section className="hero">
         <img
           className="hero-photo"
+          {...imageSize(settings.hero_image)}
           src={images[settings.hero_image]}
           alt="A furnished workspace with an adjustable desk and high-back office chair"
           fetchPriority="high"
@@ -128,10 +129,17 @@ function Index() {
               </div>
             </div>
             <div className="hero-product-top">
-              <img src={images[featured.image_key]} alt={featured.name} />
+              <img
+                {...imageSize(featured.image_key)}
+                src={images[featured.image_key]}
+                alt={featured.name}
+              />
               <div className="min-w-0">
                 <Link to="/product/$slug" params={{ slug: featured.id }}>
-                  <h3 className="text-sm font-semibold">{featured.name}</h3>
+                  {/* An h2 keeps the outline legal: this card sits directly
+                      under the hero h1, and the section headings that follow
+                      are h2 as well. */}
+                  <h2 className="text-sm font-semibold">{featured.name}</h2>
                 </Link>
                 <p className="mt-1 text-sm font-semibold">{money(featured.price)}</p>
                 {!featured.verified && (
@@ -182,7 +190,12 @@ function Index() {
                 className="category-tile"
                 key={c.id}
               >
-                <img src={images[c.image_key]} alt={c.name} loading="lazy" />
+                <img
+                  {...imageSize(c.image_key)}
+                  src={images[c.image_key]}
+                  alt={c.name}
+                  loading="lazy"
+                />
                 <span className="category-label">
                   {c.name}
                   <small>
@@ -204,6 +217,7 @@ function Index() {
         </section>
         <section className="section setup-section">
           <img
+            {...imageSize(settings.setup_image)}
             src={images[settings.setup_image]}
             className="setup-photo"
             alt="An office desk and chair in a daylight workspace"

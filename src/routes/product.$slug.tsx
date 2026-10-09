@@ -21,11 +21,15 @@ export const Route = createFileRoute("/product/$slug")({
     if (!data.products.some((p) => p.id === params.slug)) throw notFound();
     return data;
   },
-  head: ({ loaderData, params }) =>
-    pageHead(
-      loaderData?.products.find((p) => p.id === params.slug)?.name || "Product",
+  head: ({ loaderData, params }) => {
+    const product = loaderData?.products.find((p) => p.id === params.slug);
+    return pageHead(
+      product?.name || "Product",
       "Product specifications, Ghana cedi pricing and local delivery from MB Ventures GH.",
-    ),
+      // Social cards for a product lead with its own photo, not the shop default.
+      product ? { image: images[product.image_key] } : undefined,
+    );
+  },
   component: ProductPage,
   errorComponent: PageError,
   notFoundComponent: PageNotFound,

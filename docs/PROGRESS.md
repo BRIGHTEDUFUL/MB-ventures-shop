@@ -5,6 +5,86 @@ still open is listed under **Open**.
 
 ---
 
+## Gap closure pass (SEO, layout stability, a11y, automated QA)
+
+**Status:** done and verified; the only items left are the ones that need
+something from outside the repo (see **Open** at the end).
+
+### Done
+
+- **SEO** — `pageHead` now emits `og:image` / `twitter:image` (per-product when a
+  photo exists) and the root `head()` emits `rel=canonical` and `og:url` built
+  from `VITE_SITE_URL` (`SITE_ORIGIN` in `src/lib/store.ts`). Query strings are
+  stripped from the canonical, and `/staff`, `/admin` and `/dev` ship
+  `noindex, nofollow`. `.env.development` supplies `http://localhost:5173` for
+  `vite dev`; `.env.production` documents an empty `VITE_SITE_URL` so a wrong
+  host is never published — absolute URLs are simply omitted until the real
+  domain is known.
+- **Crawler files** — `src/routes/sitemap[.]xml.tsx` (10 static + every product)
+  and `src/routes/robots[.]txt.tsx` (with `Sitemap:` pointing at it) are server
+  routes that read the origin from the incoming request; `public/robots.txt` is
+  gone.
+- **Layout stability** — `imageSize()` in `src/lib/store-images.ts` carries the
+  measured intrinsic size of every photo and is applied to `ProductCard`,
+  `CartLines`, the hero photo, the hero product, the category tiles, the setup
+  photo and the header logo.
+- **Heading order** — the hero card (`h3` under `h1`), the footer column titles
+  (`h4` after `h2`) and the catalogue filter groups (`h3` directly after `h1`)
+  all skipped levels; they are now `h2`, with the matching selectors in
+  `src/styles.css`.
+- **Tap targets** — `.product-add` is 44×44 below 767px; the cart account note
+  ("an account is required to check out") was added to `src/routes/cart.tsx`.
+- **Formatting** — the tree is Prettier-clean; `convex/_generated`,
+  `test-results` and `playwright-report` are ignored.
+- **Unit tests** — `src/test/convex-mutations.test.ts` and
+  `src/test/convex-staff-mutations.test.ts` add 39 tests covering
+  `orders.place` (pricing, stock, atomicity, ordering gates, quantity and MoMo
+  validation), `orders.track` (match rules and its no-oracle property),
+  `orders.staffUpdate` (role gates, MoMo verification, status rules, restock),
+  `inventory.adjust`, the `catalogue.*` settings guards, `saveMomoSettings`'s
+  admin-only rule and `users.ts` role management. 175 tests in total.
+- **Browser QA** — Playwright is wired up:
+  `e2e/storefront.spec.ts` (canonical/social/`noindex` per route, heading
+  outline, sitemap, robots, zero console errors),
+  `e2e/mobile.spec.ts` (overflow at 320/360/390/414 over every static and
+  product route, 44px targets, 16px fields, safe-area wiring) and
+  `e2e/purchase.spec.ts`, the opt-in live run.
+  `npm run test:e2e` runs the first two (32 checks).
+- **A real order, end to end** — `npm run test:e2e:live` (which sets
+  `E2E_LIVE=1`, see `scripts/run-live-e2e.mjs`) places an actual order against
+  `dev:stoic-elephant-714`: signup → cart → 3-step checkout → MoMo reference →
+  `MB-…` receipt, then guest tracking by reference + phone in a second browser
+  context, then a staff sign-in that verifies the payment, advances the order,
+  cancels it and proves the restock on the storefront, then reads the closed
+  order back as the shopper. A final sweep cancels any E2E order a previous run
+  left open, so stock always ends where it started.
+  One account is reused: `e2e.staff@example.com`, granted via
+  `npx convex run users:grantStaff '{"email":"e2e.staff@example.com"}'`
+  (`role: "admin"` — see the note in **Open**).
+
+### Bugs found by the new tests and fixed
+
+- Footer column titles were `h4` directly after `h2` on every page, the
+  catalogue's filter groups were `h3` directly after its `h1`, and the hero card
+  was `h3` under `h1` — all three now render a legal outline.
+- `.product-add` was under 44px on phones.
+
+### Open
+
+- Resend domain verification and the go-live checklist in `docs/EMAIL.md` §8.
+- Real MoMo recipient details before production can enable ordering.
+- `VITE_SITE_URL` in `.env.production` once the storefront has a domain.
+- Device-only mobile checks (`MOBILE_TASKS.md` §3): soft keyboard, focus zoom on
+  a physical iPhone, landscape.
+- `users.grantStaff` grants `role: "admin"` despite its name and its use in
+  `AGENTS.md` as "grant staff"; and `orders.place` does not enforce uniqueness
+  on `transaction_reference`, so the same MoMo reference can fund two orders.
+  Both are reported, not changed — they change behaviour, not tests.
+- Nothing outstanding in the repo: this pass was committed locally as `29a0baa`
+  (not pushed, not deployed).
+
+---
+
 ## Email system (dry-run first)
 
 **Status:** built, typechecked, linted, covered by tests and verified end to end
@@ -109,7 +189,6 @@ the location copy reading "Abelenkpe taxi rank, Accra, Ghana".
 ### Open
 
 - Resend domain verification and the go-live checklist in `docs/EMAIL.md` §8.
-- Commit the working tree (everything below is still uncommitted).
 
 ---
 

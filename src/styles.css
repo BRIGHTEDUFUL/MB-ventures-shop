@@ -660,7 +660,7 @@ label textarea {
   grid-template-columns: 2fr 1fr 1fr 1.3fr;
   gap: 40px;
 }
-.footer-grid h4 {
+.footer-grid h2 {
   font-size: 14px;
   margin-bottom: 20px;
 }
@@ -711,7 +711,7 @@ label textarea {
 .filters {
   font-size: 13px;
 }
-.filters h3 {
+.filters h2 {
   font-size: 15px;
   margin: 25px 0 12px;
 }
@@ -1610,6 +1610,13 @@ h4 {
   .hero-product button,
   .picker-move button {
     min-width: 44px;
+  }
+  /* The product-card add button ships 36×36 — under the thumb minimum on a
+     phone. It grows without changing its glyph; the desktop layout is
+     untouched. (The hero hotspots are already `display: none` below 767px.) */
+  .product-add {
+    width: 44px;
+    height: 44px;
   }
   /* The stepper ships 36×38 — under the thumb minimum on the cart drawer. */
   .quantity {

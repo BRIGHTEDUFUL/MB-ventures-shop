@@ -2,27 +2,55 @@
 
 - [x] Store design system, logo and real photography
 - [x] Home, catalogue, product gallery, search, navigation and cart
-- [ ] Persistent checkout, receipt and secure tracking — structure verified (cart persists, checkout redirects signed-out shoppers to `/account?next=/checkout`, receipt and ref+phone tracker render); still needs one real order placed end to end
-- [ ] Staff sign-in, payment verification, order timeline and store editing — access gate verified and every transition is unit-tested; the dashboard itself still needs a staff account to exercise
+- [x] Persistent checkout, receipt and secure tracking — **one real order placed end to end**
+      (9 Oct, `npm run test:e2e:live`): signup → cart → 3-step checkout → MoMo reference →
+      `MB-…` receipt → guest tracking by reference + phone, no session
+- [x] Staff sign-in, payment verification, order timeline and store editing — the same run signs in
+      a granted staff account, verifies the MoMo payment, advances `received → processing`, cancels
+      the order (restock proven on the storefront), and the shopper reads the closed order back
+      from `/track`
 - [x] Customer accounts and information pages
-- [ ] End-to-end checks and mobile layout checks — desktop pass complete (21 pages crawled, 26 internal links, 0 console errors); the mobile work is queued as a task list in `MOBILE_TASKS.md`
-- [ ] Live inventory and MoMo recipient details (awaiting store-supplied information) — `ordering_enabled` stays off until MoMo recipient details are saved
+- [x] End-to-end checks and mobile layout checks — `npm run test:e2e` runs 32 checks: canonical,
+      Open Graph/Twitter card, `noindex` on the consoles, sitemap/robots, heading outline, then the
+      **320/360/390/414 overflow matrix over every route**, 44px tap targets, 16px form fields and
+      the safe-area wiring. Device-only checks (soft keyboard, real focus zoom, landscape) still
+      need a phone — `MOBILE_TASKS.md` §3.
+- [ ] Live inventory and MoMo recipient details (awaiting store-supplied information) —
+      `ordering_enabled` stays off until MoMo recipient details are saved
 
-## Verification run — 8 October 2026
+## Verification run — 9 October 2026
 
-| Gate | Result |
-| --- | --- |
-| `npx tsc --noEmit` | 0 errors |
-| `npm run lint` | 0 errors, 7 warnings (all `react-refresh/only-export-components` inside the shadcn/ui kit) |
-| `npm test` | 29/29 passing across 3 files |
-| `npm run build` | ✓ built in 9.5s |
-| Route crawl | 21 pages + all 10 products + all 5 categories + search/edge cases — 0 × 404, 0 console errors |
-| Images | 0 broken; store logo resolves on every page |
-| Cart → checkout | Adds to cart, persists to `mb-cart`, totals and free-delivery hint correct, auth gate redirects as designed |
+| Gate                     | Result                                                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `npx tsc --noEmit`       | 0 errors                                                                                                    |
+| `npm run lint`           | 0 errors, 7 warnings (all `react-refresh/only-export-components` inside the shadcn/ui kit)                  |
+| `npm test`               | 175/175 passing across 11 files (incl. `orders.place`/`track`/`staffUpdate`, inventory and settings guards) |
+| `npm run build`          | ✓ built in 5.7s                                                                                             |
+| `npx prettier --check .` | All matched files use Prettier code style                                                                   |
+| `npm run test:e2e`       | 32/32 passing — head, outline and the four-width mobile matrix                                              |
+| `npm run test:e2e:live`  | 4/4 passing — a real order placed, verified, advanced, cancelled and restocked in dev                       |
 
-Open findings from the desktop audit, none blocking:
+### Closed by this pass (they were the open findings of the 8 October desktop audit)
 
-- No `<link rel="canonical">` on any page.
-- Most product images ship without `width`/`height`, so there is no reserved box against layout shift.
-- Home heading order runs `H1 → H3 → H2`.
-- Screen-reader passes (labels, landmarks, accessible names, `alt`) were clean on every page checked.
+- Canonical URL, `og:url`, `og:image`/`twitter:image` on every public page; `noindex, nofollow`
+  on `/staff`, `/admin` and `/dev`; `/sitemap.xml` and `/robots.txt` served as real routes with
+  the origin taken from the request (see `src/routes/sitemap[.]xml.tsx`).
+- Every image carries intrinsic `width`/`height` (`imageSize()` in `src/lib/store-images.ts`), so
+  rails no longer shift as photos land.
+- Home heading order runs `H1 → H2 → H3`; the footer and catalogue filter headings were also
+  level-skipping and are now flat, which the heading-outline tests hold in place.
+- Product-card add button is a 44×44 target below 767px.
+- Formatting: the tree is Prettier-clean (`convex/_generated` and Playwright artifacts are
+  ignored).
+
+## Still blocked on something only the shop can supply
+
+- **Email**: Resend domain verification and `docs/EMAIL.md` §8 — until then every send is a
+  dry run.
+- **MoMo recipient details**: real wallet name and number before `ordering_enabled` can go on in
+  production.
+- **Production URL**: `VITE_SITE_URL` in `.env.production` is empty until the real domain exists;
+  absolute URLs (canonical, `og:url`, sitemap) are then omitted rather than pointing at a
+  wrong host.
+- **Real devices**: `MOBILE_TASKS.md` §3 — soft keyboard, focus zoom on a physical iPhone,
+  landscape.

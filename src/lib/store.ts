@@ -69,16 +69,40 @@ export const specs = (value: unknown) =>
     : [];
 /** Public storefront bundle — products, categories and settings (server is authoritative). */
 export const storeQuery = convexQueryOptions(api.store.get, {});
-export const pageHead = (name: string, description: string) => ({
-  meta: [
-    { title: `${name} | MB Ventures GH` },
-    { name: "description", content: description },
-    { property: "og:title", content: `${name} | MB Ventures GH` },
-    { property: "og:description", content: description },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-  ],
-});
+/**
+ * Public origin of the storefront (`VITE_SITE_URL`), with no trailing slash.
+ * Absolute SEO URLs (canonical, og:url, og:image, sitemap entries) are only
+ * emitted when it is known, so an unset value degrades to relative URLs rather
+ * than a confidently wrong absolute one.
+ */
+export const SITE_ORIGIN = (import.meta.env["VITE_SITE_URL"] ?? "").replace(/\/+$/, "");
+
+/** Absolute URL for a path — absolute inputs pass through untouched. */
+export const absoluteUrl = (path: string) =>
+  /^https?:\/\//.test(path) ? path : `${SITE_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
+
+/** Default social card image; product pages pass their own photo instead. */
+export const DEFAULT_SOCIAL_IMAGE = "/images/workspace.jpg";
+
+export const pageHead = (
+  name: string,
+  description: string,
+  opts: { image?: string | undefined } = {},
+) => {
+  const image = absoluteUrl(opts.image ?? DEFAULT_SOCIAL_IMAGE);
+  return {
+    meta: [
+      { title: `${name} | MB Ventures GH` },
+      { name: "description", content: description },
+      { property: "og:title", content: `${name} | MB Ventures GH` },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: image },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: image },
+    ],
+  };
+};
 export const delivery = (
   settings: {
     central_fee: number;

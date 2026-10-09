@@ -4,21 +4,21 @@ Two workstreams. `MOBILE_TASKS.md` stays the QA checklist; this doc is the build
 
 ## Status — Phases 1–8 shipped
 
-| Phase | What landed | State |
-| ----- | ----------- | ----- |
-| 1 | Correctness fixes in `convex/lib/rules.ts` + consumers | ✅ `npm test` green |
-| 2 | 9 optional `home_*` fields, `settingsDTO` defaults, `HOME_CONTENT_DEFAULTS`, `saveSettings` extended, `saveDeliverySettings` (staff) / `saveMomoSettings` (admin) | ✅ additive, no backfill |
-| 3 | Customization hub rebuilt as an 8-pane tabbed form with previews, fee calculator, reorderable featured picker, sticky save | ✅ |
-| 4 | `index.tsx` reads all section copy from settings; hero hotspots derive from `featured_ids` | ✅ no hardcoded slugs left |
-| 5 | `StaffMobileNav` bottom bar + More sheet; `MobileNavigation` returns `null` on `/staff` and `/admin` | ✅ single bottom bar |
-| 6 | 16px form controls, stacked toolbars, sticky `.form-actions`, targeted 44px targets | ✅ |
-| 7 | `.spec-table` overflow guard, `.section-heading` / `.brand-strip` wrap for authored copy | ✅ |
-| 8 | `npm test` 136/136, `tsc --noEmit` 0, `npm run build` ✓, lint clean on every touched file | ✅ |
+| Phase | What landed                                                                                                                                                       | State                      |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 1     | Correctness fixes in `convex/lib/rules.ts` + consumers                                                                                                            | ✅ `npm test` green        |
+| 2     | 9 optional `home_*` fields, `settingsDTO` defaults, `HOME_CONTENT_DEFAULTS`, `saveSettings` extended, `saveDeliverySettings` (staff) / `saveMomoSettings` (admin) | ✅ additive, no backfill   |
+| 3     | Customization hub rebuilt as an 8-pane tabbed form with previews, fee calculator, reorderable featured picker, sticky save                                        | ✅                         |
+| 4     | `index.tsx` reads all section copy from settings; hero hotspots derive from `featured_ids`                                                                        | ✅ no hardcoded slugs left |
+| 5     | `StaffMobileNav` bottom bar + More sheet; `MobileNavigation` returns `null` on `/staff` and `/admin`                                                              | ✅ single bottom bar       |
+| 6     | 16px form controls, stacked toolbars, sticky `.form-actions`, targeted 44px targets                                                                               | ✅                         |
+| 7     | `.spec-table` overflow guard, `.section-heading` / `.brand-strip` wrap for authored copy                                                                          | ✅                         |
+| 8     | `npm test` 136/136, `tsc --noEmit` 0, `npm run build` ✓, lint clean on every touched file                                                                         | ✅                         |
 
 **Deliberate deviations from the original plan**
 
 - `<Field>` / `<SectionTabs>` were not added to `bits.tsx` — the existing `<label>` pattern plus a
-  dedicated `.settings-tabs` row covers it with less indirection. `<FormActions>` *was* added.
+  dedicated `.settings-tabs` row covers it with less indirection. `<FormActions>` _was_ added.
 - The global `button { min-height: 44px }` rule was rejected: it inflates every icon button
   (24px chevrons become 44×24 pills). Targets are applied per-surface instead
   (`.toolbar button`, `.form-actions button`, `.hero-product button`, `td button`, `li > button`).
@@ -44,7 +44,7 @@ two real defects, both fixed:
 After those, every route tested reports `scrollWidth <= innerWidth`, the storefront and staff each
 render exactly one bottom bar, and the More sheet lists all six secondary items including **Emails**.
 
-**QA account:** verification used a real sign-up in the *dev* deployment —
+**QA account:** verification used a real sign-up in the _dev_ deployment —
 `staff.qa@example.com` (role `admin`, granted via `users:grantStaff`). It exists only in
 `dev:stoic-elephant-714`; delete it from the `users` / `user_roles` tables if it should not stay.
 Delivery fees were written to GH₵ 35 and back to GH₵ 30 to prove `saveDeliverySettings` round-trips;

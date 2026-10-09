@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -54,11 +54,11 @@ function Catalogue() {
           : a.name.localeCompare(b.name),
     );
   const title = search.q
-    ? `Results for “${search.q}”`
+    ? `Results for â€œ${search.q}â€`
     : categories.find((c) => c.id === search.category)?.name || "All workspace essentials";
   const filterPanel = (
     <>
-      <h3>Categories</h3>
+      <h2>Categories</h2>
       <select
         aria-label="Filter category"
         value={search.category}
@@ -74,7 +74,7 @@ function Catalogue() {
           </option>
         ))}
       </select>
-      <h3>Price</h3>
+      <h2>Price</h2>
       <label>
         Up to {money(max)}
         <input
@@ -89,14 +89,14 @@ function Catalogue() {
           }}
         />
       </label>
-      <h3>Brand</h3>
+      <h2>Brand</h2>
       <select aria-label="Filter brand" value={brand} onChange={(e) => setBrand(e.target.value)}>
         <option value="">All brands</option>
         {[...new Set(products.map((p) => p.brand))].map((b) => (
           <option key={b}>{b}</option>
         ))}
       </select>
-      <h3>Availability</h3>
+      <h2>Availability</h2>
       <label className="filter-line">
         <input type="checkbox" checked={stock} onChange={(e) => setStock(e.target.checked)} />
         In stock only

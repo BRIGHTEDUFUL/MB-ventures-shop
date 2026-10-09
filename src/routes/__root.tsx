@@ -11,6 +11,7 @@ import {
 import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { SITE_ORIGIN } from "@/lib/store";
 import { StoreProvider } from "@/components/store-provider";
 import {
   StoreHeader,
@@ -78,26 +79,37 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MB Ventures GH | Workspace store in Accra" },
-      {
-        name: "description",
-        content: "Desks, chairs and computer accessories from the Abelenkpe shop in Accra.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
-    ],
-  }),
+  head: ({ matches }) => {
+    // The last match is the leaf route actually being rendered, so one place
+    // can emit a canonical URL (query strings stripped) for every page.
+    const pathname = matches[matches.length - 1]?.pathname ?? "/";
+    const canonical = SITE_ORIGIN ? `${SITE_ORIGIN}${pathname}` : undefined;
+    // Staff, admin and local-only tooling must never show up in search results.
+    const isPrivate = matches.some((m) => /^\/(staff|admin|dev)(\/|$)/.test(m.pathname));
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        { title: "MB Ventures GH | Workspace store in Accra" },
+        {
+          name: "description",
+          content: "Desks, chairs and computer accessories from the Abelenkpe shop in Accra.",
+        },
+        { property: "og:type", content: "website" },
+        ...(canonical ? [{ property: "og:url", content: canonical }] : []),
+        ...(isPrivate ? [{ name: "robots", content: "noindex, nofollow" }] : []),
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        { rel: "icon", href: "/favicon.png", type: "image/png" },
+        ...(canonical ? [{ rel: "canonical", href: canonical }] : []),
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
 import { CartLines, FreeDelivery } from "./store-ui";
 import { money, storeQuery, announcementText, whatsappHref } from "@/lib/store";
-import { images } from "@/lib/store-images";
+import { images, imageSize } from "@/lib/store-images";
 export function StoreHeader() {
   const { data: hd } = useQuery(storeQuery),
     categories = (hd?.categories ?? []).filter((c) => c.visible),
@@ -50,7 +50,7 @@ export function StoreHeader() {
       <header className="store-header glass">
         <div className="header-top">
           <Link to="/" className="header-logo">
-            <img src={images["logo"]} alt="MB Ventures GH logo" />
+            <img {...imageSize("logo")} src={images["logo"]} alt="MB Ventures GH logo" />
             <span className="brand-text">
               MB VENTURES<span className="text-link"> GH</span>
               <small>YOUR WORKSPACE STORE</small>
@@ -65,7 +65,7 @@ export function StoreHeader() {
               <Search className="size-4" />
               Search desks, chairs, accessories...
             </span>
-            <kbd className="font-mono text-[10px]">⌘ K</kbd>
+            <kbd className="font-mono text-[10px]">âŒ˜ K</kbd>
           </Button>
           <div className="header-actions flex items-center gap-2">
             <Button
@@ -179,7 +179,7 @@ export function StoreHeader() {
 export function StoreOverlays() {
   const cart = useCart(),
     [query, setQuery] = useState("");
-  // `setSearchOpen` is a stable state setter, so the ⌘K listener below can depend
+  // `setSearchOpen` is a stable state setter, so the âŒ˜K listener below can depend
   // on it directly instead of on the whole context object, which is recreated on
   // every render of the provider.
   const { setSearchOpen } = cart;
@@ -306,7 +306,7 @@ export function StoreOverlays() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{p.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {p.brand} ·{" "}
+                    {p.brand} Â·{" "}
                     {p.verified ? (p.stock ? "In stock" : "Out of stock") : "Sample catalogue"}
                   </p>
                 </div>
@@ -315,7 +315,7 @@ export function StoreOverlays() {
             ))}
             {results.length === 0 && (
               <p className="py-8 text-sm text-muted-foreground">
-                No products match “{query}”. Try a different name.
+                No products match â€œ{query}â€. Try a different name.
               </p>
             )}
             <div className="mt-5 flex flex-wrap gap-2">
@@ -404,7 +404,7 @@ export function StoreFooter() {
           </p>
         </div>
         <div>
-          <h4>Shop</h4>
+          <h2>Shop</h2>
           {categories.map((c) => (
             <Link key={c.id} to="/catalogue" search={{ category: c.id, q: "" }}>
               {c.short_name}
@@ -412,7 +412,7 @@ export function StoreFooter() {
           ))}
         </div>
         <div>
-          <h4>Here to help</h4>
+          <h2>Here to help</h2>
           <Link to="/$page" params={{ page: "delivery" }}>
             Delivery & pickup
           </Link>
@@ -429,7 +429,7 @@ export function StoreFooter() {
           <Link to="/staff">Staff access</Link>
         </div>
         <div>
-          <h4>Visit us at Abelenkpe</h4>
+          <h2>Visit us at Abelenkpe</h2>
           <p>{s?.address || "Abelenkpe taxi rank, Accra, Ghana"}</p>
           <p>{s?.hours || "Monday to Saturday, 8:00 AM to 6:00 PM"}</p>
           <a href={`tel:${s?.phone || "+233240000000"}`} className="flex items-center gap-2">
@@ -451,8 +451,8 @@ export function StoreFooter() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} MB Ventures GH · Ghana</span>
-        <span>MTN MoMo · Telecel Cash · AirtelTigo Money · Cash on delivery</span>
+        <span>Â© {new Date().getFullYear()} MB Ventures GH Â· Ghana</span>
+        <span>MTN MoMo Â· Telecel Cash Â· AirtelTigo Money Â· Cash on delivery</span>
         <span className="flex gap-4">
           <Link to="/$page" params={{ page: "terms" }}>
             Terms

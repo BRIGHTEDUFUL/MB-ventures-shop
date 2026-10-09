@@ -6,6 +6,12 @@
 - Guest tracking requires an unguessable receipt reference plus the order phone number (`orders.track`); no session needed.
 - Keep unverified demonstration products distinct from live inventory and block their checkout until staff confirms them; never present invented inventory as real store facts.
 
+## Quality gates
+
+- Run `npx tsc --noEmit`, `npm run lint`, `npm test`, `npx prettier --check .` and `npm run build` before calling anything done. Playwright adds two more: `npm run test:e2e` (storefront head/outline/crawler checks plus the 320/360/390/414 mobile matrix — 32 checks) and `npm run test:e2e:live`, which places a **real order** in dev, works it as staff, cancels it and verifies the restock (`e2e/purchase.spec.ts`; opt-in only, never part of a plain test run).
+- Absolute URLs (canonical, `og:url`, sitemap) come from `VITE_SITE_URL`; it is `http://localhost:5173` in `.env.development` and empty in `.env.production` until the real domain exists — empty omits the absolute URL rather than publishing a wrong host.
+- The live run signs in as `e2e.staff@example.com` (`E2E_STAFF_PASSWORD` overrides the default) and needs `npx convex run users:grantStaff '{"email":"e2e.staff@example.com"}'` once.
+
 ## Deployments
 
 - **Dev** (day to day): `npm run dev` runs `vite dev` and `convex dev` together; `.env.local` points both at the dev deployment `dev:stoic-elephant-714`.

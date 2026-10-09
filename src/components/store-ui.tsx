@@ -4,7 +4,7 @@ import { Plus, Minus, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
 import { type Product, money, specs, storeQuery, displayFees } from "@/lib/store";
-import { images } from "@/lib/store-images";
+import { images, imageSize } from "@/lib/store-images";
 import { remainingForFreeDelivery } from "../../convex/lib/rules";
 export function ProductCard({ product: p }: { product: Product }) {
   const { add } = useCart();
@@ -23,7 +23,7 @@ export function ProductCard({ product: p }: { product: Product }) {
     <article className="product-card">
       <div className="product-image">
         <Link to="/product/$slug" params={{ slug: p.id }}>
-          <img src={images[p.image_key]} alt={p.name} loading="lazy" />
+          <img {...imageSize(p.image_key)} src={images[p.image_key]} alt={p.name} loading="lazy" />
         </Link>
         <span className="product-badge" data-tone={badge.tone}>
           {badge.text}
@@ -94,7 +94,7 @@ export function CartLines() {
     <>
       {lines.map(({ product: p, quantity }) => (
         <div className="cart-line" key={p.id}>
-          <img src={images[p.image_key]} alt={p.name} />
+          <img {...imageSize(p.image_key)} src={images[p.image_key]} alt={p.name} />
           <div className="min-w-0">
             <Link to="/product/$slug" params={{ slug: p.id }} className="text-sm font-medium">
               {p.name}

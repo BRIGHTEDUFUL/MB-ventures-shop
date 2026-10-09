@@ -16,6 +16,8 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as CatalogueRouteImport } from './routes/catalogue'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ConfirmationRouteImport } from './routes/confirmation'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
@@ -66,6 +68,16 @@ const CheckoutRoute = CheckoutRouteImport.update({
 const ConfirmationRoute = ConfirmationRouteImport.update({
   id: '/confirmation',
   path: '/confirmation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StaffRoute = StaffRouteImport.update({
@@ -157,6 +169,8 @@ export interface FileRoutesByFullPath {
   '/catalogue': typeof CatalogueRoute
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
   '/admin/emails': typeof AdminEmailsRoute
@@ -182,6 +196,8 @@ export interface FileRoutesByTo {
   '/catalogue': typeof CatalogueRoute
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/track': typeof TrackRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
@@ -207,6 +223,8 @@ export interface FileRoutesById {
   '/catalogue': typeof CatalogueRoute
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
   '/admin/emails': typeof AdminEmailsRoute
@@ -234,6 +252,8 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/checkout'
     | '/confirmation'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/staff'
     | '/track'
     | '/admin/emails'
@@ -259,6 +279,8 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/checkout'
     | '/confirmation'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/track'
     | '/admin/emails'
     | '/dev/email-preview'
@@ -283,6 +305,8 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/checkout'
     | '/confirmation'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/staff'
     | '/track'
     | '/admin/emails'
@@ -309,6 +333,8 @@ export interface RootRouteChildren {
   CatalogueRoute: typeof CatalogueRoute
   CheckoutRoute: typeof CheckoutRoute
   ConfirmationRoute: typeof ConfirmationRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
   AdminEmailsRoute: typeof AdminEmailsRoute
@@ -365,6 +391,20 @@ declare module '@tanstack/react-router' {
       path: '/confirmation'
       fullPath: '/confirmation'
       preLoaderRoute: typeof ConfirmationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/staff': {
@@ -520,6 +560,8 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogueRoute: CatalogueRoute,
   CheckoutRoute: CheckoutRoute,
   ConfirmationRoute: ConfirmationRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
   AdminEmailsRoute: AdminEmailsRoute,
