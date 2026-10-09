@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "@/lib/use-session";
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/staff")({
 function StaffLayout() {
   const { session, loading } = useSession();
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
+
+  const { signIn, signOut } = useAuthActions();
 
   if (loading || (session && role.isPending)) {
     return <AuthFrame title="Staff access" lead="Checking access…" />;
@@ -62,11 +65,31 @@ function StaffLayout() {
     return (
       <AuthFrame
         title="Staff access"
-        lead="Your account does not have staff permission. Ask the store owner to grant access."
+        lead={
+          <>
+            <span>Your account does not have staff permission.</span>
+            {session.user.email ? (
+              <span className="mt-1 block text-sm opacity-80">
+                Currently signed in as: <strong>{session.user.email}</strong>
+              </span>
+            ) : null}
+          </>
+        }
       >
-        <Button asChild className="mt-6 w-full sm:w-auto">
-          <Link to="/account">Go to account</Link>
-        </Button>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button
+            variant="default"
+            onClick={async () => {
+              await signOut();
+              window.location.href = "/account?next=/staff";
+            }}
+          >
+            Sign out & switch account
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/account">Go to account</Link>
+          </Button>
+        </div>
       </AuthFrame>
     );
   }
