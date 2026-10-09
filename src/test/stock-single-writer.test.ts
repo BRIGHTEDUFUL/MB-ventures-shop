@@ -71,7 +71,15 @@ function writes(source: string, pattern: RegExp): { arg: string; at: number }[] 
 }
 
 /** Files whose stock writes are legitimate, and why. */
-const allowedFiles = new Map<string, string>([[CHOKE_POINT, "the choke point itself"]]);
+const allowedFiles = new Map<string, string>([
+  [CHOKE_POINT, "the choke point itself"],
+  [
+    join(CONVEX_DIR, "migrations.ts"),
+    "the one-time reservation backfill: it sets products.reserved from what open " +
+      "orders already hold, which is the state the choke point assumes already " +
+      "exists. Deliberately the only other name on this list.",
+  ],
+]);
 
 const describePath = (path: string) => relative(CONVEX_DIR, path).replaceAll("\\", "/");
 
