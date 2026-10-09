@@ -34,7 +34,8 @@ export function StoreHeader() {
       <div className="facts-bar flex items-center justify-between bg-primary px-8 py-2 text-[11px] text-primary-foreground">
         <span className="flex items-center gap-2">
           <MapPin className="size-3" />{" "}
-          {hd?.settings.announcement ?? "Circle, Accra · Pickup in store · Delivery across Ghana"}
+          {hd?.settings.announcement ??
+            "Abelenkpe, Accra · Pickup in store · Delivery across Ghana"}
         </span>
         <Link to="/track" className="flex items-center gap-2">
           Track your order <ArrowRight className="size-3" />
@@ -142,7 +143,7 @@ export function StoreHeader() {
                   ))}
                 </div>
                 <div>
-                  <h3 className="mb-3 text-lg">From our Circle shop</h3>
+                  <h3 className="mb-3 text-lg">From our Abelenkpe shop</h3>
                   <Link className="my-2 block text-sm" to="/$page" params={{ page: "delivery" }}>
                     Delivery & pickup
                   </Link>
@@ -378,7 +379,7 @@ export function StoreFooter() {
             <span className="brand-text">MB Ventures GH</span>
           </Link>
           <p>
-            Computer accessories, desks and chairs. A real shop at Circle, Accra, with delivery
+            Computer accessories, desks and chairs. A real shop at Abelenkpe, Accra, with delivery
             across Ghana.
           </p>
         </div>
@@ -408,8 +409,8 @@ export function StoreFooter() {
           <Link to="/staff">Staff access</Link>
         </div>
         <div>
-          <h4>Visit us at Circle</h4>
-          <p>{s?.address || "Circle Commercial Area, Accra, Ghana"}</p>
+          <h4>Visit us at Abelenkpe</h4>
+          <p>{s?.address || "Abelenkpe taxi rank, Accra, Ghana"}</p>
           <p>{s?.hours || "Monday to Saturday, 8:00 AM to 6:00 PM"}</p>
           <a href={`tel:${s?.phone || "+233240000000"}`} className="flex items-center gap-2">
             <Phone className="mr-1 inline size-3" />

@@ -8,7 +8,7 @@ export const Route = createFileRoute("/cart")({
   head: () =>
     pageHead(
       "Your cart",
-      "Review your workspace gear and checkout with delivery or Circle pickup.",
+      "Review your workspace gear and checkout with delivery or Abelenkpe pickup.",
     ),
   component: CartPage,
 });

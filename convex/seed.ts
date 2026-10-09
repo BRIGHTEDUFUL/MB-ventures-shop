@@ -4,10 +4,10 @@ import type { MutationCtx } from "./_generated/server";
 const SETTINGS = {
   key: "singleton",
   hero_title: "Made for your workspace.",
-  hero_subtitle: "Desks, chairs and everyday tech. From our Circle shop to your setup.",
+  hero_subtitle: "Desks, chairs and everyday tech. From our Abelenkpe shop to your setup.",
   phone: "+233 24 000 0000",
   email: "orders@mbventuresgh.com",
-  address: "Circle Commercial Area, Accra, Ghana",
+  address: "Abelenkpe taxi rank, Accra, Ghana",
   hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
   momo_number: "",
   momo_name: "",
@@ -18,7 +18,7 @@ const SETTINGS = {
   ordering_enabled: false,
   hero_image: "workspace",
   setup_image: "workspace",
-  announcement: "Circle, Accra · Pickup in store · Delivery across Ghana",
+  announcement: "Abelenkpe, Accra · Pickup in store · Delivery across Ghana",
   whatsapp: "",
   featured_ids: ["standing-desk", "ergonomic-chair", "mechanical-keyboard"],
 };
@@ -222,5 +222,38 @@ export const seed = internalMutation({
       categories: categories.length,
       newlyInserted: inserted,
     };
+  },
+});
+
+/**
+ * Rewrites the three location strings on `store_settings` when they still
+ * mention the old "Circle" address. Anything the shop edited itself is left
+ * untouched, so this is safe to run repeatedly:
+ *
+ * `npx convex run seed:syncLocation` (add `--prod` for production)
+ */
+export const syncLocation = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db
+      .query("store_settings")
+      .withIndex("by_key", (q) => q.eq("key", "singleton"))
+      .unique();
+    if (settings === null) return { updated: [] as string[] };
+
+    const updated: string[] = [];
+    if (settings.address.includes("Circle")) {
+      await ctx.db.patch(settings._id, { address: SETTINGS.address });
+      updated.push("address");
+    }
+    if (settings.announcement.includes("Circle")) {
+      await ctx.db.patch(settings._id, { announcement: SETTINGS.announcement });
+      updated.push("announcement");
+    }
+    if (settings.hero_subtitle.includes("Circle")) {
+      await ctx.db.patch(settings._id, { hero_subtitle: SETTINGS.hero_subtitle });
+      updated.push("hero_subtitle");
+    }
+    return { updated };
   },
 });

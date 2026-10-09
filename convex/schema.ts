@@ -19,12 +19,30 @@ const orderStatus = v.union(
   v.literal("cancelled"),
 );
 
+const emailStatus = v.union(
+  v.literal("queued"),
+  v.literal("sent"),
+  v.literal("failed"),
+  v.literal("skipped_dry_run"),
+  v.literal("delivered"),
+  v.literal("bounced"),
+  v.literal("complained"),
+);
+const emailCategory = v.union(
+  v.literal("customer"),
+  v.literal("admin"),
+  v.literal("auth"),
+  v.literal("contact"),
+);
+
 export const validators = {
   zone,
   fulfillment,
   paymentMethod,
   paymentStatus,
   orderStatus,
+  emailStatus,
+  emailCategory,
 };
 
 export default defineSchema({
@@ -124,6 +142,10 @@ export default defineSchema({
         image_key: v.string(),
       }),
     ),
+    // Set when a message we sent to the customer bounced or was complained
+    // about (see `convex/emails/webhook.ts`), cleared by the next message
+    // that reaches the address. Never set by checkout itself.
+    needs_attention: v.optional(v.string()),
   })
     .index("by_reference", ["reference"])
     .index("by_user", ["user_id"]),
@@ -163,4 +185,55 @@ export default defineSchema({
     action: v.string(),
     summary: v.string(),
   }),
+
+  // One row per outbound message (see `convex/emails/`). `html`/`text` are
+  // persisted in dry-run mode only so `/admin/emails` can preview exactly what
+  // would have been sent; live rows keep the provider id instead.
+  emailLogs: defineTable({
+    template: v.string(),
+    category: emailCategory,
+    to: v.string(),
+    subject: v.string(),
+    status: emailStatus,
+    mode: v.union(v.literal("live"), v.literal("dry-run")),
+    order_id: v.union(v.id("orders"), v.null()),
+    // Dedupe key: `${template}:${orderId}` for order mail, otherwise
+    // `${template}:${recipient}` — see `convex/emails/enqueue.ts`.
+    dedupe_ref: v.string(),
+    // Rendered template inputs. Deliberately untyped: each template owns the
+    // shape of its own payload and coerces defensively when rendering.
+    data: v.record(v.string(), v.any()),
+    html: v.optional(v.string()),
+    text: v.optional(v.string()),
+    error: v.optional(v.string()),
+    reply_to: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    provider_message_id: v.optional(v.string()),
+    // Dry-run only: the one-time code an auth email carries, stored when
+    // EMAIL_DRY_RUN_LOG_CODES="true" so a developer can complete a flow.
+    dry_run_code: v.optional(v.string()),
+    attempt: v.number(),
+    sent_at: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_template", ["template"])
+    .index("by_dedupe", ["dedupe_ref"])
+    .index("by_provider_id", ["provider_message_id"])
+    .index("by_order", ["order_id"]),
+
+  // Recipients we must stop emailing (hard bounces, complaints, manual opt
+  // out). Checked on every enqueue; admins can remove an entry.
+  suppressedEmails: defineTable({
+    email: v.string(),
+    reason: v.string(),
+    source: v.string(),
+    actor_id: v.optional(v.id("users")),
+  }).index("by_email", ["email"]),
+
+  // Svix delivery ids already applied, so a resent webhook is a no-op.
+  webhook_events: defineTable({
+    svix_id: v.string(),
+    event_type: v.string(),
+    provider_message_id: v.optional(v.string()),
+  }).index("by_svix_id", ["svix_id"]),
 });

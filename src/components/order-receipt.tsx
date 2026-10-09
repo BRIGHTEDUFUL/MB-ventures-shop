@@ -14,7 +14,7 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
       </div>
       <p className="mt-4 text-sm text-muted-foreground">
         Received {new Date(o.created_at).toLocaleString()} ·{" "}
-        {o.fulfillment === "pickup" ? "Circle pickup" : "Courier delivery"}
+        {o.fulfillment === "pickup" ? "Abelenkpe pickup" : "Courier delivery"}
       </p>
       <div className="my-6 flex flex-wrap gap-3">
         <span className="rounded-full bg-secondary px-4 py-2 text-xs capitalize">
@@ -31,7 +31,7 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
             : "Your Mobile Money reference awaits manual staff confirmation."
           : "Pay cash when the courier arrives."}
         {o.fulfillment === "pickup"
-          ? " Please wait until your order is ready before visiting Circle."
+          ? " Please wait until your order is ready before visiting the shop."
           : ""}
       </p>
       <table className="spec-table">
@@ -89,7 +89,7 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
         </Button>
       </div>
       <p className="mt-6 text-xs text-muted-foreground">
-        MB Ventures GH · Circle Commercial Area, Accra, Ghana
+        MB Ventures GH · Abelenkpe taxi rank, Accra, Ghana
       </p>
     </section>
   );

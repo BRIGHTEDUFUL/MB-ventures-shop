@@ -126,7 +126,7 @@ function ProductPage() {
           </p>
           <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             <MapPin className="size-4" />
-            Pickup at Circle, Accra
+            Pickup at Abelenkpe, Accra
           </p>
           <div className="mt-7 flex gap-4">
             <Quantity value={quantity} onChange={setQuantity} />
@@ -214,8 +214,9 @@ function ProductPage() {
               Delivery, pickup & returns
             </summary>
             <p className="mt-4 text-sm text-muted-foreground">
-              Delivery across Ghana or collection from the Circle shop. Report damaged or incorrect
-              goods promptly. Contact our shop for product-specific returns and warranty conditions.
+              Delivery across Ghana or collection from the Abelenkpe shop. Report damaged or
+              incorrect goods promptly. Contact our shop for product-specific returns and warranty
+              conditions.
             </p>
           </details>
         </div>

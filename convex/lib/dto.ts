@@ -82,6 +82,8 @@ export type Order = {
   total: number;
   items: OrderItem[];
   created_at: string;
+  /** Set when delivery mail to the customer bounced or was complained about. */
+  needs_attention: string | null;
 };
 
 export type HistoryEntry = { status: string; note: string; created_at: string };
@@ -153,6 +155,7 @@ export const orderDTO = (order: Doc<"orders">): Order => ({
   total: order.total,
   items: order.items,
   created_at: new Date(order._creationTime).toISOString(),
+  needs_attention: order.needs_attention ?? null,
 });
 
 export const receiptDTO = (order: Doc<"orders">, history: Doc<"order_history">[]): Receipt => ({

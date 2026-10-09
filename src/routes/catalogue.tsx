@@ -125,7 +125,7 @@ function Catalogue() {
       <h1 className="page-title">{title}</h1>
       <p className="page-lead">Desks, chairs and everyday technology for your workspace.</p>
       <p className="mt-4 text-xs text-muted-foreground">
-        Sample catalogue. Prices and availability will be confirmed by the Circle shop before
+        Sample catalogue. Prices and availability will be confirmed by the Abelenkpe shop before
         ordering opens.
       </p>
       <div className="toolbar">

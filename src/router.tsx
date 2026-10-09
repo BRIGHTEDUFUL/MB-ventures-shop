@@ -24,7 +24,14 @@ export const getRouter = () => {
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
     Wrap: ({ children }: { children: React.ReactNode }) => (
-      <ConvexAuthProvider client={convexQueryClient.convexClient}>{children}</ConvexAuthProvider>
+      // shouldHandleCode: Convex Auth reserves `?code=` for OAuth callbacks and
+      // strips it from the URL before React renders. Password reset uses the
+      // same param (`/account?code=…`), so the built-in handler would eat the
+      // one-time code and leave the new-password form with nothing to submit.
+      // This shop signs in with email and password only, so nothing else needs it.
+      <ConvexAuthProvider client={convexQueryClient.convexClient} shouldHandleCode={false}>
+        {children}
+      </ConvexAuthProvider>
     ),
   });
 

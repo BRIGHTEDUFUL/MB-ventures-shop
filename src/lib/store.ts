@@ -83,7 +83,7 @@ export const delivery = (
         ? settings.greater_fee
         : settings.nationwide_fee;
 export const zones = [
-  { id: "central", name: "Accra Central & Circle", time: "Same day or next day" },
+  { id: "central", name: "Accra Central & Abelenkpe", time: "Same day or next day" },
   { id: "greater", name: "Greater Accra", time: "1–2 business days" },
   { id: "nationwide", name: "Nationwide", time: "2–4 business days" },
 ];

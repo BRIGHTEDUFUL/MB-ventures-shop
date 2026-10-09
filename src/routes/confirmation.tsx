@@ -24,7 +24,7 @@ function Confirmation() {
     <div className="page-content wrap">
       <h1 className="page-title">Thank you for your order.</h1>
       <p className="page-lead mb-8">
-        Keep your reference handy. Our Circle shop team will handle the next steps.
+        Keep your reference handy. Our Abelenkpe shop team will handle the next steps.
       </p>
       {order ? (
         <OrderReceipt order={order} />

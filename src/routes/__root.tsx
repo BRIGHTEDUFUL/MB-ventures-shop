@@ -85,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "MB Ventures GH | Workspace store in Accra" },
       {
         name: "description",
-        content: "Desks, chairs and computer accessories from the Circle shop in Accra.",
+        content: "Desks, chairs and computer accessories from the Abelenkpe shop in Accra.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

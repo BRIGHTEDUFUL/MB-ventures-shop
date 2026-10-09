@@ -24,6 +24,7 @@ const ACTION_LABEL: Record<string, string> = {
   "role.grant": "Team",
   "role.change": "Team",
   "role.revoke": "Team",
+  "email.unsuppress": "Email",
 };
 
 function ActivityPage() {
@@ -34,7 +35,7 @@ function ActivityPage() {
       <h2 className="page-title">Activity</h2>
       <p className="page-lead">
         Who changed what, newest first. Order timelines live on each order page; this covers the
-        catalogue, stock, settings and team.
+        catalogue, stock, settings, team and email delivery.
       </p>
 
       <div className="mt-6">

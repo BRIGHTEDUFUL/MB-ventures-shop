@@ -13,6 +13,7 @@ import {
 } from "./lib/rules";
 import { recordStockChange } from "./inventory";
 import { validators } from "./schema";
+import { notifyOrderPlaced, notifyOrderUpdated } from "./emails/orderTriggers";
 
 const checkoutArgs = {
   customer_name: v.string(),
@@ -147,6 +148,11 @@ export const place = mutation({
 
     const order = await ctx.db.get(orderId);
     if (order === null) throw new Error("Order could not be saved.");
+
+    // Notifications only: a failure here is swallowed inside
+    // `scheduleEmail`, so the order itself always commits.
+    await notifyOrderPlaced(ctx, order);
+
     return orderDTO(order);
   },
 });
@@ -280,6 +286,9 @@ export const staffUpdate = mutation({
     const problem = validateStatusChange(order, args.status, args.payment);
     if (problem !== null) throw new ConvexError({ message: problem });
 
+    const previousStatus = order.status;
+    const previousPayment = order.payment_status;
+
     if (order.status !== "cancelled" && args.status === "cancelled") {
       for (const line of order.items) {
         const product = await ctx.db
@@ -308,6 +317,16 @@ export const staffUpdate = mutation({
       note: note === "" ? `Payment: ${args.payment}` : `Payment: ${args.payment} · ${note}`,
       actor_id: actorId,
     });
+
+    const updated = await ctx.db.get(orderId);
+    if (updated !== null) {
+      await notifyOrderUpdated(ctx, updated, {
+        previousStatus,
+        previousPayment,
+        note,
+        actorId,
+      });
+    }
 
     return { ok: true };
   },

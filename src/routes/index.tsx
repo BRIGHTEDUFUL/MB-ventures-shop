@@ -19,8 +19,8 @@ import { images } from "@/lib/store-images";
 export const Route = createFileRoute("/")({
   head: () =>
     pageHead(
-      "Workspace gear, from Circle to your desk",
-      "Shop desks, office chairs and everyday technology with delivery across Ghana and Circle pickup.",
+      "Workspace gear, from Abelenkpe to your desk",
+      "Shop desks, office chairs and everyday technology with delivery across Ghana and Abelenkpe pickup.",
     ),
   loader: ({ context }) => context.queryClient.ensureQueryData(storeQuery),
   component: Index,
@@ -49,7 +49,7 @@ function Index() {
           fetchPriority="high"
         />
         <div className="hero-content">
-          <p className="eyebrow !mb-4 !mt-0">MB Ventures GH · Circle, Accra</p>
+          <p className="eyebrow !mb-4 !mt-0">MB Ventures GH · Abelenkpe, Accra</p>
           <h1>{settings.hero_title}</h1>
           <p>{settings.hero_subtitle}</p>
           <div className="hero-ctas">
@@ -60,7 +60,7 @@ function Index() {
             </Button>
             <Button asChild variant="outline" className="hero-secondary">
               <Link to="/$page" params={{ page: "delivery" }}>
-                Visit our Circle shop
+                Visit our Abelenkpe shop
               </Link>
             </Button>
           </div>
@@ -146,7 +146,7 @@ function Index() {
         <div className="hero-facts">
           <span>
             <MapPin className="size-3" />
-            Pickup at Circle
+            Pickup at Abelenkpe
           </span>
           <span>
             <Truck className="size-3" />
@@ -157,7 +157,7 @@ function Index() {
       <div className="wrap">
         <section className="trust-strip" aria-label="Store assurances">
           {[
-            { icon: MapPin, title: "A real shop at Circle", text: "Visit us in Accra" },
+            { icon: MapPin, title: "A real shop at Abelenkpe", text: "Visit us in Accra" },
             { icon: Truck, title: "Delivery across Ghana", text: "Accra, Tema and beyond" },
             { icon: ShieldCheck, title: "Store warranty", text: "Support from our shop" },
             { icon: Wallet, title: "Pay your way", text: "Mobile Money or cash on delivery" },
@@ -217,7 +217,7 @@ function Index() {
             </h2>
             <p>
               Start with a desk and chair. Add the tools you use every day. Put your workspace
-              together with help from our Circle shop.
+              together with help from our Abelenkpe shop.
             </p>
             <div className="mt-6 divide-y divide-border">
               {rail.slice(0, 3).map((p) => (
@@ -250,16 +250,15 @@ function Index() {
           <div>
             <p className="eyebrow text-muted-foreground">From online to in-store</p>
             <h2 className="mt-4 text-3xl">
-              Your Circle shop.
+              Your Abelenkpe shop.
               <br />
               Now closer to your doorstep.
             </h2>
           </div>
           <div>
             <p className="text-sm leading-7 text-muted-foreground">
-              Collect your order at Circle Commercial Area, Accra, or have it delivered to your
-              door. Our shop team handles your order and confirms every Mobile Money payment
-              personally.
+              Collect your order at Abelenkpe taxi rank, Accra, or have it delivered to your door.
+              Our shop team handles your order and confirms every Mobile Money payment personally.
             </p>
             <Link
               to="/$page"

@@ -99,7 +99,7 @@ export function remainingForFreeDelivery(freeThreshold: number, subtotal: number
 
 /** Returns the user-facing message, or `null` when the payload is valid. */
 export function validateCheckout(input: CheckoutInput, settings: FeeSettings): string | null {
-  if (!settings.ordering_enabled) return "Ordering is not open yet. Contact the Circle shop.";
+  if (!settings.ordering_enabled) return "Ordering is not open yet. Contact the Abelenkpe shop.";
 
   if (
     input.customer_name.trim().length < 2 ||

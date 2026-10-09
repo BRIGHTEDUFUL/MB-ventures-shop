@@ -158,7 +158,7 @@ export function PageError() {
   return (
     <div className="page-content wrap">
       <h1 className="page-title">The store could not load</h1>
-      <p className="page-lead">Please refresh the page or contact the Circle shop.</p>
+      <p className="page-lead">Please refresh the page or contact the Abelenkpe shop.</p>
       <Button className="mt-6" onClick={() => window.location.reload()}>
         Refresh page
       </Button>

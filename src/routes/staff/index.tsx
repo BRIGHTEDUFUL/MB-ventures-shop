@@ -28,7 +28,7 @@ function Dashboard() {
       <h2 className="page-title">Dashboard</h2>
       <p className="page-lead">Everything happening in the shop today.</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="Orders today"
           value={orders.today}
@@ -53,7 +53,10 @@ function Dashboard() {
         />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      {/* `grid-cols-1` keeps the column at `minmax(0,1fr)` below `lg` — a bare
+          `grid` sizes its track to max-content, and a long order row would drag
+          the whole page sideways on a phone. */}
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
           <Panel
             title="Latest orders"
@@ -78,7 +81,7 @@ function Dashboard() {
                         <span className="block font-mono text-sm font-semibold">{o.reference}</span>
                         <span className="block truncate text-xs text-muted-foreground">
                           {o.customer_name} ·{" "}
-                          {o.fulfillment === "pickup" ? "Circle pickup" : o.address}
+                          {o.fulfillment === "pickup" ? "Abelenkpe pickup" : o.address}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">

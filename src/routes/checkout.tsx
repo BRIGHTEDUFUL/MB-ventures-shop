@@ -21,7 +21,7 @@ export const Route = createFileRoute("/checkout")({
   head: () =>
     pageHead(
       "Checkout",
-      "Delivery or Circle pickup. Mobile Money confirmed manually, or cash on courier arrival.",
+      "Delivery or Abelenkpe pickup. Mobile Money confirmed manually, or cash on courier arrival.",
     ),
   component: Checkout,
 });
@@ -189,7 +189,7 @@ function Checkout() {
                         },
                         {
                           id: "pickup" as const,
-                          title: "Circle in-store pickup",
+                          title: "Abelenkpe in-store pickup",
                           text: "Collection only · Mobile Money required",
                         },
                       ].map((o) => (
@@ -240,7 +240,7 @@ function Checkout() {
                 )}
                 {step === 2 && (
                   <>
-                    <div className="grid gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <label className="solid-panel cursor-pointer">
                         <input
                           type="radio"
@@ -406,7 +406,7 @@ function Checkout() {
                 <span>{money(cart.subtotal, true)}</span>
               </div>
               <div className="summary-row">
-                <span>{form.fulfillment === "pickup" ? "Circle pickup" : "Delivery"}</span>
+                <span>{form.fulfillment === "pickup" ? "Abelenkpe pickup" : "Delivery"}</span>
                 <span>{fee ? money(fee, true) : "Free"}</span>
               </div>
               <div className="summary-row summary-total">

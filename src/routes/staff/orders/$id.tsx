@@ -84,6 +84,7 @@ function OrderView({
   const update = useConvexMutation(api.orders.staffUpdate);
   const addNote = useConvexMutation(api.orders.staffNote);
   const fixContact = useConvexMutation(api.orders.staffFixContact);
+  const clearAttention = useConvexMutation(api.emails.clearAttention);
 
   const saveUpdate = async () => {
     if (
@@ -147,6 +148,24 @@ function OrderView({
   return (
     <div>
       <BackLink />
+      {order.needs_attention ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
+          <p>{order.needs_attention}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void clearAttention({ id: order.id })
+                .then(() => toast.success("Alert dismissed"))
+                .catch((err: unknown) =>
+                  toast.error(errorMessage(err, "Alert could not be cleared.")),
+                );
+            }}
+          >
+            Dismiss
+          </Button>
+        </div>
+      ) : null}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="page-title">{order.reference}</h2>
@@ -409,7 +428,7 @@ function OrderView({
                   </dt>
                   <dd>
                     {order.fulfillment === "pickup" ? (
-                      "Circle pickup"
+                      "Abelenkpe pickup"
                     ) : (
                       <>
                         {order.address}

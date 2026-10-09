@@ -14,8 +14,10 @@ const NEXT_ROUTES = ["/checkout", "/cart", "/track"] as const;
 type NextRoute = (typeof NEXT_ROUTES)[number];
 
 export const Route = createFileRoute("/account")({
-  validateSearch: (s: Record<string, unknown>): { next?: string } =>
-    typeof s["next"] === "string" ? { next: s["next"] } : {},
+  validateSearch: (s: Record<string, unknown>): { next?: string; code?: string } => ({
+    ...(typeof s["next"] === "string" ? { next: s["next"] } : {}),
+    ...(typeof s["code"] === "string" ? { code: s["code"] } : {}),
+  }),
   head: () =>
     pageHead(
       "Your account",
@@ -25,7 +27,7 @@ export const Route = createFileRoute("/account")({
 });
 
 function Account() {
-  const { next } = Route.useSearch(),
+  const { next, code } = Route.useSearch(),
     navigate = useNavigate();
   const { session, loading, profile } = useSession(),
     { signIn, signOut } = useAuthActions();
@@ -36,7 +38,11 @@ function Account() {
     [phone, setPhone] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [address, setAddress] = useState("");
+    [address, setAddress] = useState(""),
+    [forgot, setForgot] = useState(false),
+    [resetSent, setResetSent] = useState(false),
+    [newPassword, setNewPassword] = useState(""),
+    [confirmPassword, setConfirmPassword] = useState("");
   const redirectTo: NextRoute | "" = (NEXT_ROUTES as readonly string[]).includes(next ?? "")
     ? (next as NextRoute)
     : "";
@@ -70,6 +76,55 @@ function Account() {
               "Your account could not be created. Check your details and try again.",
             )
           : errorMessage(err, "Email or password is incorrect."),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Step one of the reset: ask for the address, hand it to the password
+   * provider, which queues `auth-reset-password` through the shared pipeline.
+   */
+  const submitForgot = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await signIn("password", { flow: "reset", email });
+      setResetSent(true);
+    } catch (err) {
+      setError(errorMessage(err, "We could not start a password reset for that address."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Step two: the emailed link lands on `/account?code=…`, so the code comes
+   * from the URL while the address and new password are typed in. Convex Auth
+   * needs the address to know which account the code belongs to.
+   */
+  const submitNewPassword = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError("The two passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await signIn("password", {
+        flow: "reset-verification",
+        email,
+        code: code ?? "",
+        newPassword,
+      });
+      toast.success("Password updated. You are signed in.");
+      navigate({ to: redirectTo || "/" });
+    } catch (err) {
+      setError(
+        errorMessage(err, "That reset link has expired or is no longer valid. Request a new one."),
       );
     } finally {
       setBusy(false);
@@ -169,6 +224,123 @@ function Account() {
             <Button>Save</Button>
           </form>
         </>
+      ) : code ? (
+        <div className="mt-8 max-w-md">
+          <p className="mb-4 text-sm text-muted-foreground">
+            Choose a new password. The one-time code from your email is already attached to this
+            page, so all we need is the address it was sent to.
+          </p>
+          <form className="space-y-4" onSubmit={submitNewPassword}>
+            <label>
+              Email
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <label>
+              New password
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </label>
+            <label>
+              Confirm new password
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </label>
+            {newPassword && confirmPassword && newPassword !== confirmPassword ? (
+              <p role="alert" className="text-sm text-destructive">
+                The two passwords do not match.
+              </p>
+            ) : null}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <Button disabled={busy} className="w-full">
+              {busy ? "Please wait…" : "Set new password"}
+            </Button>
+          </form>
+          <Button variant="link" className="mt-4 px-0" onClick={() => navigate({ to: "/" })}>
+            Back to the store
+          </Button>
+        </div>
+      ) : forgot ? (
+        <div className="mt-8 max-w-md">
+          {resetSent ? (
+            <>
+              <p className="font-semibold">Check your email</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                If <span className="font-medium">{email}</span> has an account, a reset link is on
+                its way. The link is valid for 60 minutes.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-5"
+                onClick={() => {
+                  setForgot(false);
+                  setResetSent(false);
+                  setError("");
+                }}
+              >
+                Back to sign in
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Enter the address you signed up with and we will email you a link to set a new
+                password.
+              </p>
+              <form className="space-y-4" onSubmit={submitForgot}>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+                {error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {error}
+                  </p>
+                )}
+                <Button disabled={busy} className="w-full">
+                  {busy ? "Sending…" : "Email me a reset link"}
+                </Button>
+              </form>
+              <Button
+                variant="link"
+                className="mt-4 px-0"
+                onClick={() => {
+                  setForgot(false);
+                  setError("");
+                }}
+              >
+                Back to sign in
+              </Button>
+            </>
+          )}
+        </div>
       ) : (
         <div className="mt-8 max-w-md">
           {redirectTo && (
@@ -244,6 +416,20 @@ function Account() {
           >
             {signup ? "Already have an account? Sign in" : "New here? Create an account"}
           </Button>
+          {!signup && (
+            <div>
+              <Button
+                variant="link"
+                className="px-0"
+                onClick={() => {
+                  setForgot(true);
+                  setError("");
+                }}
+              >
+                Forgot your password?
+              </Button>
+            </div>
+          )}
           <p className="mt-4 text-xs text-muted-foreground">
             An account is needed to place an order — your cart stays saved while you sign in. Staff
             access is granted separately by the store owner.

@@ -30,7 +30,7 @@ const checkout = (overrides: Partial<CheckoutInput> = {}): CheckoutInput => ({
   customer_name: "Ama Mensah",
   phone: "0241234567",
   email: "ama@example.com",
-  address: "12 Ring Road East, Circle, Accra",
+  address: "12 Abelenkpe Taxi Rank Road, Accra",
   fulfillment: "delivery",
   zone: "central",
   payment_method: "momo",
@@ -138,7 +138,7 @@ describe("deliveryFee — what checkout charges and the cart estimates", () => {
 describe("validateCheckout — the server-side order gate", () => {
   it("blocks ordering while the switch is off", () => {
     expect(validateCheckout(checkout(), { ...feeSettings, ordering_enabled: false })).toBe(
-      "Ordering is not open yet. Contact the Circle shop.",
+      "Ordering is not open yet. Contact the Abelenkpe shop.",
     );
   });
 

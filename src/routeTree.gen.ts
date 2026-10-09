@@ -18,6 +18,8 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ConfirmationRouteImport } from './routes/confirmation'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as TrackRouteImport } from './routes/track'
+import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
+import { Route as DevEmailPreviewRouteImport } from './routes/dev/email-preview'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as StaffActivityRouteImport } from './routes/staff/activity'
@@ -74,6 +76,16 @@ const StaffRoute = StaffRouteImport.update({
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
   path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEmailsRoute = AdminEmailsRouteImport.update({
+  id: '/admin/emails',
+  path: '/admin/emails',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevEmailPreviewRoute = DevEmailPreviewRouteImport.update({
+  id: '/dev/email-preview',
+  path: '/dev/email-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductSlugRoute = ProductSlugRouteImport.update({
@@ -147,6 +159,8 @@ export interface FileRoutesByFullPath {
   '/confirmation': typeof ConfirmationRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
+  '/admin/emails': typeof AdminEmailsRoute
+  '/dev/email-preview': typeof DevEmailPreviewRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
   '/staff/categories': typeof StaffCategoriesRoute
@@ -169,6 +183,8 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
   '/track': typeof TrackRoute
+  '/admin/emails': typeof AdminEmailsRoute
+  '/dev/email-preview': typeof DevEmailPreviewRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
   '/staff/categories': typeof StaffCategoriesRoute
@@ -193,6 +209,8 @@ export interface FileRoutesById {
   '/confirmation': typeof ConfirmationRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
+  '/admin/emails': typeof AdminEmailsRoute
+  '/dev/email-preview': typeof DevEmailPreviewRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
   '/staff/categories': typeof StaffCategoriesRoute
@@ -218,6 +236,8 @@ export interface FileRouteTypes {
     | '/confirmation'
     | '/staff'
     | '/track'
+    | '/admin/emails'
+    | '/dev/email-preview'
     | '/product/$slug'
     | '/staff/activity'
     | '/staff/categories'
@@ -240,6 +260,8 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/confirmation'
     | '/track'
+    | '/admin/emails'
+    | '/dev/email-preview'
     | '/product/$slug'
     | '/staff/activity'
     | '/staff/categories'
@@ -263,6 +285,8 @@ export interface FileRouteTypes {
     | '/confirmation'
     | '/staff'
     | '/track'
+    | '/admin/emails'
+    | '/dev/email-preview'
     | '/product/$slug'
     | '/staff/activity'
     | '/staff/categories'
@@ -287,6 +311,8 @@ export interface RootRouteChildren {
   ConfirmationRoute: typeof ConfirmationRoute
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
+  AdminEmailsRoute: typeof AdminEmailsRoute
+  DevEmailPreviewRoute: typeof DevEmailPreviewRoute
   ProductSlugRoute: typeof ProductSlugRoute
 }
 
@@ -353,6 +379,20 @@ declare module '@tanstack/react-router' {
       path: '/track'
       fullPath: '/track'
       preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/emails': {
+      id: '/admin/emails'
+      path: '/admin/emails'
+      fullPath: '/admin/emails'
+      preLoaderRoute: typeof AdminEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/email-preview': {
+      id: '/dev/email-preview'
+      path: '/dev/email-preview'
+      fullPath: '/dev/email-preview'
+      preLoaderRoute: typeof DevEmailPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/product/$slug': {
@@ -482,6 +522,8 @@ const rootRouteChildren: RootRouteChildren = {
   ConfirmationRoute: ConfirmationRoute,
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
+  AdminEmailsRoute: AdminEmailsRoute,
+  DevEmailPreviewRoute: DevEmailPreviewRoute,
   ProductSlugRoute: ProductSlugRoute,
 }
 export const routeTree = rootRouteImport

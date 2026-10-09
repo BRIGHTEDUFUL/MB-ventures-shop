@@ -105,8 +105,8 @@ function OrdersList() {
                     </span>
                     <span className="mt-1 block truncate text-sm text-muted-foreground">
                       {o.customer_name} · {o.phone} ·{" "}
-                      {o.fulfillment === "pickup" ? "Circle pickup" : `${o.address} (${o.zone})`} ·{" "}
-                      {o.items.length} item{o.items.length === 1 ? "" : "s"}
+                      {o.fulfillment === "pickup" ? "Abelenkpe pickup" : `${o.address} (${o.zone})`}{" "}
+                      · {o.items.length} item{o.items.length === 1 ? "" : "s"}
                     </span>
                   </span>
                   <span className="text-right">

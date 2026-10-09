@@ -1,8 +1,9 @@
 # Circle Shop Express
 
-Storefront for **MB Ventures GH** — a workspace and computer accessories shop at Circle, Accra.
+Storefront for **MB Ventures GH** — a workspace and computer accessories shop at Abelenkpe taxi
+rank, Accra.
 Shoppers browse desks, office chairs, accessories, mounts and streaming gear in Ghana cedis, and
-order for delivery across Ghana or collection from the Circle shop.
+order for delivery across Ghana or collection from the Abelenkpe shop.
 
 ## Payments and fulfilment
 
@@ -12,19 +13,19 @@ Two payment methods only — there is no pay-at-counter option:
    reference, which staff verify manually before the order advances.
 2. **Cash on Delivery** when the courier arrives.
 
-**In-store pickup** at the Circle shop is available as a fulfilment option alongside the three
-delivery zones (Accra Central, Greater Accra, Nationwide).
+**In-store pickup** at the Abelenkpe taxi rank shop is available as a fulfilment option alongside
+the three delivery zones (Accra Central, Greater Accra, Nationwide).
 
 ## Stack
 
-| Layer | Choice |
-| --- | --- |
-| Framework | TanStack Start (file routes, SSR) on React 19 + Vite |
-| Styling | Tailwind CSS v4, shadcn/ui, Archivo / Public Sans / IBM Plex Mono |
-| Data | Convex — schema, queries/mutations, file storage |
-| Auth | Convex Auth, email + password only (no OAuth, no email verification) |
-| Client data | TanStack Query via `@convex-dev/react-query` |
-| Tests | Vitest + Testing Library |
+| Layer       | Choice                                                               |
+| ----------- | -------------------------------------------------------------------- |
+| Framework   | TanStack Start (file routes, SSR) on React 19 + Vite                 |
+| Styling     | Tailwind CSS v4, shadcn/ui, Archivo / Public Sans / IBM Plex Mono    |
+| Data        | Convex — schema, queries/mutations, file storage                     |
+| Auth        | Convex Auth, email + password only (no OAuth, no email verification) |
+| Client data | TanStack Query via `@convex-dev/react-query`                         |
+| Tests       | Vitest + Testing Library                                             |
 
 ## Development
 
@@ -44,6 +45,10 @@ npm run lint      # eslint
 npm test          # vitest
 npm run format    # prettier
 ```
+
+Environment variables are documented in `.env.example` — copy it to `.env.local`
+(gitignored) and fill in what you need. Email runs in **dry-run** until Resend is
+configured, so no credentials are required to develop; see `docs/EMAIL.md`.
 
 ## Architecture notes
 
@@ -69,4 +74,6 @@ See `AGENTS.md` for seed and staff-grant commands.
 ## Status
 
 `roadmap.md` tracks what is verified and what is outstanding, including the last verification run.
+`docs/PROGRESS.md` is the running record of recent work, and `docs/EMAIL.md` documents the email
+pipeline, which runs in dry-run until Resend is configured.
 `CONVEX_PLAN.md` records the Supabase → Convex migration.
