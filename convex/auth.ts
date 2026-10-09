@@ -1,10 +1,9 @@
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth, type EmailConfig } from "@convex-dev/auth/server";
-import { ConvexError, v } from "convex/values";
+import { ConvexError } from "convex/values";
 import { normalizePhone } from "./lib/rules";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
-import { action } from "./_generated/server";
 
 /**
  * Email + password only (no OAuth, no email verification — confirmed decision
@@ -94,37 +93,4 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       },
     }),
   ],
-});
-
-/**
- * Request a password reset email.
- * Public action - anyone can request a reset for any email.
- */
-export const requestPasswordReset = action({
-  args: {
-    email: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const email = args.email.trim().toLowerCase();
-    if (!email || !email.includes("@")) {
-      throw new ConvexError({ message: "Enter a valid email address." });
-    }
-
-    // Use the Password provider's reset functionality
-    // This will trigger the resetEmailProvider defined above
-    try {
-      await signIn(ctx, {
-        provider: "password",
-        params: {
-          email,
-          flow: "reset",
-        },
-      });
-    } catch (error) {
-      // Don't reveal whether the email exists or not (security best practice)
-      // Just say the email was sent
-    }
-
-    return { ok: true, message: "If an account exists with that email, a reset link has been sent." };
-  },
 });
