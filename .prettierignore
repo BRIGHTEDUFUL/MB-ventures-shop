@@ -9,3 +9,4 @@ routeTree.gen.ts
 convex/_generated
 test-results
 playwright-report
+.agents

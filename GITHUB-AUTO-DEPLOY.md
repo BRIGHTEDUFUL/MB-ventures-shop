@@ -28,20 +28,21 @@
 
 **Required Secrets:**
 
-| Secret Name | Value | Example |
-|-------------|-------|---------|
-| `HOSTINGER_HOST` | Your server IP | `123.456.78.90` |
-| `HOSTINGER_USERNAME` | SSH username | `root` or `u123456789` |
-| `HOSTINGER_PASSWORD` | SSH password | `YourSecurePassword123!` |
+| Secret Name          | Value          | Example                  |
+| -------------------- | -------------- | ------------------------ |
+| `HOSTINGER_HOST`     | Your server IP | `123.456.78.90`          |
+| `HOSTINGER_USERNAME` | SSH username   | `root` or `u123456789`   |
+| `HOSTINGER_PASSWORD` | SSH password   | `YourSecurePassword123!` |
 
 **Optional Secrets:**
 
-| Secret Name | Value | Default | Notes |
-|-------------|-------|---------|-------|
-| `HOSTINGER_PORT` | SSH port | `22` | Only if different |
+| Secret Name      | Value        | Default                    | Notes             |
+| ---------------- | ------------ | -------------------------- | ----------------- |
+| `HOSTINGER_PORT` | SSH port     | `22`                       | Only if different |
 | `HOSTINGER_PATH` | Project path | `/var/www/mbventuresghana` | Only if different |
 
 **How to add each secret:**
+
 1. Click **"New repository secret"**
 2. Enter **Name** (e.g., `HOSTINGER_HOST`)
 3. Enter **Value** (e.g., `123.456.78.90`)
@@ -53,6 +54,7 @@
 ### Step 3: First-Time Server Setup
 
 **Connect to Hostinger via SSH:**
+
 ```bash
 # Via hPanel Web Terminal (easiest)
 # OR via SSH client:
@@ -60,6 +62,7 @@ ssh root@YOUR_SERVER_IP
 ```
 
 **Run initial setup:**
+
 ```bash
 # Create project directory
 sudo mkdir -p /var/www/mbventuresghana
@@ -94,6 +97,7 @@ pm2 startup
 **Triggers:** Automatically on every push to `main` branch
 
 **What it does:**
+
 1. ✅ Pulls latest code from GitHub
 2. ✅ Installs dependencies
 3. ✅ Sets up environment
@@ -102,6 +106,7 @@ pm2 startup
 6. ✅ Shows deployment status
 
 **How to use:**
+
 ```bash
 # Just push to main branch
 git add .
@@ -120,6 +125,7 @@ git push origin main
 **Triggers:** Manually via GitHub Actions UI
 
 **What it does:**
+
 1. 🛑 Stops PM2
 2. 🗑️ Removes old files (node_modules, build cache)
 3. 🔄 Fresh git pull
@@ -128,6 +134,7 @@ git push origin main
 6. 🚀 Starts PM2
 
 **How to use:**
+
 1. Go to: https://github.com/BRIGHTEDUFUL/MB-ventures-shop/actions
 2. Click **"Clean Deployment to Hostinger"**
 3. Click **"Run workflow"**
@@ -135,6 +142,7 @@ git push origin main
 5. Click **"Run workflow"** button
 
 **When to use clean deployment:**
+
 - After major dependency updates
 - When build cache causes issues
 - For completely fresh start
@@ -153,6 +161,7 @@ git push origin main
 ### Check Server Status
 
 **Via hPanel Web Terminal:**
+
 ```bash
 cd /var/www/mbventuresghana
 pm2 status
@@ -160,6 +169,7 @@ pm2 logs mb-ventures-gh --lines 50
 ```
 
 **Check if site is live:**
+
 ```bash
 curl http://localhost:3000
 # Or visit: https://mbventuresghana.com
@@ -172,6 +182,7 @@ curl http://localhost:3000
 ### Deployment Failed
 
 **Check GitHub Actions logs:**
+
 1. Go to Actions tab
 2. Click on failed workflow
 3. Read error messages
@@ -179,23 +190,28 @@ curl http://localhost:3000
 **Common issues:**
 
 **1. SSH Connection Failed**
+
 - ✅ Verify `HOSTINGER_HOST` is correct
 - ✅ Check `HOSTINGER_USERNAME` and `HOSTINGER_PASSWORD`
 - ✅ Ensure SSH is enabled in hPanel
 
 **2. Git Pull Failed**
+
 - ✅ Repository must be public OR
 - ✅ Add deploy key to GitHub (Advanced)
 
 **3. Build Failed**
+
 - ✅ Check Node.js version on server: `node --version`
 - ✅ Should be 20.x or higher
 - ✅ Run clean deployment
 
 **4. PM2 Not Found**
+
 - ✅ Install PM2: `npm install -g pm2`
 
 **5. Permission Denied**
+
 - ✅ Use `sudo` if needed
 - ✅ Check directory ownership: `ls -la /var/www/`
 - ✅ Fix permissions: `sudo chown -R $USER:$USER /var/www/mbventuresghana`
@@ -205,6 +221,7 @@ curl http://localhost:3000
 ## 🎬 Quick Start Workflow
 
 ### First Time Setup:
+
 1. ✅ Add GitHub secrets (Step 2 above)
 2. ✅ Run first-time server setup (Step 3 above)
 3. ✅ Test automatic deployment:
@@ -215,12 +232,14 @@ curl http://localhost:3000
 4. ✅ Watch Actions tab for deployment status
 
 ### Daily Workflow:
+
 1. Make code changes
 2. Commit and push to main
 3. GitHub automatically deploys!
 4. Check site: https://mbventuresghana.com
 
 ### When Issues Occur:
+
 1. Run **Clean Deployment** from Actions
 2. Check PM2 logs on server
 3. Verify environment variables
@@ -230,17 +249,20 @@ curl http://localhost:3000
 ## 🔐 Security Notes
 
 **GitHub Secrets:**
+
 - ✅ Never commit passwords to code
 - ✅ GitHub secrets are encrypted
 - ✅ Only visible to you and Actions
 - ✅ Can be updated anytime
 
 **SSH Security:**
+
 - ✅ Use strong password
 - ✅ Consider SSH key authentication (advanced)
 - ✅ Restrict SSH access in Hostinger firewall
 
 **Server Security:**
+
 - ✅ Keep Node.js updated
 - ✅ Set up UFW firewall
 - ✅ Enable Fail2ban (optional)
@@ -253,6 +275,7 @@ curl http://localhost:3000
 **Instead of password, use SSH key:**
 
 1. **Generate key locally:**
+
    ```bash
    ssh-keygen -t rsa -b 4096 -C "deploy@mbventuresghana.com"
    ```
@@ -298,6 +321,7 @@ After setup, verify:
 ## 🆘 Support
 
 **If deployment fails:**
+
 1. Check GitHub Actions logs
 2. SSH into server and check:
    ```bash

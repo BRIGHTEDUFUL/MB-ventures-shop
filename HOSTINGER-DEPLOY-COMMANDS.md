@@ -11,6 +11,7 @@ cd /var/www/mbventuresghana
 ```
 
 **If directory doesn't exist, create it:**
+
 ```bash
 sudo mkdir -p /var/www
 cd /var/www
@@ -36,11 +37,13 @@ bash scripts/setup-production-env.sh
 ```
 
 **Verify environment file was created:**
+
 ```bash
 cat .env.local
 ```
 
 **Should show:**
+
 - VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 - VITE_SITE_URL=https://mbventuresghana.com
 - WEB3FORMS_ACCESS_KEY=c8395fed...
@@ -67,6 +70,7 @@ npm run build
 **This may take 1-2 minutes...**
 
 **Verify build succeeded:**
+
 ```bash
 ls -la .output/
 ```
@@ -86,6 +90,7 @@ npm install -g pm2
 ## Step 7: Start Application
 
 **First time:**
+
 ```bash
 pm2 start ecosystem.config.js
 pm2 save
@@ -93,6 +98,7 @@ pm2 startup
 ```
 
 **If already running:**
+
 ```bash
 pm2 restart mb-ventures-gh
 ```
@@ -107,6 +113,7 @@ pm2 logs mb-ventures-gh --lines 50
 ```
 
 **Should see:**
+
 - Status: `online`
 - Logs showing server started on port 3000
 
@@ -146,11 +153,13 @@ pm2 monit
 ## Troubleshooting
 
 **App not starting?**
+
 ```bash
 pm2 logs mb-ventures-gh --err --lines 100
 ```
 
 **Port 3000 already in use?**
+
 ```bash
 sudo lsof -i :3000
 # Kill the process if needed
@@ -158,6 +167,7 @@ sudo kill -9 [PID]
 ```
 
 **Build errors?**
+
 ```bash
 rm -rf node_modules .output
 npm install
@@ -165,6 +175,7 @@ npm run build
 ```
 
 **Environment variables not set?**
+
 ```bash
 cat .env.local
 # If empty or wrong, run setup again:
@@ -196,6 +207,7 @@ server {
 ```
 
 Enable and restart:
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/mbventuresghana.com /etc/nginx/sites-enabled/
 sudo nginx -t

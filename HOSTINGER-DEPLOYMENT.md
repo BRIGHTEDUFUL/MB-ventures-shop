@@ -3,7 +3,7 @@
 **Project:** MB Ventures GH - Circle Shop Express  
 **Domain:** mbventuresghana.com  
 **Target:** Hostinger VPS/Cloud Hosting  
-**Date:** October 9, 2026  
+**Date:** October 9, 2026
 
 ---
 
@@ -25,6 +25,7 @@ Before deploying to Hostinger:
 ### Step 1: Choose Hosting Plan
 
 **Recommended for this project:**
+
 - **VPS Hosting** (for Node.js support) or
 - **Cloud Hosting** (easier Node.js setup)
 - **Minimum:** 2GB RAM, 2 CPU cores
@@ -38,13 +39,14 @@ Before deploying to Hostinger:
    - Enter: `mbventuresghana.com`
 
 2. **DNS Configuration:**
+
    ```
    Type: A Record
    Name: @ (or mbventuresghana.com)
    Points to: [Your VPS IP]
    TTL: 3600
-   
-   Type: A Record  
+
+   Type: A Record
    Name: www
    Points to: [Your VPS IP]
    TTL: 3600
@@ -166,22 +168,24 @@ nano ecosystem.config.js
 
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'mbventuresghana',
-    script: '.output/server/index.mjs',
-    instances: 'max',
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3000,
-      HOST: '0.0.0.0'
+  apps: [
+    {
+      name: "mbventuresghana",
+      script: ".output/server/index.mjs",
+      instances: "max",
+      exec_mode: "cluster",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3000,
+        HOST: "0.0.0.0",
+      },
+      error_file: "./logs/err.log",
+      out_file: "./logs/out.log",
+      log_file: "./logs/combined.log",
+      time: true,
+      max_memory_restart: "500M",
     },
-    error_file: './logs/err.log',
-    out_file: './logs/out.log',
-    log_file: './logs/combined.log',
-    time: true,
-    max_memory_restart: '500M'
-  }]
+  ],
 };
 ```
 
@@ -233,7 +237,7 @@ server {
     listen 80;
     listen [::]:80;
     server_name mbventuresghana.com www.mbventuresghana.com;
-    
+
     return 301 https://mbventuresghana.com$request_uri;
 }
 
@@ -259,8 +263,8 @@ server {
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript 
-               application/x-javascript application/xml+rss 
+    gzip_types text/plain text/css text/xml text/javascript
+               application/x-javascript application/xml+rss
                application/json application/javascript;
 
     # Client max body size (for image uploads)
@@ -377,6 +381,7 @@ npx convex env list --prod
 ```
 
 Should show:
+
 ```
 WEB3FORMS_ACCESS_KEY: c8395fed-...
 SITE_URL: https://mbventuresghana.com
@@ -422,6 +427,7 @@ curl -I https://mbventuresghana.com
 ### 4. Browser Test
 
 Open in browser:
+
 - ✅ https://mbventuresghana.com
 - ✅ https://www.mbventuresghana.com (redirects to non-www)
 - ✅ http://mbventuresghana.com (redirects to HTTPS)
@@ -514,6 +520,7 @@ pm2 logs mbventuresghana --lines 20
 ```
 
 Make executable and use:
+
 ```bash
 chmod +x deploy.sh
 ./deploy.sh
@@ -724,18 +731,22 @@ dpkg-reconfigure --priority=low unattended-upgrades
 ## 📞 Support Contacts
 
 **Domain & Hosting:**
+
 - Hostinger Support: https://www.hostinger.com/contact
 - Login: https://hpanel.hostinger.com
 
 **Email Service:**
+
 - Web3Forms: https://web3forms.com
 - Dashboard: https://web3forms.com/dashboard
 
 **Backend (Convex):**
+
 - Dashboard: https://dashboard.convex.dev
 - Deployment: prod:necessary-newt-861
 
 **Repository:**
+
 - GitHub: https://github.com/BRIGHTEDUFUL/MB-ventures-shop
 
 ---

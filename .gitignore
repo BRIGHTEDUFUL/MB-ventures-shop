@@ -42,3 +42,6 @@ docs/PRODUCTION-CREDENTIALS.md
 *.njsproj
 *.sln
 *.sw?
+
+# Raw product assets
+Products/

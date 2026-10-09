@@ -2,7 +2,7 @@
 
 **Status:** ✅ Production Ready  
 **Domain:** https://mbventuresghana.com  
-**Email:** info@mbventuresghana.com  
+**Email:** info@mbventuresghana.com
 
 ---
 
@@ -55,7 +55,7 @@ npm run dev
 # Check email configuration
 node scripts/verify-email-config.mjs
 
-# Check production configuration  
+# Check production configuration
 node scripts/verify-production-config.mjs
 
 # Run all tests

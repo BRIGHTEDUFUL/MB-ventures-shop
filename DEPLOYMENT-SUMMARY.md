@@ -10,11 +10,13 @@
 ## ✅ Completed Setup
 
 ### 1. GitHub Repository
+
 - **URL:** https://github.com/BRIGHTEDUFUL/MB-ventures-shop
 - **Latest Commit:** 5072d8a
 - **Status:** All updates pushed ✅
 
 ### 2. Backend (Convex Cloud)
+
 - **Production URL:** https://necessary-newt-861.convex.cloud
 - **Dashboard:** https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
 - **Status:** Deployed and configured ✅
@@ -22,6 +24,7 @@
 - **Environment Variables:** Set correctly ✅
 
 ### 3. Documentation Created
+
 - ✅ `HOSTINGER-DEPLOYMENT.md` - Full deployment guide
 - ✅ `docs/HOSTINGER-SETUP-CHECKLIST.md` - Step-by-step checklist
 - ✅ `docs/PRODUCTION-CONFIG.md` - Configuration reference
@@ -39,6 +42,7 @@
 **Location:** `docs/PRODUCTION-CREDENTIALS.md` (local file, not in git)
 
 ### Admin Account
+
 ```
 Email: admin@mbventuresghana.com
 Password: MBVentures2025!Admin#Secure
@@ -46,6 +50,7 @@ Role: Administrator (Full Access)
 ```
 
 ### Staff Account
+
 ```
 Email: staff@mbventuresghana.com
 Password: MBVentures2025!Staff#Secure
@@ -61,18 +66,21 @@ Role: Staff (Standard Permissions)
 ### For Hostinger VPS Deployment:
 
 **1. SSH into server:**
+
 ```bash
 ssh root@[your-server-ip]
 cd /var/www/mbventuresghana
 ```
 
 **2. Set up environment:**
+
 ```bash
 chmod +x scripts/setup-production-env.sh
 bash scripts/setup-production-env.sh
 ```
 
 **3. Build and start:**
+
 ```bash
 npm install
 npm run build
@@ -81,16 +89,19 @@ pm2 save
 ```
 
 **4. Configure Nginx + SSL:**
+
 ```bash
 # See HOSTINGER-DEPLOYMENT.md for detailed steps
 certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
 ```
 
 **5. Create accounts:**
+
 - Register at https://mbventuresghana.com/auth/signup
 - Grant privileges: `npx convex run users:grantStaff '{"email":"admin@mbventuresghana.com"}' --prod`
 
 **6. Configure store:**
+
 - Sign in as admin
 - Navigate to /staff
 - Set Mobile Money details
@@ -101,6 +112,7 @@ certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
 ## 📋 Environment Variables
 
 ### On Hostinger VPS (.env.local)
+
 ```env
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_SITE_URL=https://mbventuresghana.com
@@ -112,6 +124,7 @@ EMAIL_DAILY_LIMIT=250
 ```
 
 ### On Convex Production (Already Set)
+
 - ✅ WEB3FORMS_ACCESS_KEY
 - ✅ EMAIL_REPLY_TO
 - ✅ ADMIN_ALERT_EMAIL
@@ -125,6 +138,7 @@ EMAIL_DAILY_LIMIT=250
 ## ✅ Pre-Deployment Checklist
 
 ### Code & Backend
+
 - [x] All code pushed to GitHub
 - [x] Backend deployed to Convex production
 - [x] All functions validated
@@ -133,6 +147,7 @@ EMAIL_DAILY_LIMIT=250
 - [x] No TypeScript errors
 
 ### Documentation
+
 - [x] Deployment guide created
 - [x] Setup checklist prepared
 - [x] Credentials documented
@@ -140,6 +155,7 @@ EMAIL_DAILY_LIMIT=250
 - [x] Troubleshooting guides included
 
 ### Configuration
+
 - [x] Production domain configured
 - [x] Environment variables set
 - [x] PM2 configuration ready
@@ -151,12 +167,16 @@ EMAIL_DAILY_LIMIT=250
 ## 🚀 Post-Deployment Steps
 
 ### 1. Register Accounts (5 minutes)
+
 Navigate to https://mbventuresghana.com/auth/signup and register:
+
 - Admin account (admin@mbventuresghana.com)
 - Staff account (staff@mbventuresghana.com)
 
 ### 2. Grant Privileges (2 minutes)
+
 From your local machine:
+
 ```powershell
 # Windows PowerShell
 npx convex run users:grantStaff '{\"email\":\"admin@mbventuresghana.com\"}' --prod
@@ -164,17 +184,21 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 ```
 
 ### 3. Verify Access (3 minutes)
+
 - Admin: Sign in → /staff → Check Mobile Money settings visible
 - Staff: Sign in → /staff → Check Mobile Money settings NOT visible
 
 ### 4. Configure Store (10 minutes)
+
 As admin at /staff:
+
 - Settings → Store: Set store details
 - Settings → Delivery: Verify zones and fees
 - Settings → Mobile Money: **Set wallet details**
 - Settings → Store: **Enable ordering**
 
 ### 5. Test Order Flow (10 minutes)
+
 - Place test order as customer
 - Process as staff
 - Verify emails sent
@@ -185,6 +209,7 @@ As admin at /staff:
 ## 🎨 Features Ready for Production
 
 ### Customer Features
+
 - ✅ Product browsing with categories
 - ✅ Shopping cart with persistence
 - ✅ User registration and authentication
@@ -197,6 +222,7 @@ As admin at /staff:
 - ✅ Mobile responsive (320px - 1280px)
 
 ### Staff Features
+
 - ✅ Order management dashboard
 - ✅ Product catalogue editing
 - ✅ Inventory adjustments
@@ -207,6 +233,7 @@ As admin at /staff:
 - ✅ Settings management
 
 ### Admin Features (Additional)
+
 - ✅ Mobile Money wallet configuration
 - ✅ Delivery fee management
 - ✅ Staff role management
@@ -215,6 +242,7 @@ As admin at /staff:
 - ✅ System-wide settings
 
 ### Backend Features
+
 - ✅ Email system (Web3Forms)
 - ✅ Stock reservation (prevents overselling)
 - ✅ Automatic restock on cancellation
@@ -229,7 +257,9 @@ As admin at /staff:
 ## 🔍 Monitoring & Maintenance
 
 ### Convex Dashboard
+
 Monitor at: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+
 - Function logs (real-time)
 - Email queue (emailLogs table)
 - Order activity
@@ -237,6 +267,7 @@ Monitor at: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
 - User registrations
 
 ### Server Monitoring
+
 ```bash
 # PM2 status
 pm2 status
@@ -256,6 +287,7 @@ free -m
 ## 📞 Support & Resources
 
 ### Documentation
+
 - **Full Deployment:** `HOSTINGER-DEPLOYMENT.md`
 - **Setup Checklist:** `docs/HOSTINGER-SETUP-CHECKLIST.md`
 - **Configuration:** `docs/PRODUCTION-CONFIG.md`
@@ -263,10 +295,12 @@ free -m
 - **Credentials:** `docs/PRODUCTION-CREDENTIALS.md` (local only)
 
 ### Dashboards
+
 - **Convex:** https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
 - **GitHub:** https://github.com/BRIGHTEDUFUL/MB-ventures-shop
 
 ### Scripts
+
 - **Environment Setup:** `scripts/setup-production-env.sh`
 - **Account Creation:** `scripts/create-production-accounts.mjs`
 - **Deployment:** `scripts/deploy-hostinger.sh`
@@ -276,6 +310,7 @@ free -m
 ## 🎯 Success Criteria
 
 ### Deployment Complete When:
+
 - [ ] Site loads at https://mbventuresghana.com
 - [ ] SSL certificate valid (HTTPS)
 - [ ] Admin account works (can access /staff)
@@ -288,6 +323,7 @@ free -m
 - [ ] Page load < 3 seconds
 
 ### Business Ready When:
+
 - [ ] Mobile Money details configured
 - [ ] Inventory counts verified
 - [ ] Delivery zones confirmed
@@ -324,7 +360,7 @@ free -m
 **Backend:** ✅ Live on Convex Cloud  
 **Frontend:** ⏸️ Awaiting build and PM2 start on Hostinger  
 **Accounts:** ⏸️ Awaiting registration at /auth/signup  
-**Configuration:** ⏸️ Awaiting admin setup at /staff  
+**Configuration:** ⏸️ Awaiting admin setup at /staff
 
 **Next Action:** Follow quick start guide above to complete deployment
 

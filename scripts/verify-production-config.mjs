@@ -10,7 +10,7 @@ console.log("🏭 Production Configuration Verification\n");
 console.log("Domain: https://mbventuresghana.com");
 console.log("Email: info@mbventuresghana.com");
 console.log("Deployment: prod:necessary-newt-861\n");
-console.log("=" .repeat(60));
+console.log("=".repeat(60));
 
 const requiredVars = [
   "SITE_URL",
@@ -107,10 +107,10 @@ console.log("\n📄 Frontend Environment (.env.production):\n");
 try {
   const fs = await import("fs");
   const envProd = fs.readFileSync(".env.production", "utf8");
-  
+
   const hasConvexUrl = envProd.includes("VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud");
   const hasSiteUrl = envProd.includes("VITE_SITE_URL=https://mbventuresghana.com");
-  
+
   console.log(hasConvexUrl ? "✅" : "❌", "VITE_CONVEX_URL points to production");
   console.log(hasSiteUrl ? "✅" : "❌", "VITE_SITE_URL set to mbventuresghana.com");
 } catch (error) {
@@ -127,27 +127,27 @@ if (allSet && allChecksPassed) {
   console.log("✅ Email configured: info@mbventuresghana.com");
   console.log("✅ Web3Forms key set for email delivery");
   console.log("✅ Email system ready for live operation\n");
-  
+
   console.log("Next Steps:");
   console.log("1. Deploy backend: npx convex deploy --prod");
   console.log("2. Build frontend: npm run build");
   console.log("3. Deploy frontend to hosting");
   console.log("4. Point DNS to hosting");
   console.log("5. Test: https://mbventuresghana.com\n");
-  
+
   process.exit(0);
 } else {
   console.log("\n⚠️  Production Configuration: INCOMPLETE\n");
-  
+
   if (!allSet) {
     console.log("❌ Some environment variables are missing");
     console.log("   Run the commands in docs/PRODUCTION-CONFIG.md\n");
   }
-  
+
   if (!allChecksPassed) {
     console.log("❌ Some configuration values are incorrect");
     console.log("   Review docs/PRODUCTION-CONFIG.md for expected values\n");
   }
-  
+
   process.exit(1);
 }

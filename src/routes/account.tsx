@@ -13,13 +13,19 @@ import { AuthFrame } from "@/components/auth-frame";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const NEXT_ROUTES = ["/checkout", "/cart", "/track"] as const;
+const NEXT_ROUTES = ["/checkout", "/cart", "/track", "/staff", "/admin/emails"] as const;
 type NextRoute = (typeof NEXT_ROUTES)[number];
 
+const isNextRoute = (path?: string): path is NextRoute =>
+  typeof path === "string" && (NEXT_ROUTES as readonly string[]).includes(path);
+
 export const Route = createFileRoute("/account")({
-  validateSearch: (s: Record<string, unknown>): { next?: string; code?: string } => ({
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { next?: string; code?: string; signup?: string } => ({
     ...(typeof s["next"] === "string" ? { next: s["next"] } : {}),
     ...(typeof s["code"] === "string" ? { code: s["code"] } : {}),
+    ...(typeof s["signup"] === "string" ? { signup: s["signup"] } : {}),
   }),
   head: () =>
     pageHead(
@@ -44,11 +50,12 @@ function FieldError({ children }: { children: ReactNode }) {
 }
 
 function Account() {
-  const { next, code } = Route.useSearch(),
+  const { next, code, signup: signupParam } = Route.useSearch(),
     navigate = useNavigate();
   const { session, loading, profile } = useSession(),
     { signIn, signOut } = useAuthActions();
-  const [signup, setSignup] = useState(false),
+  const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
+  const [signup, setSignup] = useState(signupParam === "true"),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [name, setName] = useState(""),
@@ -60,15 +67,13 @@ function Account() {
     [resetSent, setResetSent] = useState(false),
     [newPassword, setNewPassword] = useState(""),
     [confirmPassword, setConfirmPassword] = useState("");
-  const redirectTo: NextRoute | "" = (NEXT_ROUTES as readonly string[]).includes(next ?? "")
-    ? (next as NextRoute)
-    : "";
+  const redirectTo = isNextRoute(next) ? next : "";
   const orders = useQuery({ ...convexQueryOptions(api.orders.mine, {}), enabled: !!session });
   const addresses = useQuery({ ...convexQueryOptions(api.addresses.list, {}), enabled: !!session });
   const addAddress = useConvexMutation(api.addresses.add);
   const removeAddress = useConvexMutation(api.addresses.remove);
 
-  // Send the visitor back to where they came from (e.g. /checkout) once signed in.
+  // Send the visitor back to where they came from (e.g. /checkout or /staff) once signed in.
   useEffect(() => {
     if (!loading && session && redirectTo) navigate({ to: redirectTo });
   }, [loading, session, redirectTo, navigate]);
@@ -177,6 +182,11 @@ function Account() {
         }
       >
         <div className="mt-6 flex flex-wrap gap-4">
+          {role.data === "admin" || role.data === "staff" ? (
+            <Button asChild>
+              <Link to="/staff">Store staff hub</Link>
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             onClick={() => {

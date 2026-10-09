@@ -55,13 +55,13 @@ WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 
 ### Required Secrets:
 
-| Secret Name | Value |
-|-------------|-------|
-| `HOSTINGER_HOST` | [YOUR_SERVER_IP] |
-| `HOSTINGER_USERNAME` | [YOUR_SSH_USERNAME] |
-| `HOSTINGER_PASSWORD` | [YOUR_SSH_PASSWORD] |
-| `HOSTINGER_PATH` | `/var/www/mbventuresghana` |
-| `HOSTINGER_PORT` | `22` |
+| Secret Name          | Value                      |
+| -------------------- | -------------------------- |
+| `HOSTINGER_HOST`     | [YOUR_SERVER_IP]           |
+| `HOSTINGER_USERNAME` | [YOUR_SSH_USERNAME]        |
+| `HOSTINGER_PASSWORD` | [YOUR_SSH_PASSWORD]        |
+| `HOSTINGER_PATH`     | `/var/www/mbventuresghana` |
+| `HOSTINGER_PORT`     | `22`                       |
 
 ---
 
@@ -175,11 +175,13 @@ curl https://mbventuresghana.com
 ## 📊 ALL CREDENTIALS SUMMARY
 
 ### Production URLs:
+
 - **Site**: https://mbventuresghana.com
 - **Convex Backend**: https://necessary-newt-861.convex.cloud
 - **Convex Dashboard**: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
 
 ### Email:
+
 - **Provider**: Web3Forms
 - **Access Key**: `c8395fed-e25e-4350-a914-df8e592f5920`
 - **Reply To**: info@mbventuresghana.com
@@ -187,14 +189,17 @@ curl https://mbventuresghana.com
 - **Daily Limit**: 250 emails
 
 ### Admin Account (Register First):
+
 - **Email**: admin@mbventuresghana.com
 - **Password**: MBVentures2025!Admin#Secure
 
 ### Staff Account (Register First):
+
 - **Email**: staff@mbventuresghana.com
 - **Password**: MBVentures2025!Staff#Secure
 
 ### After Registration, Grant Privileges:
+
 ```powershell
 # Windows PowerShell
 npx convex run users:grantStaff '{\"email\":\"admin@mbventuresghana.com\"}' --prod
@@ -215,7 +220,7 @@ npx convex run users:grantStaff '{"email":"staff@mbventuresghana.com"}' --prod
 - [ ] PM2 running (`pm2 status` shows online)
 - [ ] Site loads at https://mbventuresghana.com
 - [ ] Admin account registered
-- [ ] Staff account registered  
+- [ ] Staff account registered
 - [ ] Privileges granted (can access /staff)
 - [ ] Mobile Money wallet configured
 - [ ] Ordering enabled

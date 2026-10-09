@@ -105,6 +105,7 @@ cat .env.local
 ```
 
 **Should show:**
+
 ```
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
@@ -147,23 +148,26 @@ pm2 status
 **File name:** `.env.hostinger` (in repo) → `.env.local` (on server)  
 **Size:** ~340 bytes  
 **Format:** Plain text, UTF-8  
-**Line endings:** LF (Unix) or CRLF (Windows) - both work  
+**Line endings:** LF (Unix) or CRLF (Windows) - both work
 
 ---
 
 ## 🔍 Troubleshooting
 
 **File not found after upload?**
+
 - Check you're in correct directory: `/var/www/mbventuresghana`
 - File might be hidden (starts with dot)
 - In File Manager, enable "Show hidden files"
 
 **Variables not loading?**
+
 - Ensure file is named exactly `.env.local` (with the dot)
 - Check file has no extra extensions (not `.env.local.txt`)
 - Verify file permissions: `chmod 600 .env.local`
 
 **Build fails?**
+
 - Make sure `.env.local` exists before running `npm run build`
 - Check file content is correct: `cat .env.local`
 
@@ -171,11 +175,11 @@ pm2 status
 
 ## 🎯 Quick Reference
 
-| Method | Difficulty | Best For |
-|--------|-----------|----------|
-| hPanel File Manager | ⭐ Easy | First-time users |
-| FTP/SFTP | ⭐⭐ Medium | Familiar with FTP |
-| Terminal/SSH | ⭐⭐⭐ Advanced | Command-line users |
+| Method              | Difficulty      | Best For           |
+| ------------------- | --------------- | ------------------ |
+| hPanel File Manager | ⭐ Easy         | First-time users   |
+| FTP/SFTP            | ⭐⭐ Medium     | Familiar with FTP  |
+| Terminal/SSH        | ⭐⭐⭐ Advanced | Command-line users |
 
 ---
 

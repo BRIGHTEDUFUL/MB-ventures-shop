@@ -255,13 +255,18 @@ export const setPermission = mutation({
 });
 
 /**
- * Grants staff access to an existing account.
+ * Grants staff or admin access to an existing account.
  * Run once per account: `npx convex run users:grantStaff '{"email":"owner@example.com"}'`
+ * Or specify role: `npx convex run users:grantStaff '{"email":"staff@example.com","role":"staff"}'`
  */
 export const grantStaff = internalMutation({
-  args: { email: v.string() },
+  args: {
+    email: v.string(),
+    role: v.optional(v.union(v.literal("admin"), v.literal("staff"))),
+  },
   handler: async (ctx, args) => {
     const email = args.email.trim().toLowerCase();
+    const role = args.role ?? "admin";
     const user = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", email))
@@ -275,10 +280,15 @@ export const grantStaff = internalMutation({
       .query("user_roles")
       .withIndex("by_user", (q) => q.eq("user_id", user._id))
       .first();
-    if (existing !== null) return { ok: true, role: existing.role };
+    if (existing !== null) {
+      if (args.role && existing.role !== role) {
+        await ctx.db.patch(existing._id, { role });
+      }
+      return { ok: true, role: args.role ?? existing.role };
+    }
 
-    await ctx.db.insert("user_roles", { user_id: user._id, role: "admin" });
-    return { ok: true, role: "admin" as const };
+    await ctx.db.insert("user_roles", { user_id: user._id, role });
+    return { ok: true, role };
   },
 });
 
@@ -302,7 +312,8 @@ export const updateProfile = mutation({
 
     if (args.name !== undefined) {
       const name = args.name.trim();
-      if (name.length < 2) throw new ConvexError({ message: "Name must be at least 2 characters." });
+      if (name.length < 2)
+        throw new ConvexError({ message: "Name must be at least 2 characters." });
       if (name.length > 100) throw new ConvexError({ message: "Name is too long." });
       updates.name = name;
     }
@@ -386,7 +397,8 @@ export const adminUpdateUser = mutation({
 
     if (args.name !== undefined) {
       const name = args.name.trim();
-      if (name.length < 2) throw new ConvexError({ message: "Name must be at least 2 characters." });
+      if (name.length < 2)
+        throw new ConvexError({ message: "Name must be at least 2 characters." });
       if (name.length > 100) throw new ConvexError({ message: "Name is too long." });
       updates.name = name;
     }
@@ -472,8 +484,7 @@ export const allUsers = query({
     // Filter by search term if provided
     if (search !== "") {
       users = users.filter((user) => {
-        const haystack =
-          `${user.email ?? ""} ${user.name ?? ""} ${user.phone ?? ""}`.toLowerCase();
+        const haystack = `${user.email ?? ""} ${user.name ?? ""} ${user.phone ?? ""}`.toLowerCase();
         return haystack.includes(search);
       });
     }

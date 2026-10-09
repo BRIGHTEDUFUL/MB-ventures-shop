@@ -193,14 +193,14 @@ export const saveProduct = mutation({
       gallery: args.gallery,
       specs: args.specs,
       verified: args.verified,
-      // `undefined` clears the field, so deleting a code on the form really
+      // `null` clears the field, so deleting a code on the form really
       // removes it rather than leaving a stale value behind.
-      sku: sku === "" ? undefined : sku,
-      barcode: barcode === "" ? undefined : barcode,
-      supplier: supplier === "" ? undefined : supplier,
-      cost_price: costPrice ?? undefined,
-      reorder_point: reorderPoint ?? undefined,
-      reorder_quantity: reorderQuantity ?? undefined,
+      sku: sku === "" ? null : sku,
+      barcode: barcode === "" ? null : barcode,
+      supplier: supplier === "" ? null : supplier,
+      cost_price: costPrice ?? null,
+      reorder_point: reorderPoint ?? null,
+      reorder_quantity: reorderQuantity ?? null,
     };
 
     if (args.isNew) {

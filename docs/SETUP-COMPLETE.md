@@ -1,7 +1,7 @@
 # Setup Complete ✅
 
 **Date:** October 9, 2026  
-**Status:** Production-Ready  
+**Status:** Production-Ready
 
 ---
 
@@ -14,28 +14,30 @@ The following items that were previously "blocked on external information" are n
 **Status:** Live and configured for both development and production
 
 **What was needed:**
+
 - Web3Forms access key
 - Email addresses for reply-to and admin alerts
 - Production domain for email links
 
 **What is now configured:**
 
-| Environment | Deployment | Configuration |
-|-------------|------------|---------------|
-| **Development** | `dev:stoic-elephant-714` | ✅ Live mode |
-| | Access Key | `c8395fed-e25e-4350-a914-df8e592f5920` |
-| | Site URL | `http://localhost:5173` |
-| | Reply-to | `info@mbventuresghana.com` |
-| | Admin alerts | `info@mbventuresghana.com` |
-| | Daily limit | 100 emails |
-| **Production** | `prod:necessary-newt-861` | ✅ Live mode |
-| | Access Key | `c8395fed-e25e-4350-a914-df8e592f5920` |
-| | Site URL | `https://mbventuresghana.com` |
-| | Reply-to | `info@mbventuresghana.com` |
-| | Admin alerts | `info@mbventuresghana.com` |
-| | Daily limit | 250 emails |
+| Environment     | Deployment                | Configuration                          |
+| --------------- | ------------------------- | -------------------------------------- |
+| **Development** | `dev:stoic-elephant-714`  | ✅ Live mode                           |
+|                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
+|                 | Site URL                  | `http://localhost:5173`                |
+|                 | Reply-to                  | `info@mbventuresghana.com`             |
+|                 | Admin alerts              | `info@mbventuresghana.com`             |
+|                 | Daily limit               | 100 emails                             |
+| **Production**  | `prod:necessary-newt-861` | ✅ Live mode                           |
+|                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
+|                 | Site URL                  | `https://mbventuresghana.com`          |
+|                 | Reply-to                  | `info@mbventuresghana.com`             |
+|                 | Admin alerts              | `info@mbventuresghana.com`             |
+|                 | Daily limit               | 250 emails                             |
 
 **Email templates ready:**
+
 - Order confirmations
 - Payment confirmations
 - Delivery notifications
@@ -44,11 +46,13 @@ The following items that were previously "blocked on external information" are n
 - Admin alerts
 
 **Documentation:**
+
 - `docs/EMAIL.md` - Complete email system guide
 - `docs/EMAIL-SETUP-STATUS.md` - Setup status and testing guide
 - `scripts/verify-email-config.mjs` - Verification script
 
 **Verification:**
+
 ```powershell
 # Check dev configuration
 node scripts/verify-email-config.mjs
@@ -66,6 +70,7 @@ npx convex env get EMAIL_REPLY_TO --prod
 **Status:** Fully configured
 
 **What was needed:**
+
 - Real production domain
 - Domain configured in all environment variables
 - Domain used in canonical URLs, Open Graph tags, email links
@@ -75,17 +80,20 @@ npx convex env get EMAIL_REPLY_TO --prod
 **Domain:** `https://mbventuresghana.com`
 
 **Frontend (.env.production):**
+
 ```env
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_SITE_URL=https://mbventuresghana.com
 ```
 
 **Backend (Convex production env):**
+
 ```
 SITE_URL=https://mbventuresghana.com
 ```
 
 **Where domain is used:**
+
 1. **SEO Metadata:**
    - Canonical URLs: `<link rel="canonical" href="https://mbventuresghana.com/..." />`
    - Open Graph: `<meta property="og:url" content="https://mbventuresghana.com/..." />`
@@ -106,10 +114,12 @@ SITE_URL=https://mbventuresghana.com
    - Store information includes website URL
 
 **Documentation:**
+
 - `docs/PRODUCTION-CONFIG.md` - Complete production setup guide
 - `scripts/verify-production-config.mjs` - Configuration verification
 
 **Verification:**
+
 ```powershell
 # Verify all production configuration
 node scripts/verify-production-config.mjs
@@ -122,6 +132,7 @@ node scripts/verify-production-config.mjs
 **Status:** Ready for configuration via admin panel
 
 **What was needed:**
+
 - Mobile Money recipient wallet details
 - Wallet name and number for payment verification
 
@@ -144,6 +155,7 @@ The system is fully prepared to accept MoMo recipient details:
 5. Toggle "Accept orders" to ON
 
 **Security:**
+
 - Only users with `admin` role can set MoMo details
 - Only users with `catalogue.ordering` permission can toggle ordering
 - Changes are logged in activity feed
@@ -161,6 +173,7 @@ All contact information is properly set throughout the application:
 **Domain:** `https://mbventuresghana.com`
 
 **Where configured:**
+
 - Store settings seed data (`convex/seed.ts`)
 - Email templates (all 12 templates)
 - Footer contact section
@@ -174,6 +187,7 @@ All contact information is properly set throughout the application:
 All prerequisites for production deployment are complete:
 
 ### Backend (Convex)
+
 - ✅ Production deployment exists: `prod:necessary-newt-861`
 - ✅ All environment variables set
 - ✅ Auth keys configured (JWT_PRIVATE_KEY, JWKS)
@@ -181,12 +195,14 @@ All prerequisites for production deployment are complete:
 - ✅ Domain configured
 
 ### Frontend
+
 - ✅ `.env.production` configured
 - ✅ Production Convex URL set
 - ✅ Domain configured for SEO
 - ✅ Build process tested and working
 
 ### Features Complete
+
 - ✅ Storefront (browse, search, cart, checkout)
 - ✅ Order management and tracking
 - ✅ Staff console with inventory management
@@ -197,6 +213,7 @@ All prerequisites for production deployment are complete:
 - ✅ Inventory reservations and ledger
 
 ### Quality Gates
+
 - ✅ TypeScript: `npx tsc --noEmit` - 0 errors
 - ✅ Linting: `npm run lint` - 0 errors
 - ✅ Tests: `npm test` - 186/186 passing
@@ -212,23 +229,29 @@ All prerequisites for production deployment are complete:
 Ready to deploy when you want to go live:
 
 ### 1. Deploy Backend
+
 ```powershell
 npx convex deploy --prod
 ```
 
 ### 2. Build Frontend
+
 ```powershell
 npm run build
 ```
+
 Output will be in `.output/` directory
 
 ### 3. Deploy to Hosting
+
 Upload `.output/` contents to your hosting provider (Netlify, Vercel, Cloudflare Pages, etc.)
 
 ### 4. Configure DNS
+
 Point `mbventuresghana.com` DNS to your hosting provider
 
 ### 5. Verify Deployment
+
 ```powershell
 # Test the live site
 curl https://mbventuresghana.com
@@ -239,6 +262,7 @@ curl https://mbventuresghana.com
 ```
 
 ### 6. Enable Ordering
+
 1. Sign in as admin at `/staff`
 2. Navigate to Customization → Mobile Money
 3. Enter real wallet details
@@ -246,12 +270,14 @@ curl https://mbventuresghana.com
 5. Toggle "Accept orders" to ON
 
 ### 7. Seed Data (if needed)
+
 ```powershell
 # Only if starting fresh
 npx convex run seed:seed --prod
 ```
 
 ### 8. Grant Staff Access
+
 ```powershell
 # For each staff member
 npx convex run users:grantStaff '{\"email\":\"staff@example.com\"}' --prod
@@ -288,6 +314,7 @@ Only one category remains:
 ### Physical Device Testing (Non-blocking)
 
 From `MOBILE_TASKS.md` §3:
+
 - [ ] Soft-keyboard behavior on real phones
 - [ ] iOS focus zoom on physical iPhone
 - [ ] Landscape orientation testing

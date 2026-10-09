@@ -16,11 +16,17 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as CatalogueRouteImport } from './routes/catalogue'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ConfirmationRouteImport } from './routes/confirmation'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SigninRouteImport } from './routes/signin'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as TrackRouteImport } from './routes/track'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
+import { Route as AuthSigninRouteImport } from './routes/auth/signin'
+import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as DevEmailPreviewRouteImport } from './routes/dev/email-preview'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
@@ -71,9 +77,24 @@ const ConfirmationRoute = ConfirmationRouteImport.update({
   path: '/confirmation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   id: '/robots.txt',
   path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -91,9 +112,24 @@ const TrackRoute = TrackRouteImport.update({
   path: '/track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminEmailsRoute = AdminEmailsRouteImport.update({
   id: '/admin/emails',
   path: '/admin/emails',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSigninRoute = AuthSigninRouteImport.update({
+  id: '/auth/signin',
+  path: '/auth/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/auth/signup',
+  path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevEmailPreviewRoute = DevEmailPreviewRouteImport.update({
@@ -175,11 +211,16 @@ export interface FileRoutesByFullPath {
   '/catalogue': typeof CatalogueRoute
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
+  '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/signin': typeof SigninRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
   '/admin/emails': typeof AdminEmailsRoute
+  '/auth/signin': typeof AuthSigninRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
@@ -188,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/staff/health': typeof StaffHealthRoute
   '/staff/inventory': typeof StaffInventoryRoute
   '/staff/team': typeof StaffTeamRoute
+  '/admin/': typeof AdminIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/staff/orders/$id': typeof StaffOrdersIdRoute
   '/staff/products/$id': typeof StaffProductsIdRoute
@@ -203,10 +245,15 @@ export interface FileRoutesByTo {
   '/catalogue': typeof CatalogueRoute
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
+  '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/signin': typeof SigninRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/track': typeof TrackRoute
   '/admin/emails': typeof AdminEmailsRoute
+  '/auth/signin': typeof AuthSigninRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
@@ -215,6 +262,7 @@ export interface FileRoutesByTo {
   '/staff/health': typeof StaffHealthRoute
   '/staff/inventory': typeof StaffInventoryRoute
   '/staff/team': typeof StaffTeamRoute
+  '/admin': typeof AdminIndexRoute
   '/staff': typeof StaffIndexRoute
   '/staff/orders/$id': typeof StaffOrdersIdRoute
   '/staff/products/$id': typeof StaffProductsIdRoute
@@ -231,11 +279,16 @@ export interface FileRoutesById {
   '/catalogue': typeof CatalogueRoute
   '/checkout': typeof CheckoutRoute
   '/confirmation': typeof ConfirmationRoute
+  '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/signin': typeof SigninRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
   '/admin/emails': typeof AdminEmailsRoute
+  '/auth/signin': typeof AuthSigninRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
@@ -244,6 +297,7 @@ export interface FileRoutesById {
   '/staff/health': typeof StaffHealthRoute
   '/staff/inventory': typeof StaffInventoryRoute
   '/staff/team': typeof StaffTeamRoute
+  '/admin/': typeof AdminIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/staff/orders/$id': typeof StaffOrdersIdRoute
   '/staff/products/$id': typeof StaffProductsIdRoute
@@ -261,11 +315,16 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/checkout'
     | '/confirmation'
+    | '/login'
     | '/robots.txt'
+    | '/signin'
+    | '/signup'
     | '/sitemap.xml'
     | '/staff'
     | '/track'
     | '/admin/emails'
+    | '/auth/signin'
+    | '/auth/signup'
     | '/dev/email-preview'
     | '/product/$slug'
     | '/staff/activity'
@@ -274,6 +333,7 @@ export interface FileRouteTypes {
     | '/staff/health'
     | '/staff/inventory'
     | '/staff/team'
+    | '/admin/'
     | '/staff/'
     | '/staff/orders/$id'
     | '/staff/products/$id'
@@ -289,10 +349,15 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/checkout'
     | '/confirmation'
+    | '/login'
     | '/robots.txt'
+    | '/signin'
+    | '/signup'
     | '/sitemap.xml'
     | '/track'
     | '/admin/emails'
+    | '/auth/signin'
+    | '/auth/signup'
     | '/dev/email-preview'
     | '/product/$slug'
     | '/staff/activity'
@@ -301,6 +366,7 @@ export interface FileRouteTypes {
     | '/staff/health'
     | '/staff/inventory'
     | '/staff/team'
+    | '/admin'
     | '/staff'
     | '/staff/orders/$id'
     | '/staff/products/$id'
@@ -316,11 +382,16 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/checkout'
     | '/confirmation'
+    | '/login'
     | '/robots.txt'
+    | '/signin'
+    | '/signup'
     | '/sitemap.xml'
     | '/staff'
     | '/track'
     | '/admin/emails'
+    | '/auth/signin'
+    | '/auth/signup'
     | '/dev/email-preview'
     | '/product/$slug'
     | '/staff/activity'
@@ -329,6 +400,7 @@ export interface FileRouteTypes {
     | '/staff/health'
     | '/staff/inventory'
     | '/staff/team'
+    | '/admin/'
     | '/staff/'
     | '/staff/orders/$id'
     | '/staff/products/$id'
@@ -345,13 +417,19 @@ export interface RootRouteChildren {
   CatalogueRoute: typeof CatalogueRoute
   CheckoutRoute: typeof CheckoutRoute
   ConfirmationRoute: typeof ConfirmationRoute
+  LoginRoute: typeof LoginRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SigninRoute: typeof SigninRoute
+  SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
   AdminEmailsRoute: typeof AdminEmailsRoute
+  AuthSigninRoute: typeof AuthSigninRoute
+  AuthSignupRoute: typeof AuthSignupRoute
   DevEmailPreviewRoute: typeof DevEmailPreviewRoute
   ProductSlugRoute: typeof ProductSlugRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -405,11 +483,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfirmationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/robots.txt': {
       id: '/robots.txt'
       path: '/robots.txt'
       fullPath: '/robots.txt'
       preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -433,11 +532,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/emails': {
       id: '/admin/emails'
       path: '/admin/emails'
       fullPath: '/admin/emails'
       preLoaderRoute: typeof AdminEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/signin': {
+      id: '/auth/signin'
+      path: '/auth/signin'
+      fullPath: '/auth/signin'
+      preLoaderRoute: typeof AuthSigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/signup': {
+      id: '/auth/signup'
+      path: '/auth/signup'
+      fullPath: '/auth/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/email-preview': {
@@ -581,13 +701,19 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogueRoute: CatalogueRoute,
   CheckoutRoute: CheckoutRoute,
   ConfirmationRoute: ConfirmationRoute,
+  LoginRoute: LoginRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SigninRoute: SigninRoute,
+  SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
   AdminEmailsRoute: AdminEmailsRoute,
+  AuthSigninRoute: AuthSigninRoute,
+  AuthSignupRoute: AuthSignupRoute,
   DevEmailPreviewRoute: DevEmailPreviewRoute,
   ProductSlugRoute: ProductSlugRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

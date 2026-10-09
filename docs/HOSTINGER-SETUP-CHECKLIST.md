@@ -91,6 +91,7 @@ cat .env.local
 ```
 
 **Expected variables in .env.local:**
+
 - ✓ `VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud`
 - ✓ `VITE_SITE_URL=https://mbventuresghana.com`
 - ✓ `NODE_ENV=production`
@@ -111,6 +112,7 @@ npx convex env list --prod
 ```
 
 **Must show:**
+
 - ✓ WEB3FORMS_ACCESS_KEY
 - ✓ EMAIL_REPLY_TO
 - ✓ ADMIN_ALERT_EMAIL
@@ -218,7 +220,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
@@ -341,6 +343,7 @@ curl -I https://mbventuresghana.com
 **Action:** Open https://mbventuresghana.com/auth/signup in browser
 
 **Enter:**
+
 - Name: `MB Ventures Admin`
 - Email: `admin@mbventuresghana.com`
 - Phone: `+233 24 000 0001`
@@ -355,6 +358,7 @@ curl -I https://mbventuresghana.com
 **Action:** Open https://mbventuresghana.com/auth/signup in browser
 
 **Enter:**
+
 - Name: `MB Ventures Staff`
 - Email: `staff@mbventuresghana.com`
 - Phone: `+233 24 000 0002`
@@ -395,6 +399,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 **Navigation:** /staff → Settings → Store
 
 **Set:**
+
 - [x] Store name: MB Ventures GH
 - [x] Contact email: info@mbventuresghana.com
 - [x] Contact phone: +233 XX XXX XXXX
@@ -411,6 +416,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 **Navigation:** /staff → Settings → Delivery
 
 **Verify:**
+
 - [x] Central Accra zone fee
 - [x] Greater Accra zone fee
 - [x] Nationwide zone fee
@@ -426,6 +432,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 **Navigation:** /staff → Settings → Mobile Money
 
 **Set:**
+
 - [x] Recipient name (wallet owner)
 - [x] Mobile Money phone number
 - [x] Provider (MTN/Vodafone/AirtelTigo)
@@ -479,6 +486,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 ### 9.3 Test Customer Flow
 
 **As Guest:**
+
 1. [x] Browse products at https://mbventuresghana.com
 2. [x] Add items to cart
 3. [x] Create customer account
@@ -486,14 +494,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 5. [x] Receive order confirmation email
 6. [x] Track order with reference + phone
 
-**As Staff/Admin:**
-7. [x] See order in staff panel
-8. [x] Update payment status to "Confirmed"
-9. [x] Update order status to "Processing"
-10. [x] Update to "Dispatched"
-11. [x] Customer receives status update email
-12. [x] Complete order
-13. [x] Verify inventory updated correctly
+**As Staff/Admin:** 7. [x] See order in staff panel 8. [x] Update payment status to "Confirmed" 9. [x] Update order status to "Processing" 10. [x] Update to "Dispatched" 11. [x] Customer receives status update email 12. [x] Complete order 13. [x] Verify inventory updated correctly
 
 **Status:** ⏸️ Waiting for testing
 
@@ -628,20 +629,25 @@ systemctl start fail2ban
 ## Support & Documentation
 
 **Deployment Docs:**
+
 - HOSTINGER-DEPLOYMENT.md
 - docs/PRODUCTION-CONFIG.md
 - docs/BACKEND-STATUS.md
 
 **Credentials:**
+
 - docs/PRODUCTION-CREDENTIALS.md (local only, gitignored)
 
 **Convex Dashboard:**
+
 - https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
 
 **GitHub Repository:**
+
 - https://github.com/BRIGHTEDUFUL/MB-ventures-shop
 
 **Email System:**
+
 - Web3Forms dashboard (if available)
 - Admin emails: info@mbventuresghana.com
 
@@ -650,6 +656,7 @@ systemctl start fail2ban
 ## Troubleshooting
 
 ### Site Not Loading
+
 ```bash
 # Check PM2 status
 pm2 status
@@ -665,6 +672,7 @@ curl http://localhost:3000
 ```
 
 ### SSL Issues
+
 ```bash
 # Renew certificate
 certbot renew
@@ -672,6 +680,7 @@ systemctl reload nginx
 ```
 
 ### Build Errors
+
 ```bash
 cd /var/www/mbventuresghana
 rm -rf node_modules .output
@@ -681,6 +690,7 @@ pm2 restart mb-ventures-gh
 ```
 
 ### Email Not Sending
+
 - Check Convex env vars: `npx convex env list --prod`
 - Verify WEB3FORMS_ACCESS_KEY is set
 - Check email logs in Convex dashboard: Data → emailLogs table
