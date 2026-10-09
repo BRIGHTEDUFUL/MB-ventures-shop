@@ -1,0 +1,72 @@
+name: Clean Deployment to Hostinger
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "CLEAN_DEPLOY" to confirm fresh installation'
+        required: true
+        default: ''
+
+jobs:
+  clean-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "CLEAN_DEPLOY" ]; then
+            echo "❌ Deployment cancelled - confirmation required"
+            exit 1
+          fi
+          echo "✅ Clean deployment confirmed"
+          
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Clean Deploy to Hostinger
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_PORT || 22 }}
+          script: |
+            echo "🧹 Starting CLEAN deployment..."
+            
+            cd ${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}
+            
+            echo "🛑 Stopping PM2 processes..."
+            pm2 stop mb-ventures-gh || true
+            pm2 delete mb-ventures-gh || true
+            
+            echo "🗑️ Removing old files..."
+            rm -rf node_modules
+            rm -rf .output
+            rm -rf .vinxi
+            rm -rf .tanstack
+            rm -f .env.local
+            
+            echo "🔄 Pulling fresh code from GitHub..."
+            git fetch --all
+            git reset --hard origin/main
+            git pull origin main
+            
+            echo "📦 Installing dependencies (clean)..."
+            npm ci
+            
+            echo "🔧 Setting up environment..."
+            bash scripts/setup-production-env.sh
+            
+            echo "🏗️ Building application..."
+            npm run build
+            
+            echo "🚀 Starting PM2..."
+            pm2 start ecosystem.config.js
+            pm2 save
+            
+            echo "✅ Clean deployment complete!"
+            echo ""
+            pm2 status
+            echo ""
+            pm2 logs mb-ventures-gh --lines 20 --nostream

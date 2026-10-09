@@ -1,0 +1,57 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          
+      - name: Deploy to Hostinger via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
+          port: ${{ secrets.HOSTINGER_PORT || 22 }}
+          script: |
+            cd ${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}
+            
+            echo "🔄 Pulling latest changes..."
+            git pull origin main
+            
+            echo "📦 Installing dependencies..."
+            npm ci
+            
+            echo "🔧 Setting up environment..."
+            bash scripts/setup-production-env.sh
+            
+            echo "🏗️ Building application..."
+            npm run build
+            
+            echo "🚀 Restarting PM2..."
+            pm2 restart mb-ventures-gh || pm2 start ecosystem.config.js
+            pm2 save
+            
+            echo "✅ Deployment complete!"
+            pm2 status
