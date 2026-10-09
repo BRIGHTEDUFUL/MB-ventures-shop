@@ -77,6 +77,61 @@ export const adjust = mutation({
 });
 
 /**
+ * Stocktake: "I counted the shelf and there are *n*, whatever the system
+ * thinks." The only operation that writes an absolute number, so it takes no
+ * `operation_key` — the value is the intent, and repeating it is harmless
+ * (D6). Gated on `inventory.stocktake` rather than `inventory.adjust` so the
+ * owner can let someone count without letting them invent stock.
+ */
+export const count = mutation({
+  args: {
+    product_id: v.string(),
+    counted: v.number(),
+    reason: v.optional(v.string()),
+    operation_key: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requirePermission(ctx, "inventory.stocktake");
+    if (!Number.isInteger(args.counted) || args.counted < 0) {
+      throw new ConvexError({ message: "Counted stock must be a whole number of 0 or more." });
+    }
+    const reason = args.reason?.trim() || "Stocktake";
+    if (reason.length > LIMITS.reason) {
+      throw new ConvexError({ message: `Keep the reason under ${LIMITS.reason} characters.` });
+    }
+
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", args.product_id))
+      .first();
+    if (product === null) throw new ConvexError({ message: "Product not found." });
+    const before = product.stock;
+
+    const result = await applyStockChange(ctx, {
+      slug: args.product_id,
+      command: { kind: "set_on_hand", value: args.counted },
+      movement_type: "stocktake",
+      source: "attendant",
+      reason,
+      actor_id: actorId,
+      ...(args.operation_key !== undefined ? { operation_key: args.operation_key } : {}),
+    });
+
+    // Only announce a real change: a count that matches the system is still a
+    // useful result to show, but it is not an event in the feed.
+    if (!result.skipped && result.stock !== before) {
+      await logActivity(
+        ctx,
+        actorId,
+        "inventory.count",
+        `${product.name}: counted ${args.counted}, system said ${before}.`,
+      );
+    }
+    return { ok: true, stock: result.stock, changed: result.stock !== before };
+  },
+});
+
+/**
  * Undo one movement.
  *
  * Corrections are never edits: the original row keeps its numbers and stays in

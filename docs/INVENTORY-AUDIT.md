@@ -181,20 +181,20 @@ suites, `app-routing.test.tsx`.
 
 ## 5. Prioritized milestone plan
 
-| #   | Milestone                                                                                                                                                                         | Defects closed                         |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| M1  | **Audit** — this document + the reusable data-health scanner (`convex/health.ts`).                                                                                                | —                                      |
-| M2  | **Critical fixes** ✅ — `applyStockChange` choke point + the test that enforces it; typed errors; validation caps; money rounding; `version` conflicts.                           | C1(partial), H1–H4, H12, M2, M3, C12   |
-| M3  | **Permissions foundation** ✅ — permission catalogue, `requirePermission`, role defaults, per-user overrides, applied to every guarded function.                                  | C1(role defaults + overrides), H7, M13 |
-| M4  | **Stock ledger data** ✅ — backfill `reserved` / `stock_state` for existing rows (dry-run, verification report, rollback note).                                                   | C3 data                                |
-| M5  | **Product master data** — SKU/barcode/status/cost/supplier/custom fields, product editor tabs, archive instead of delete.                                                         | H11, M1, M16                           |
-| M6  | **Stock ledger ops** — receive/write-off/transfer operations, reason codes, reversal. **Reversal done** (`inventory.reverse`); receive/write-off already exist as movement types. | C4, H5, M8, M15                        |
-| M7  | **Data health page** ✅ — `/staff/health`: severity counts, findings with explanations and next steps, re-scan; Undo on the movement log.                                         | M9, M10                                |
-| M8  | **Attendant workspace** — search-first mobile screens, quick adjust/receive/count, pending-state recovery.                                                                        | H1, H2, M12                            |
-| M9  | **Admin inventory area** — dashboard totals, server-side product list, bulk preview, price history, audit log, reports.                                                           | H9, M5, M6, M7, M11                    |
-| M10 | **Health scan (kept)** — reusable internal function, wired to the daily cron.                                                                                                     | (M1, retained)                         |
-| M11 | **Storefront consistency** — one low-stock constant, availability labels, scheduled sale price.                                                                                   | H10, H5, C11                           |
-| M12 | **Docs & report** — `docs/INVENTORY.md`, decision log, final report.                                                                                                              | —                                      |
+| #   | Milestone                                                                                                                                                                                       | Defects closed                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| M1  | **Audit** — this document + the reusable data-health scanner (`convex/health.ts`).                                                                                                              | —                                      |
+| M2  | **Critical fixes** ✅ — `applyStockChange` choke point + the test that enforces it; typed errors; validation caps; money rounding; `version` conflicts.                                         | C1(partial), H1–H4, H12, M2, M3, C12   |
+| M3  | **Permissions foundation** ✅ — permission catalogue, `requirePermission`, role defaults, per-user overrides, applied to every guarded function.                                                | C1(role defaults + overrides), H7, M13 |
+| M4  | **Stock ledger data** ✅ — backfill `reserved` / `stock_state` for existing rows (dry-run, verification report, rollback note).                                                                 | C3 data                                |
+| M5  | **Product master data** — SKU/barcode/status/cost/supplier/custom fields, product editor tabs, archive instead of delete.                                                                       | H11, M1, M16                           |
+| M6  | **Stock ledger ops** ✅ — typed reason codes on `inventory.adjust`, stocktake via `inventory.count` (absolute, reservation-aware), reversal. Received/write-off/reversal all leave a typed row. | C4, H5, M8, M15                        |
+| M7  | **Data health page** ✅ — `/staff/health`: severity counts, findings with explanations and next steps, re-scan; Undo on the movement log.                                                       | M9, M10                                |
+| M8  | **Attendant workspace** — search-first mobile screens, quick adjust/receive/count, pending-state recovery.                                                                                      | H1, H2, M12                            |
+| M9  | **Admin inventory area** — dashboard totals, server-side product list, bulk preview, price history, audit log, reports.                                                                         | H9, M5, M6, M7, M11                    |
+| M10 | **Health scan (kept)** — reusable internal function, wired to the daily cron.                                                                                                                   | (M1, retained)                         |
+| M11 | **Storefront consistency** — one low-stock constant, availability labels, scheduled sale price.                                                                                                 | H10, H5, C11                           |
+| M12 | **Docs & report** — `docs/INVENTORY.md`, decision log, final report.                                                                                                                            | —                                      |
 
 Suppliers/purchase orders (C5), stocktake (C6), labels/barcodes (C7) and variants
 (C3) come after M9, once the foundation is stable; they are recorded as **Not done**

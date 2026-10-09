@@ -37,7 +37,6 @@ import type * as emails_templates_orderReadyPickup from "../emails/templates/ord
 import type * as emails_templates_orderReceived from "../emails/templates/orderReceived.js";
 import type * as emails_templates_paymentConfirmed from "../emails/templates/paymentConfirmed.js";
 import type * as emails_transport from "../emails/transport.js";
-import type * as emails_webhook from "../emails/webhook.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
@@ -49,6 +48,7 @@ import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_rules from "../lib/rules.js";
 import type * as lib_settings from "../lib/settings.js";
 import type * as lib_stock from "../lib/stock.js";
+import type * as migrations from "../migrations.js";
 import type * as orders from "../orders.js";
 import type * as seed from "../seed.js";
 import type * as stats from "../stats.js";
@@ -92,7 +92,6 @@ declare const fullApi: ApiFromModules<{
   "emails/templates/orderReceived": typeof emails_templates_orderReceived;
   "emails/templates/paymentConfirmed": typeof emails_templates_paymentConfirmed;
   "emails/transport": typeof emails_transport;
-  "emails/webhook": typeof emails_webhook;
   health: typeof health;
   http: typeof http;
   inventory: typeof inventory;
@@ -104,6 +103,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rules": typeof lib_rules;
   "lib/settings": typeof lib_settings;
   "lib/stock": typeof lib_stock;
+  migrations: typeof migrations;
   orders: typeof orders;
   seed: typeof seed;
   stats: typeof stats;

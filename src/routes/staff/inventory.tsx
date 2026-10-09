@@ -16,12 +16,18 @@ export const Route = createFileRoute("/staff/inventory")({
 });
 
 const REASONS = [
-  "Restock from supplier",
-  "Delivery received",
-  "Damaged unit",
-  "Count correction",
-  "Display unit",
-];
+  { label: "Delivery received", type: "receive" },
+  { label: "Restocked from supplier", type: "receive" },
+  { label: "Damaged unit", type: "damage" },
+  { label: "Written off as a loss", type: "loss" },
+  { label: "Stolen", type: "theft" },
+  { label: "Customer returned it", type: "return" },
+  { label: "Moved to another location", type: "transfer" },
+  { label: "Count correction", type: "correction" },
+  { label: "Something else", type: "adjustment" },
+] as const;
+
+type ReasonType = (typeof REASONS)[number]["type"];
 
 /**
  * Only movements that move physical stock can be undone here. Order-driven
@@ -36,6 +42,8 @@ function InventoryPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "low" | "out">("all");
   const [reasonFilter, setReasonFilter] = useState(""); // product slug filter for history
+  // "change" applies a signed delta; "counted" sets the absolute shelf count.
+  const [mode, setMode] = useState<"change" | "counted">("change");
 
   const store = useQuery(storeQuery);
   const history = useQuery({
@@ -46,6 +54,7 @@ function InventoryPage() {
   });
   const adjust = useConvexMutation(api.inventory.adjust);
   const reverse = useConvexMutation(api.inventory.reverse);
+  const count = useConvexMutation(api.inventory.count);
 
   const undo = async (movementId: string, name: string) => {
     try {
@@ -72,18 +81,53 @@ function InventoryPage() {
 
   const apply = async (slug: string, name: string) => {
     const raw = document.getElementById(`delta-${slug}`) as HTMLInputElement | null;
-    const reasonEl = document.getElementById(`reason-${slug}`) as HTMLInputElement | null;
-    const delta = Number(raw?.value);
+    const reasonEl = document.getElementById(`reason-${slug}`) as HTMLSelectElement | null;
+    const value = Number(raw?.value);
     const reason = reasonEl?.value ?? "";
-    if (!Number.isInteger(delta) || delta === 0) {
+    const type: ReasonType = REASONS.find((r) => r.label === reason)?.type ?? "adjustment";
+
+    // One key per tap: the client reuses it if Convex retries the same call,
+    // so a flaky connection still produces exactly one movement (D6).
+    const operation_key = crypto.randomUUID();
+
+    if (mode === "counted") {
+      if (!Number.isInteger(value) || value < 0) {
+        toast.error("Enter the number you counted — a whole number of 0 or more.");
+        return;
+      }
+      try {
+        const result = await count({
+          product_id: slug,
+          counted: value,
+          reason,
+          operation_key,
+        });
+        toast.success(
+          result.changed
+            ? `${name}: counted ${value}, system corrected to ${result.stock} available`
+            : `${name}: count of ${value} matches the system`,
+        );
+        if (raw) raw.value = "";
+      } catch (err) {
+        toast.error(errorMessage(err, "The count could not be saved."));
+      }
+      return;
+    }
+
+    if (!Number.isInteger(value) || value === 0) {
       toast.error("Enter a whole number change that is not zero (e.g. 12 or -3).");
       return;
     }
     try {
-      const result = await adjust({ product_id: slug, delta, reason });
+      const result = await adjust({
+        product_id: slug,
+        delta: value,
+        reason,
+        movement_type: type,
+        operation_key,
+      });
       toast.success(`${name}: stock is now ${result.stock}`);
       if (raw) raw.value = "";
-      if (reasonEl) reasonEl.value = "";
     } catch (err) {
       toast.error(errorMessage(err, "Stock could not be updated."));
     }
@@ -112,6 +156,25 @@ function InventoryPage() {
           <option value="low">Low (1–5 on hand)</option>
           <option value="out">Out of stock</option>
         </select>
+        <div
+          className="flex overflow-hidden rounded-xl border border-border"
+          role="group"
+          aria-label="How to enter a stock change"
+        >
+          {(["change", "counted"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+              className={`px-3 py-2 text-sm font-medium ${
+                mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {m === "change" ? "Change by" : "I counted"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <QueryState pending={store.isPending} error={store.isError} label="Inventory" />
@@ -152,37 +215,36 @@ function InventoryPage() {
                 </Button>
               </div>
               <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
-                <label className="w-28">
-                  Change by
+                <label className="w-32">
+                  {mode === "change" ? "Change by" : "Counted now"}
                   <input
                     id={`delta-${p.id}`}
                     type="number"
                     step="1"
-                    placeholder={p.stock === 0 ? "+12" : "12 / -3"}
+                    min={mode === "counted" ? 0 : undefined}
+                    placeholder={
+                      mode === "counted" ? String(p.stock) : p.stock === 0 ? "+12" : "12 / -3"
+                    }
                   />
                 </label>
                 <label className="min-w-[14rem] flex-1">
                   Reason
-                  <input
-                    id={`reason-${p.id}`}
-                    list="stock-reasons"
-                    placeholder="e.g. Restock from supplier"
-                  />
+                  <select id={`reason-${p.id}`} defaultValue={REASONS[0].label}>
+                    {REASONS.map((r) => (
+                      <option key={r.label} value={r.label}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <Button size="sm" onClick={() => apply(p.id, p.name)}>
-                  Apply
+                  {mode === "change" ? "Apply" : "Save count"}
                 </Button>
               </div>
             </li>
           ))}
         </ul>
       )}
-      <datalist id="stock-reasons">
-        {REASONS.map((r) => (
-          <option key={r} value={r} />
-        ))}
-      </datalist>
-
       <div className="mt-8">
         <Panel
           title="Stock movement log"

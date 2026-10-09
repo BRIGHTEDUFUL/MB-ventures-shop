@@ -7,9 +7,10 @@ import type { Doc } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
 
 /**
- * Reversal and ledger shape: undoing a movement must add a row rather than
+ * Ledger-shaped operations: undoing a movement must add a row rather than
  * rewrite one, must not be repeatable, and must refuse the movements that are
- * owned by an order instead. Offline in the Convex edge runtime.
+ * owned by an order instead. The stocktake writes an absolute count, so it
+ * keeps open orders' units promised. Offline in the Convex edge runtime.
  */
 const modules = import.meta.glob("../../convex/**/*.*s");
 
@@ -225,5 +226,109 @@ describe("inventory.reverse — corrections without rewriting history", () => {
     const after = await env.staff.query(api.inventory.history, { limit: 50 });
     expect(after.find((row) => row.movement_type === "receive")?.reversed).toBe(true);
     expect(after[0]?.movement_type).toBe("reversal");
+  });
+});
+
+describe("inventory.count — the stocktake writes an absolute shelf count", () => {
+  it("replaces the system's number with the counted one and logs the gap", async () => {
+    const env = await setup();
+    const result = await env.staff.mutation(api.inventory.count, {
+      product_id: "standing-desk",
+      counted: 42,
+      reason: "Quarterly stocktake",
+    });
+
+    expect(result).toEqual({ ok: true, stock: 42, changed: true });
+    expect((await readDesk(env))?.stock).toBe(42);
+    const [row] = await movements(env);
+    expect(row).toMatchObject({
+      movement_type: "stocktake",
+      previous_stock: 50,
+      new_stock: 42,
+      reason: "Quarterly stocktake",
+    });
+  });
+
+  it("says so plainly when the count agrees with the system", async () => {
+    const env = await setup();
+    const result = await env.staff.mutation(api.inventory.count, {
+      product_id: "standing-desk",
+      counted: 50,
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.stock).toBe(50);
+    // A count that confirms the number is not a movement, so no row is written
+    // and the log never shows a change that did not happen.
+    expect(await movements(env)).toHaveLength(0);
+  });
+
+  it("keeps open orders' units promised rather than handing them out", async () => {
+    const env = await setup();
+    await env.t.run(async (ctx) => {
+      const product = await ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", "standing-desk"))
+        .unique();
+      // Two units are held for an open order: shelf has 52, available is 50.
+      await ctx.db.patch(product!._id, { stock: 50, reserved: 2 });
+    });
+
+    const result = await env.staff.mutation(api.inventory.count, {
+      product_id: "standing-desk",
+      counted: 52,
+      reason: "Counted the shelf",
+    });
+
+    // 52 on the shelf minus the 2 promised = 50 available.
+    expect(result.stock).toBe(50);
+    const after = await readDesk(env);
+    expect(after?.reserved).toBe(2);
+  });
+
+  it("refuses a count below what open orders already hold", async () => {
+    const env = await setup();
+    await env.t.run(async (ctx) => {
+      const product = await ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", "standing-desk"))
+        .unique();
+      await ctx.db.patch(product!._id, { stock: 48, reserved: 2 });
+    });
+
+    const error = await capture(
+      env.staff.mutation(api.inventory.count, {
+        product_id: "standing-desk",
+        counted: 1,
+      }),
+    );
+
+    expect(messageOf(error)).toMatch(/already promised to open orders/);
+    expect((await readDesk(env))?.stock).toBe(48);
+    expect(await movements(env)).toHaveLength(0);
+  });
+
+  it("rejects a negative or fractional count before anything is written", async () => {
+    const env = await setup();
+    const error = await capture(
+      env.staff.mutation(api.inventory.count, {
+        product_id: "standing-desk",
+        counted: -3,
+      }),
+    );
+
+    expect(messageOf(error)).toMatch(/whole number of 0 or more/);
+    expect(await movements(env)).toHaveLength(0);
+  });
+
+  it("denies a customer with no staff role", async () => {
+    const env = await setup();
+    const stranger = env.t.withIdentity({ subject: "someone-else|s" });
+    const error = await capture(
+      stranger.mutation(api.inventory.count, { product_id: "standing-desk", counted: 1 }),
+    );
+
+    expect(messageOf(error)).toBe("Staff access required. Ask the store owner to grant access.");
+    expect((await readDesk(env))?.stock).toBe(50);
   });
 });
