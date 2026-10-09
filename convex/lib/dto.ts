@@ -27,6 +27,7 @@ export type Product = {
   image_key: string;
   gallery: string[];
   verified: boolean;
+  visible?: boolean;
 };
 
 export type Category = {
@@ -159,6 +160,7 @@ export const productDTO = (product: Doc<"products">): Product => ({
   image_key: product.image_key,
   gallery: product.gallery,
   verified: product.verified,
+  visible: product.visible ?? (product.status ? product.status === "active" : product.verified),
 });
 
 export const categoryDTO = (category: Doc<"categories">): Category => ({

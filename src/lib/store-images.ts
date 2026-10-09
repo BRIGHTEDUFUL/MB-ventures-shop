@@ -12,10 +12,25 @@ const base: Record<string, string> = {
   workspace: "/images/workspace.jpg",
   "chair-detail": "/images/chair-detail.jpg",
   logo: "/images/store-logo.jpeg",
+  "carbon-fiber-gaming-desk": "/images/products/carbon-fiber-gaming-desk.png",
+  "luminous-rgb-mouse-pad": "/images/products/luminous-rgb-mouse-pad.png",
+  "360-rotating-laptop-stand": "/images/products/360-rotating-laptop-stand.png",
+  "dual-monitor-desk-mount": "/images/products/dual-monitor-desk-mount.png",
+  "rock-360-phone-tablet-stand": "/images/products/rock-360-phone-tablet-stand.png",
+  "vertical-laptop-stand": "/images/products/vertical-laptop-stand.png",
+  "monitor-light-bar": "/images/products/monitor-light-bar.png",
+  "rgb-dynamic-usb-microphone": "/images/products/rgb-dynamic-usb-microphone.png",
+  "electric-standing-desk-rgb-160": "/images/products/electric-standing-desk-rgb-160.png",
+  "mottian-ai-smart-keyboard-mouse": "/images/products/mottian-ai-smart-keyboard-mouse.png",
+  "custom-macro-mechanical-keyboard": "/images/products/custom-macro-mechanical-keyboard.png",
+  "custom-macro-mechanical-keyboard-gallery":
+    "/images/products/custom-macro-mechanical-keyboard-gallery.png",
 };
 export const images: Record<string, string> = new Proxy(base, {
   get: (t, k) =>
-    typeof k !== "string" ? undefined : (t[k] ?? (/^https:\/\//.test(k) ? k : base["desk"])),
+    typeof k !== "string"
+      ? undefined
+      : (t[k] ?? (/^(https:\/\/|\/images\/)/.test(k) ? k : base["desk"])),
 });
 export const builtInPhotos = Object.keys(base).filter((k) => k !== "logo");
 

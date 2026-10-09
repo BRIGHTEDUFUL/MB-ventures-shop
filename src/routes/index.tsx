@@ -25,8 +25,9 @@ export const Route = createFileRoute("/")({
 });
 function Index() {
   const {
-      data: { products, settings, categories: allCats },
+      data: { products: allProducts, settings, categories: allCats },
     } = useSuspenseQuery(storeQuery),
+    products = allProducts.filter((p) => p.visible !== false),
     categories = allCats.filter((c) => c.visible),
     { add } = useCart();
 

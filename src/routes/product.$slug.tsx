@@ -18,7 +18,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ context, params }) => {
     const data = await context.queryClient.ensureQueryData(storeQuery);
-    if (!data.products.some((p) => p.id === params.slug)) throw notFound();
+    if (!data.products.some((p) => p.id === params.slug && p.visible !== false)) throw notFound();
     return data;
   },
   head: ({ loaderData, params }) => {
@@ -243,7 +243,7 @@ function ProductPage() {
             </tbody>
           </table>
           <p className="mt-4 text-xs text-muted-foreground">
-            Specifications shown are examples until verified by the store.
+            {!p.verified && "Specifications are indicative until confirmed by the store."}
           </p>
         </div>
       </section>
@@ -251,7 +251,7 @@ function ProductPage() {
         <SectionHeading title="For the rest of your setup" />
         <div className="product-grid">
           {products
-            .filter((item) => item.id !== p.id)
+            .filter((item) => item.id !== p.id && item.visible !== false)
             .slice(0, 4)
             .map((item) => (
               <ProductCard product={item} key={item.id} />

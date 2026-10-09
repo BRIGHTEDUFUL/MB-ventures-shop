@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -39,6 +39,7 @@ function Catalogue() {
   const filtered = products
     .filter(
       (p) =>
+        p.visible !== false &&
         (!search.category || p.category === search.category) &&
         (!search.q || `${p.name} ${p.brand}`.toLowerCase().includes(search.q.toLowerCase())) &&
         p.price <= max &&
@@ -123,10 +124,8 @@ function Catalogue() {
     <div className="page-content wrap">
       <p className="breadcrumbs">Home / Shop / {search.category || "All products"}</p>
       <h1 className="page-title">{title}</h1>
-      <p className="page-lead">Desks, chairs and everyday technology for your workspace.</p>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Sample catalogue. Prices and availability will be confirmed by the Abelenkpe shop before
-        ordering opens.
+      <p className="page-lead">
+        Desks, chairs and everyday technology for your workspace in Ghana.
       </p>
       <div className="toolbar">
         <p className="text-xs text-muted-foreground">{filtered.length} products</p>

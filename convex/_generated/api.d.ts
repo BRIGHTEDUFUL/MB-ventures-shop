@@ -40,6 +40,7 @@ import type * as emails_transport from "../emails/transport.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
+import type * as inventory_import from "../inventory_import.js";
 import type * as lib_activity from "../lib/activity.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_dto from "../lib/dto.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   health: typeof health;
   http: typeof http;
   inventory: typeof inventory;
+  inventory_import: typeof inventory_import;
   "lib/activity": typeof lib_activity;
   "lib/auth": typeof lib_auth;
   "lib/dto": typeof lib_dto;

@@ -44,4 +44,4 @@ docs/PRODUCTION-CREDENTIALS.md
 *.sw?
 
 # Raw product assets
-Products/
+/Products/

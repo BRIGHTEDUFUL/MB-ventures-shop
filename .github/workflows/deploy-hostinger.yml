@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       force_clean:
-        description: 'Clean install dependencies (run npm ci from scratch)'
+        description: "Clean install dependencies (run npm ci from scratch)"
         required: false
         type: boolean
         default: false
@@ -66,32 +66,32 @@ jobs:
           script: |
             set -e
             echo "🚀 Starting deployment on Hostinger server..."
-            
+
             TARGET_DIR="${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}"
             if [ ! -d "$TARGET_DIR" ]; then
               echo "Directory $TARGET_DIR not found, checking current directory..."
               TARGET_DIR="$(pwd)"
             fi
-            
+
             cd "$TARGET_DIR"
             echo "📂 Working directory: $(pwd)"
-            
+
             echo "🔄 Fetching latest changes from GitHub..."
             git fetch origin main
             git reset --hard origin/main
-            
+
             echo "📦 Installing dependencies..."
             npm ci --omit=dev || npm install --production
-            
+
             echo "🏗️ Building application bundle..."
             npm run build
-            
+
             echo "⚡ Reloading PM2 process..."
             pm2 reload ecosystem.config.js --env production || \
             pm2 restart mbventuresghana || \
             pm2 restart mb-ventures-gh || \
             pm2 start ecosystem.config.js
-            
+
             pm2 save
             echo "✅ Hostinger deployment successfully completed!"
             pm2 status
