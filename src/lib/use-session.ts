@@ -34,7 +34,8 @@ export function useSession() {
   }, [authLoading]);
 
   const loading = !timedOut && (authLoading || (isAuthenticated && profile === undefined));
-  const session =
-    isAuthenticated && profile ? { user: { id: profile.id, email: profile.email } } : null;
+  const session = isAuthenticated
+    ? { user: { id: profile?.id ?? "user", email: profile?.email ?? "" } }
+    : null;
   return { session, loading, profile: profile ?? null };
 }

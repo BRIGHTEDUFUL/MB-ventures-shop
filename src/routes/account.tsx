@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexMutation } from "@convex-dev/react-query";
@@ -51,7 +51,8 @@ function FieldError({ children }: { children: ReactNode }) {
 
 function Account() {
   const { next, code, signup: signupParam } = Route.useSearch(),
-    navigate = useNavigate();
+    navigate = useNavigate(),
+    queryClient = useQueryClient();
   const { session, loading, profile } = useSession(),
     { signIn, signOut } = useAuthActions();
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
@@ -101,7 +102,15 @@ function Account() {
         15000,
         "Connection was temporarily interrupted. Please try again.",
       );
-      if (signup) toast.success("Account created. Welcome to MB Ventures GH.");
+      if (signup) {
+        toast.success("Account created. Welcome to MB Ventures GH.");
+      } else {
+        toast.success("Signed in successfully.");
+      }
+      void queryClient.invalidateQueries();
+      if (redirectTo) {
+        navigate({ to: redirectTo });
+      }
     } catch (err) {
       const msg = signup
         ? errorMessage(err, "Your account could not be created. Check your details and try again.")
