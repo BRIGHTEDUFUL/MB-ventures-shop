@@ -1,14 +1,15 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { logActivity } from "./lib/activity";
-import {
-  currentUserId,
-  getRole,
-  isStaff as userHasStaffRole,
-  requireAdmin,
-  requireStaff,
-} from "./lib/auth";
+import { currentUserId, getRole, isStaff as userHasStaffRole } from "./lib/auth";
 import { isValidEmail } from "./lib/rules";
+import {
+  defaultPermissions,
+  PERMISSION_CATALOG,
+  PERMISSION_KEYS_IN_ORDER,
+  requirePermission,
+} from "./lib/permissions";
+import { permissionValidator, type PermissionKey } from "./schema";
 
 /** The signed-in profile for the account page and checkout prefill. */
 export const me = query({
@@ -47,6 +48,34 @@ export const myRole = query({
   },
 });
 
+/**
+ * The signed-in user's effective permissions, so a screen can hide what the
+ * server would refuse anyway. Never the *only* check: every mutation gates
+ * itself with `requirePermission`, and this just keeps the UI honest.
+ * Signed-out and role-less callers get an empty list rather than an error,
+ * because "you may do nothing" is a valid answer for a customer.
+ */
+export const myPermissions = query({
+  args: {},
+  handler: async (ctx): Promise<PermissionKey[]> => {
+    const userId = await currentUserId(ctx);
+    if (userId === null) return [];
+    const role = await getRole(ctx, userId);
+    if (role === null) return [];
+    const row = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+    const overrides = (row?.overrides ?? {}) as Partial<Record<PermissionKey, boolean>>;
+    const granted = new Set(defaultPermissions(role));
+    for (const [key, value] of Object.entries(overrides)) {
+      if (value === true) granted.add(key as PermissionKey);
+      else if (value === false) granted.delete(key as PermissionKey);
+    }
+    return PERMISSION_KEYS_IN_ORDER.filter((key) => granted.has(key));
+  },
+});
+
 export type TeamMember = {
   id: string;
   name: string;
@@ -59,7 +88,7 @@ export type TeamMember = {
 export const team = query({
   args: {},
   handler: async (ctx): Promise<TeamMember[]> => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "team.view");
     const roles = await ctx.db.query("user_roles").collect();
     const members = await Promise.all(
       roles.map(async (roleRow) => {
@@ -94,7 +123,7 @@ export const addStaff = mutation({
     role: v.union(v.literal("admin"), v.literal("staff")),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requirePermission(ctx, "team.manage");
     const email = args.email.trim().toLowerCase();
     if (!isValidEmail(email)) throw new ConvexError({ message: "Enter a valid email address." });
 
@@ -129,7 +158,7 @@ export const setRole = mutation({
     role: v.union(v.literal("admin"), v.literal("staff")),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requirePermission(ctx, "team.manage");
     const userId = ctx.db.normalizeId("users", args.user_id);
     if (userId === null) throw new ConvexError({ message: "Account not found." });
     const target = await ctx.db.get(userId);
@@ -156,7 +185,7 @@ export const setRole = mutation({
 export const revokeRole = mutation({
   args: { user_id: v.string() },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requirePermission(ctx, "team.manage");
     const userId = ctx.db.normalizeId("users", args.user_id);
     if (userId === null) throw new ConvexError({ message: "Account not found." });
     if (userId === actorId) {
@@ -177,6 +206,50 @@ export const revokeRole = mutation({
 
     await ctx.db.delete(roleRow._id);
     await logActivity(ctx, actorId, "role.revoke", `Removed shop access for ${who}.`);
+    return { ok: true };
+  },
+});
+
+/**
+ * Grant or revoke one permission for one person (admin only).
+ *
+ * This is the "custom role" escape hatch: instead of inventing a third role
+ * for one exception, flip a single bit on that person's row. Passing `null`
+ * clears the override so they fall back to their role's defaults.
+ */
+export const setPermission = mutation({
+  args: {
+    user_id: v.string(),
+    permission: permissionValidator,
+    granted: v.union(v.boolean(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requirePermission(ctx, "team.manage");
+    const userId = ctx.db.normalizeId("users", args.user_id);
+    if (userId === null) throw new ConvexError({ message: "Account not found." });
+    const roleRow = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+    if (roleRow === null) throw new ConvexError({ message: "That account has no shop access." });
+
+    const overrides = { ...(roleRow.overrides ?? {}) } as Partial<Record<PermissionKey, boolean>>;
+    if (args.granted === null) delete overrides[args.permission];
+    else overrides[args.permission] = args.granted;
+    await ctx.db.patch(roleRow._id, {
+      overrides: overrides as Record<PermissionKey, boolean>,
+    });
+
+    const target = await ctx.db.get(userId);
+    const who = target?.email?.trim() || target?.name?.trim() || "a team member";
+    await logActivity(
+      ctx,
+      actorId,
+      "role.permission",
+      args.granted === null
+        ? `Reset the “${args.permission}” permission for ${who} to the role default.`
+        : `${args.granted ? "Granted" : "Removed"} the “${args.permission}” permission for ${who}.`,
+    );
     return { ok: true };
   },
 });

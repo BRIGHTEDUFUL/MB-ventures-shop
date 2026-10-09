@@ -72,6 +72,61 @@ export const stockState = v.union(
   v.literal("restocked"),
 );
 /**
+ * The permission catalogue (spec C1) — the closed set of things a person can
+ * be allowed to do in the back office.
+ *
+ * Keys live here, next to the validators, so `user_roles.overrides` can be
+ * typed as a record *of real permissions* rather than free text that quietly
+ * stops matching anything. `convex/lib/permissions.ts` holds the labels,
+ * groups and role defaults that go with them.
+ *
+ * Two levels only, and deliberately so: role defaults cover the shop's actual
+ * shapes (owner vs attendant), and per-user overrides handle the exceptions.
+ * A full custom-role editor is more machinery than one shop needs — see
+ * `docs/INVENTORY-DECISIONS.md` D9.
+ */
+export const PERMISSION_KEYS = [
+  // Catalogue
+  "catalogue.view",
+  "catalogue.edit", // create + edit a listing (product editor)
+  "catalogue.delete",
+  "catalogue.bulk",
+  "catalogue.categories",
+  "catalogue.settings", // storefront copy, featured picks, announcement
+  "catalogue.delivery", // delivery fees
+  "catalogue.momo", // whose wallet the money lands in — admin only
+  // Inventory
+  "inventory.view",
+  "inventory.adjust",
+  "inventory.stocktake", // applied counts (M6)
+  "inventory.health", // data-health report + fixes
+  // Orders
+  "orders.view",
+  "orders.update", // status/payment transitions, notes, contact fixes
+  // Reporting
+  "reports.view",
+  "activity.view",
+  // Media
+  "uploads.create",
+  // Team
+  "team.view",
+  "team.manage", // grant, change and revoke roles
+  // Email
+  "emails.admin", // config, templates, suppression list, test sends
+  "emails.note", // clear the bounce-attention flag on an order
+] as const;
+
+export type PermissionKey = (typeof PERMISSION_KEYS)[number];
+
+/**
+ * Permission keys as a plain string, for `user_roles.overrides`: Convex
+ * records cannot be keyed by a literal union, so the closed set is enforced
+ * on write by `lib/permissions.ts` rather than in the validator.
+ */
+export const permissionKey = v.string();
+/** Closed-set validator for "which permission" arguments (`users.setPermission`). */
+export const permissionValidator = v.union(...PERMISSION_KEYS.map((key) => v.literal(key)));
+/**
  * Icon keys for the homepage trust strip. Kept as a closed union so an
  * invalid key can never reach the client's icon registry — the matching
  * `Record` lives in `src/routes/index.tsx` and must be updated alongside.
@@ -125,9 +180,15 @@ export default defineSchema({
     .index("phone", ["phone"]),
 
   // Staff/admin privileges. Replaces `public.user_roles` + `is_staff()`.
+  //
+  // `role` picks the default permission set; `overrides` tweaks that set for
+  // one person (`true` grants, `false` takes away) without inventing a new
+  // role. Both are optional-friendly: rows written before the permission work
+  // validate unchanged, because a missing `overrides` means "no changes".
   user_roles: defineTable({
     user_id: v.id("users"),
     role: v.union(v.literal("admin"), v.literal("staff")),
+    overrides: v.optional(v.record(permissionKey, v.boolean())),
   }).index("by_user", ["user_id"]),
 
   // Replaces `public.products`; `slug` is the old text primary key (`id`).

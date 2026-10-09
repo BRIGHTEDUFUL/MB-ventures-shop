@@ -1,8 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { logActivity } from "./lib/activity";
-import { requireAdmin, requireStaff } from "./lib/auth";
 import { fail } from "./lib/errors";
+import { requirePermission } from "./lib/permissions";
 import { getSettings } from "./lib/settings";
 import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
 import { applyStockChange } from "./lib/stock";
@@ -45,7 +45,7 @@ export const saveProduct = mutation({
     expected_version: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.edit");
 
     const slug = args.id.trim().toLowerCase();
     if (slug === "") throw new ConvexError({ message: "Enter a product name." });
@@ -182,7 +182,7 @@ const moneyHint = (price: number) => `GH₵ ${round2(price)}`;
 export const deleteProduct = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.delete");
     const product = await ctx.db
       .query("products")
       .withIndex("by_slug", (q) => q.eq("slug", args.id))
@@ -255,7 +255,7 @@ export const bulkUpdate = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.bulk");
     if (args.ids.length === 0 || args.ids.length > 200) {
       throw new ConvexError({ message: "Select between 1 and 200 products." });
     }
@@ -399,7 +399,7 @@ export const saveSettings = mutation({
     home_trust: v.array(v.object({ icon: trustIcon, title: v.string(), text: v.string() })),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.settings");
 
     if (args.hero_title.trim() === "") {
       throw new ConvexError({ message: "Enter a headline for the home page." });
@@ -532,7 +532,7 @@ export const saveDeliverySettings = mutation({
     free_threshold: v.number(),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.delivery");
 
     for (const [label, value] of [
       ["Central delivery fee", args.central_fee],
@@ -571,8 +571,9 @@ export const saveDeliverySettings = mutation({
 });
 
 /**
- * The Mobile Money recipient. Admin-only: this decides whose wallet the money
- * lands in, so it stays behind `requireAdmin` even though fees moved to staff.
+ * The Mobile Money recipient. Admin-floored: this decides whose wallet the
+ * money lands in, so it stays behind `catalogue.momo` even though fees moved
+ * to staff (`catalogue.delivery`).
  */
 export const saveMomoSettings = mutation({
   args: {
@@ -580,7 +581,7 @@ export const saveMomoSettings = mutation({
     momo_name: v.string(),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.momo");
 
     const number = args.momo_number.trim();
     const name = args.momo_name.trim();

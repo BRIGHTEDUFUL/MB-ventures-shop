@@ -1,6 +1,6 @@
 import { query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { requireStaff } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 import { recentActivity, type ActivityEntry } from "./lib/activity";
 import { orderDTO, type Order } from "./lib/dto";
 import { round2 } from "./lib/rules";
@@ -35,7 +35,7 @@ export type Overview = {
 export const overview = query({
   args: {},
   handler: async (ctx): Promise<Overview> => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "reports.view");
     const [orders, products, categories, activity] = await Promise.all([
       ctx.db.query("orders").order("desc").take(500),
       ctx.db.query("products").collect(),

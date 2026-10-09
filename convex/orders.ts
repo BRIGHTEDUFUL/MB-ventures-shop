@@ -1,7 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { requireStaff, requireUser } from "./lib/auth";
+import { requireUser } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 import {
   historyDTO,
   orderDTO,
@@ -230,7 +231,7 @@ export const staffList = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Order[]> => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "orders.view");
     const search = (args.q ?? "").trim().toLowerCase();
     const limit = Math.min(Math.max(args.limit ?? 100, 1), 300);
     const orders = await ctx.db.query("orders").order("desc").take(300);
@@ -261,7 +262,7 @@ export type StaffHistoryEntry = {
 export const staffGet = query({
   args: { id: v.string() },
   handler: async (ctx, args): Promise<{ order: Order; history: StaffHistoryEntry[] }> => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "orders.view");
     const orderId = ctx.db.normalizeId("orders", args.id);
     if (orderId === null) throw new ConvexError({ message: "Order not found." });
     const order = await ctx.db.get(orderId);
@@ -301,7 +302,7 @@ export const staffUpdate = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "orders.update");
     const orderId = ctx.db.normalizeId("orders", args.id);
     if (orderId === null) throw new ConvexError({ message: "Order not found." });
 
@@ -416,7 +417,7 @@ export const staffUpdate = mutation({
 export const staffNote = mutation({
   args: { id: v.string(), note: v.string() },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "orders.update");
     const note = args.note.trim();
     if (note === "") throw new ConvexError({ message: "Enter a note." });
     if (note.length > 500)
@@ -449,7 +450,7 @@ export const staffFixContact = mutation({
     address: v.string(),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "orders.update");
     const orderId = ctx.db.normalizeId("orders", args.id);
     if (orderId === null) throw new ConvexError({ message: "Order not found." });
     const order = await ctx.db.get(orderId);

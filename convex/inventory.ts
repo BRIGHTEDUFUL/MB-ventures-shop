@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
-import { requireStaff } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 import { logActivity } from "./lib/activity";
 import { LIMITS } from "./catalogue";
 import { applyStockChange, type MovementSource, type MovementType } from "./lib/stock";
@@ -35,7 +35,7 @@ export const adjust = mutation({
     note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "inventory.adjust");
     const reason = args.reason.trim() || "Stock adjustment";
     if (reason.length > LIMITS.reason) {
       throw new ConvexError({ message: `Keep the reason under ${LIMITS.reason} characters.` });
@@ -93,7 +93,7 @@ export const history = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<InventoryEntry[]> => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "inventory.view");
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 200);
     const base =
       args.product_id !== undefined && args.product_id !== ""

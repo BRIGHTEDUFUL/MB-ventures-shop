@@ -38,13 +38,19 @@ export async function getRole(
   return role === null ? null : role.role;
 }
 
+/**
+ * Denial copy for the two role floors. Kept in one place because every guard
+ * — legacy `requireStaff`/`requireAdmin` and the permission gate alike — must
+ * say exactly this, and tests match on it.
+ */
+export const STAFF_ACCESS_MESSAGE = "Staff access required. Ask the store owner to grant access.";
+export const ADMIN_ACCESS_MESSAGE = "Admin access required. Ask the store owner for an admin role.";
+
 /** Replaces the `public.is_staff()` guards on every staff-only function. */
 export async function requireStaff(ctx: Ctx): Promise<Id<"users">> {
   const userId = await requireUser(ctx);
   if (!(await isStaff(ctx, userId))) {
-    throw new ConvexError({
-      message: "Staff access required. Ask the store owner to grant access.",
-    });
+    throw new ConvexError({ message: STAFF_ACCESS_MESSAGE });
   }
   return userId;
 }
@@ -56,9 +62,7 @@ export async function requireStaff(ctx: Ctx): Promise<Id<"users">> {
 export async function requireAdmin(ctx: Ctx): Promise<Id<"users">> {
   const userId = await requireUser(ctx);
   if ((await getRole(ctx, userId)) !== "admin") {
-    throw new ConvexError({
-      message: "Admin access required. Ask the store owner for an admin role.",
-    });
+    throw new ConvexError({ message: ADMIN_ACCESS_MESSAGE });
   }
   return userId;
 }

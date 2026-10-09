@@ -9,7 +9,7 @@ import {
 } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireAdmin, requireStaff } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 import { logActivity } from "./lib/activity";
 import { validators } from "./schema";
 import { getEmailConfig } from "./emails/config";
@@ -41,7 +41,7 @@ import { applyEmailEvent, alreadySeen, rememberEvent } from "./emails/webhook";
 export const adminGate = internalQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    await requirePermission(ctx, "emails.admin");
     return true;
   },
 });
@@ -50,7 +50,7 @@ export const adminGate = internalQuery({
 export const staffGate = internalQuery({
   args: {},
   handler: async (ctx) => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "emails.note");
     return true;
   },
 });
@@ -58,7 +58,7 @@ export const staffGate = internalQuery({
 export const config = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    await requirePermission(ctx, "emails.admin");
     return await emailConfigPayload(ctx);
   },
 });
@@ -71,7 +71,7 @@ export const list = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    await requirePermission(ctx, "emails.admin");
     return await listEmails(ctx, args);
   },
 });
@@ -79,7 +79,7 @@ export const list = query({
 export const suppressed = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    await requirePermission(ctx, "emails.admin");
     return await listSuppressed(ctx);
   },
 });
@@ -87,7 +87,7 @@ export const suppressed = query({
 export const preview = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    await requirePermission(ctx, "emails.admin");
     return await previewLog(ctx, args.id);
   },
 });
@@ -372,7 +372,7 @@ export const enqueueTest = internalMutation({
     if (!isTemplateName(args.template)) {
       throw new ConvexError({ message: "Unknown email template." });
     }
-    await requireAdmin(ctx);
+    await requirePermission(ctx, "emails.admin");
     const emailCtx = await renderContext(ctx);
     const data =
       args.template === "admin-new-order" || args.template === "admin-payment-confirmed"
@@ -435,7 +435,7 @@ export const sendTest = action({
 export const addSuppression = mutation({
   args: { email: v.string(), reason: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requirePermission(ctx, "emails.admin");
     const email = args.email.trim().toLowerCase();
     if (!/^[^\s@,;<>"]+@[^\s@,;<>".]+\.[^\s@,;<>"]{2,}$/.test(email)) {
       throw new ConvexError({ message: "Enter a valid email address." });
@@ -461,7 +461,7 @@ export const addSuppression = mutation({
 export const removeSuppression = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requirePermission(ctx, "emails.admin");
     const rowId = ctx.db.normalizeId("suppressedEmails", args.id);
     if (rowId === null) throw new ConvexError({ message: "Suppression not found." });
     const row = await ctx.db.get(rowId);
@@ -476,7 +476,7 @@ export const removeSuppression = mutation({
 export const clearAttention = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "emails.note");
     const orderId = ctx.db.normalizeId("orders", args.id);
     if (orderId === null) throw new ConvexError({ message: "Order not found." });
     const order = await ctx.db.get(orderId);

@@ -1,5 +1,5 @@
 import { internalMutation, internalQuery, query, type QueryCtx } from "./_generated/server";
-import { requireStaff } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 
 /**
  * Data health scan — the reusable checker behind `/staff/health` and the
@@ -263,7 +263,7 @@ export async function scanHealth(ctx: QueryCtx): Promise<HealthReport> {
 export const report = query({
   args: {},
   handler: async (ctx): Promise<HealthReport> => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "inventory.health");
     return await scanHealth(ctx);
   },
 });

@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { requireStaff } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 
 /**
  * Staff-only photo uploads (replaces the `product-photos` bucket policies).
@@ -9,7 +9,7 @@ import { requireStaff } from "./lib/auth";
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "uploads.create");
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -17,7 +17,7 @@ export const generateUploadUrl = mutation({
 export const savePhoto = mutation({
   args: { storageId: v.string() },
   handler: async (ctx, args) => {
-    await requireStaff(ctx);
+    await requirePermission(ctx, "uploads.create");
     if (args.storageId === "") throw new ConvexError({ message: "Photo upload failed." });
     // `storage` ids are system ids (`_storage`), which `db.normalizeId` does not
     // cover; an invalid id simply yields no URL below.

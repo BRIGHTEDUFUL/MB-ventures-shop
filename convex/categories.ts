@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { logActivity } from "./lib/activity";
-import { requireStaff } from "./lib/auth";
+import { requirePermission } from "./lib/permissions";
 
 /** Same slug rules the product editor uses (link name = lowercase kebab). */
 const slugify = (value: string) =>
@@ -23,7 +23,7 @@ export const save = mutation({
     visible: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.categories");
 
     const name = args.name.trim();
     if (name === "") throw new ConvexError({ message: "Enter a category name." });
@@ -72,7 +72,7 @@ export const save = mutation({
 export const remove = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    const actorId = await requireStaff(ctx);
+    const actorId = await requirePermission(ctx, "catalogue.categories");
     const category = await ctx.db
       .query("categories")
       .withIndex("by_slug", (q) => q.eq("slug", args.id))

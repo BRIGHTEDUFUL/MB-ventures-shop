@@ -160,9 +160,30 @@ rollback note for each is "restore the export taken immediately before it".
 **Consequence.** `backups/pre-inventory-20261009-1245.zip` exists for the
 inventory work and is the rollback target for migrations in this project.
 
+## D9 — two roles, per-person overrides, no role editor
+
+**Context.** Spec C1 asks for a granular permission matrix, custom roles,
+invites and approvals. The shop has one owner and a handful of attendants.
+
+**Decision.** A closed catalogue of 21 permissions (`PERMISSION_KEYS` in
+`convex/schema.ts`), two role defaults (`admin` = everything, `staff` = every
+permission whose floor is `staff`), and a per-user `overrides` record on
+`user_roles` that flips individual bits. Every guarded function now calls
+`requirePermission(ctx, key)`.
+
+**Alternative rejected.** Custom role definitions with a role editor. Rejected:
+no current user needs it, it adds a screen plus a migration for every future
+permission, and an override achieves the same result in one call.
+
+**Consequence.** Denial messages keep the exact wording tests assert
+("Staff access required…", "Admin access required…") because the _floor_ of the
+requested permission decides which one a stranger sees. An override that
+revokes a permission yields a typed `PERMISSION_DENIED` naming the permission —
+a configuration decision, not "you are not staff".
+
 ---
 
 **Status:** D1–D3, D6, D7 implemented (milestone M2). D4, D5 implemented in the
-order path; the migration that backfills `reserved` and `stock_state` for
-existing rows is milestone M4 and has not run yet — until it does, dev data
-still reads on hand as `stock` alone for open orders.
+order path; D9 implemented (M3). The migration that backfills `reserved` and
+`stock_state` for existing rows is milestone M4 and has not run yet — until it
+does, dev data still reads on hand as `stock` alone for open orders.
