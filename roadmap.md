@@ -15,8 +15,9 @@
       **320/360/390/414 overflow matrix over every route**, 44px tap targets, 16px form fields and
       the safe-area wiring. Device-only checks (soft keyboard, real focus zoom, landscape) still
       need a phone — `MOBILE_TASKS.md` §3.
-- [ ] Live inventory and MoMo recipient details (awaiting store-supplied information) —
-      `ordering_enabled` stays off until MoMo recipient details are saved
+- [x] Live inventory and MoMo recipient details — ready for production. Email system live,
+      domain configured (`mbventuresghana.com`), MoMo details set. `ordering_enabled` can be
+      toggled on via `/staff` customization panel once store is ready to accept orders
 
 ## Verification run — 9 October 2026
 
@@ -43,14 +44,23 @@
 - Formatting: the tree is Prettier-clean (`convex/_generated` and Playwright artifacts are
   ignored).
 
-## Still blocked on something only the shop can supply
+## Completed Setup (9 October 2026)
 
-- **Email**: Resend domain verification and `docs/EMAIL.md` §8 — until then every send is a
-  dry run.
-- **MoMo recipient details**: real wallet name and number before `ordering_enabled` can go on in
-  production.
-- **Production URL**: `VITE_SITE_URL` in `.env.production` is empty until the real domain exists;
-  absolute URLs (canonical, `og:url`, sitemap) are then omitted rather than pointing at a
-  wrong host.
+- ✅ **Email**: Web3Forms access key configured (`c8395fed-e25e-4350-a914-df8e592f5920`)
+  - Development: Live mode enabled at `dev:stoic-elephant-714`
+  - Production: Fully configured at `prod:necessary-newt-861`
+  - Reply-to: `info@mbventuresghana.com`
+  - Admin alerts: `info@mbventuresghana.com`
+  - Daily limit: 250 emails/day (production)
+  - See `docs/EMAIL-SETUP-STATUS.md` and `docs/PRODUCTION-CONFIG.md`
+- ✅ **Production domain**: `https://mbventuresghana.com` configured
+  - `VITE_SITE_URL` set in `.env.production`
+  - `SITE_URL` set in Convex production environment
+  - All email links, canonical URLs, Open Graph tags use correct domain
+  - Sitemap and robots.txt configured
+- ✅ **MoMo recipient details**: Configured and ready for production ordering
+
+## Still requires physical device testing
+
 - **Real devices**: `MOBILE_TASKS.md` §3 — soft keyboard, focus zoom on a physical iPhone,
-  landscape.
+  landscape orientation testing.

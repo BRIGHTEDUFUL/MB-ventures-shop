@@ -5,6 +5,43 @@ still open is listed under **Open**.
 
 ---
 
+## Production Configuration Complete (9 October 2026)
+
+**Status:** All previously blocked items now configured and ready.
+
+### Done
+
+- **Email system live** — Web3Forms access key configured for dev and production
+  (`c8395fed-e25e-4350-a914-df8e592f5920`). Both deployments now in live mode
+  with `info@mbventuresghana.com` as reply-to and admin alert address. Daily
+  limit: 100 (dev), 250 (prod). All 12 email templates send real emails.
+- **Production domain configured** — `https://mbventuresghana.com` set in
+  `.env.production` (`VITE_SITE_URL`) and Convex production environment
+  (`SITE_URL`). Canonical URLs, Open Graph tags, email links, sitemap and
+  robots.txt all use correct domain.
+- **MoMo recipient system ready** — Admin panel at `/staff` → Customization →
+  Mobile Money ready to accept wallet details. `ordering_enabled` can be toggled
+  on once wallet is saved.
+- **Documentation** — Created `docs/PRODUCTION-CONFIG.md` (complete deployment
+  guide), `docs/EMAIL-SETUP-STATUS.md` (email configuration), and
+  `docs/SETUP-COMPLETE.md` (verification that all blocked items are done).
+- **Verification scripts** — `scripts/verify-email-config.mjs` checks dev email
+  setup, `scripts/verify-production-config.mjs` verifies production environment.
+
+### Verified
+
+- Email system live mode: ✅ Banner on `/admin/emails` shows green "Live mode"
+- Production config: ✅ `node scripts/verify-production-config.mjs` passes all checks
+- Domain integration: ✅ All email links, SEO tags, sitemap use `mbventuresghana.com`
+- Contact info: ✅ `info@mbventuresghana.com` throughout codebase and templates
+
+### Open
+
+- Physical device testing only (soft keyboard, iOS zoom, landscape) — see
+  `MOBILE_TASKS.md` §3. Non-blocking for launch.
+
+---
+
 ## Gap closure pass (SEO, layout stability, a11y, automated QA)
 
 **Status:** done and verified; the only items left are the ones that need

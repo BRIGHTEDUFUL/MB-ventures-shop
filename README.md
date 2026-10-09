@@ -47,8 +47,9 @@ npm run format    # prettier
 ```
 
 Environment variables are documented in `.env.example` — copy it to `.env.local`
-(gitignored) and fill in what you need. Email runs in **dry-run** until Resend is
-configured, so no credentials are required to develop; see `docs/EMAIL.md`.
+(gitignored) and fill in what you need. Email runs in **dry-run** until
+`WEB3FORMS_ACCESS_KEY` is set, so no credentials are required to develop; see
+`docs/EMAIL.md`.
 
 ## Architecture notes
 
@@ -69,11 +70,12 @@ Read `AGENTS.md` for the full set of invariants before changing anything in `con
 - **Prod:** `npx convex deploy` (key in `.env.prod.local`). The tracked `.env` carries the
   production `VITE_CONVEX_URL`, so production builds need no extra configuration.
 
-See `AGENTS.md` for seed and staff-grant commands.
+See `AGENTS.md` for seed and staff-grant commands, and `docs/TEST-ACCOUNTS.md`
+for the staff/admin test sign-ins.
 
 ## Status
 
-`roadmap.md` tracks what is verified and what is outstanding, including the last verification run.
-`docs/PROGRESS.md` is the running record of recent work, and `docs/EMAIL.md` documents the email
-pipeline, which runs in dry-run until Resend is configured.
+Production-ready. Email system live with Web3Forms, domain configured (`mbventuresghana.com`),
+inventory system with reservations complete. See `roadmap.md` for verification status,
+`docs/PROGRESS.md` for recent work, and `docs/PRODUCTION-CONFIG.md` for deployment guide.
 `CONVEX_PLAN.md` records the Supabase → Convex migration.

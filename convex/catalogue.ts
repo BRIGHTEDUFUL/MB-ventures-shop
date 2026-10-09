@@ -19,6 +19,8 @@ export const LIMITS = {
   specs: 40,
   gallery: 8,
   reason: 200,
+  /** SKU and barcode: short enough to read off a label, long enough for EAN-13. */
+  code: 40,
 } as const;
 
 /** Product create/update from the staff product editor. */
@@ -37,6 +39,12 @@ export const saveProduct = mutation({
     gallery: v.array(v.string()),
     specs: v.record(v.string(), v.string()),
     verified: v.boolean(),
+    /** Shop-facing codes; blank/absent means "has no code yet". */
+    sku: v.optional(v.string()),
+    barcode: v.optional(v.string()),
+    supplier: v.optional(v.string()),
+    /** What the shop pays a unit; staff-only, never in a public DTO. */
+    cost_price: v.optional(v.number()),
     /**
      * `products.version` the editor loaded. Omit it to force the save (used
      * by scripts); the staff form always sends it, so a stale tab loses
@@ -92,6 +100,51 @@ export const saveProduct = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
 
+    // Codes are stored normalised (SKU upper-cased, barcode left as digits) so
+    // an exact index lookup is also a case-insensitive one. Blank means "no
+    // code" and is stored as absent, which keeps the index free of empty keys.
+    const sku = (args.sku ?? "").trim().toUpperCase();
+    const barcode = (args.barcode ?? "").trim();
+    const supplier = (args.supplier ?? "").trim();
+    const costPrice =
+      args.cost_price === undefined || args.cost_price === null ? null : round2(args.cost_price);
+    if (costPrice !== null && costPrice < 0) {
+      throw new ConvexError({ message: "Cost cannot be below zero." });
+    }
+    for (const [label, value] of [
+      ["SKU", sku],
+      ["Barcode", barcode],
+    ] as const) {
+      if (value.length > LIMITS.code) {
+        throw new ConvexError({ message: `Keep the ${label} under ${LIMITS.code} characters.` });
+      }
+    }
+
+    // Two listings sharing a code makes scan-to-find land on the wrong one and
+    // a label print ambiguous. There is no unique index available for these
+    // fields, so this check *is* the uniqueness guarantee — which is why it
+    // runs for creates and edits alike, comparing against every other row.
+    const codeConflict = async (
+      field: "sku" | "barcode",
+      value: string,
+      label: string,
+    ): Promise<void> => {
+      if (value === "") return;
+      const dupe = await ctx.db
+        .query("products")
+        .withIndex(field === "sku" ? "by_sku" : "by_barcode", (q) => q.eq(field, value))
+        .first();
+      if (dupe !== null && (existing === null || dupe._id !== existing._id)) {
+        fail("DUPLICATE_SKU", `${label} “${value}” is already used by “${dupe.name}”.`, {
+          field,
+          value,
+          product: dupe.slug,
+        });
+      }
+    };
+    await codeConflict("sku", sku, "SKU");
+    await codeConflict("barcode", barcode, "Barcode");
+
     // Stale-editor guard: the form sends the `version` it loaded, so two
     // people editing the same listing cannot silently overwrite each other.
     if (args.expected_version !== undefined && existing !== null) {
@@ -119,6 +172,12 @@ export const saveProduct = mutation({
       gallery: args.gallery,
       specs: args.specs,
       verified: args.verified,
+      // `undefined` clears the field, so deleting a code on the form really
+      // removes it rather than leaving a stale value behind.
+      sku: sku === "" ? undefined : sku,
+      barcode: barcode === "" ? undefined : barcode,
+      supplier: supplier === "" ? undefined : supplier,
+      cost_price: costPrice ?? undefined,
     };
 
     if (args.isNew) {
