@@ -18,7 +18,7 @@ import {
   validateCheckout,
   validateStatusChange,
 } from "./lib/rules";
-import { recordStockChange } from "./inventory";
+import { applyStockChange, stockStateOf, type StockState } from "./lib/stock";
 import { validators } from "./schema";
 import { notifyOrderPlaced, notifyOrderUpdated } from "./emails/orderTriggers";
 
@@ -110,13 +110,20 @@ export const place = mutation({
         quantity: line.quantity,
         image_key: product.image_key,
       });
-      await ctx.db.patch(product._id, { stock: product.stock - line.quantity });
-      await recordStockChange(ctx, {
-        product_slug: product.slug,
-        product_name: product.name,
-        previous_stock: product.stock,
-        new_stock: product.stock - line.quantity,
+      // The units are *held*, not gone: `stock` (available) drops so nobody
+      // else can buy them, `reserved` grows by the same amount, and on-hand
+      // (= stock + reserved) is unchanged until the goods actually leave.
+      // Same visible number as the old direct decrement, but cancellable
+      // without guessing what to restore.
+      await applyStockChange(ctx, {
+        slug: product.slug,
+        command: { kind: "reserve", quantity: line.quantity },
+        movement_type: "reserve",
+        source: "checkout",
         reason: `Sold on order ${reference}`,
+        reference,
+        // One intent, one movement: a retried client cannot double-hold.
+        operation_key: `place:${reference}:${product.slug}`,
       });
     }
 
@@ -145,6 +152,9 @@ export const place = mutation({
       delivery_fee: fee,
       total: round2(subtotal + fee),
       items: lines,
+      // Tracks what happened to the physical units for this order, so a
+      // later cancellation returns them exactly once and never twice.
+      stock_state: "reserved",
     });
 
     await ctx.db.insert("order_history", {
@@ -304,27 +314,82 @@ export const staffUpdate = mutation({
     const previousStatus = order.status;
     const previousPayment = order.payment_status;
 
+    // What is this order currently doing to the shelf? Orders written before
+    // `stock_state` existed infer it from their status (the migration writes
+    // the same answer), so a legacy row behaves exactly like a new one.
+    const heldState = stockStateOf(order);
+    let nextStockState: StockState | undefined;
+
     if (order.status !== "cancelled" && args.status === "cancelled") {
       for (const line of order.items) {
         const product = await ctx.db
           .query("products")
           .withIndex("by_slug", (q) => q.eq("slug", line.id))
           .first();
-        if (product !== null) {
-          await ctx.db.patch(product._id, { stock: product.stock + line.quantity });
-          await recordStockChange(ctx, {
-            product_slug: product.slug,
-            product_name: product.name,
-            previous_stock: product.stock,
-            new_stock: product.stock + line.quantity,
+        if (product === null) continue; // listing removed after the order closed
+        if (heldState === "reserved") {
+          // The goods never left: hand the same units back to the shelf.
+          await applyStockChange(ctx, {
+            slug: product.slug,
+            command: { kind: "release", quantity: line.quantity },
+            movement_type: "release",
+            source: "order",
             reason: `Restock: order ${order.reference} cancelled`,
             actor_id: actorId,
+            reference: order.reference,
+            operation_key: `cancel:${order.reference}:${product.slug}`,
+          });
+        } else if (heldState === "committed") {
+          // Already out of the shop — this is goods coming *back*, which is a
+          // different story in the ledger than a hold being dropped.
+          await applyStockChange(ctx, {
+            slug: product.slug,
+            command: { kind: "restock", quantity: line.quantity },
+            movement_type: "restock",
+            source: "order",
+            reason: `Restock: order ${order.reference} cancelled after dispatch`,
+            actor_id: actorId,
+            reference: order.reference,
+            operation_key: `cancel:${order.reference}:${product.slug}`,
           });
         }
+        // `released` / `restocked` already gave the units back — cancelling
+        // twice (or cancelling a refunded-then-cancelled order) must not.
       }
+      nextStockState = heldState === "committed" ? "restocked" : "released";
+    } else if (
+      (args.status === "dispatched" || args.status === "completed") &&
+      heldState === "reserved"
+    ) {
+      // The goods left the shop: the hold becomes a real reduction of the
+      // shelf count. Available stock was already taken at checkout, so only
+      // `reserved` moves — and only once, because the state below is written
+      // in this same transaction.
+      for (const line of order.items) {
+        const product = await ctx.db
+          .query("products")
+          .withIndex("by_slug", (q) => q.eq("slug", line.id))
+          .first();
+        if (product === null) continue;
+        await applyStockChange(ctx, {
+          slug: product.slug,
+          command: { kind: "commit", quantity: line.quantity },
+          movement_type: "commit",
+          source: "order",
+          reason: `Order ${order.reference} ${args.status === "dispatched" ? "dispatched" : "completed"} — stock leaves the shelf`,
+          actor_id: actorId,
+          reference: order.reference,
+          operation_key: `commit:${order.reference}:${product.slug}`,
+        });
+      }
+      nextStockState = "committed";
     }
 
-    await ctx.db.patch(orderId, { status: args.status, payment_status: args.payment });
+    await ctx.db.patch(orderId, {
+      status: args.status,
+      payment_status: args.payment,
+      ...(nextStockState !== undefined ? { stock_state: nextStockState } : {}),
+    });
     const note = (args.note ?? "").trim();
     await ctx.db.insert("order_history", {
       order_id: orderId,

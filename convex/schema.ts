@@ -19,6 +19,59 @@ const orderStatus = v.union(
   v.literal("cancelled"),
 );
 /**
+ * What a stock movement did. Stored on `inventory_history` so the movements
+ * screen can filter (sales vs corrections vs restocks) and so reversal knows
+ * which direction to write. Legacy rows predate the field and read as `null`;
+ * `movementDTO` infers a type from the reason text for those.
+ */
+export const movementType = v.union(
+  v.literal("opening"), // first stock when a product is created
+  v.literal("sale"), // an order took units
+  v.literal("restock"), // an order gave units back
+  v.literal("receive"), // supplier delivery landed
+  v.literal("adjustment"), // manual count correction (+/-)
+  v.literal("damage"), // write-off: broken in the shop
+  v.literal("loss"), // write-off: unexplained shortage
+  v.literal("theft"), // write-off: suspected theft
+  v.literal("return"), // customer gave goods back
+  v.literal("transfer"), // moved between locations
+  v.literal("correction"), // stocktake variance
+  v.literal("stocktake"), // stocktake applied
+  v.literal("import"), // CSV import
+  v.literal("reversal"), // undo of another movement
+  // Reservation lifecycle (added with the available/reserved split): an order
+  // first *holds* units, the hold is *released* if the order dies on the
+  // shelf, and *committed* when the goods actually leave.
+  v.literal("reserve"), // order placed: available → reserved
+  v.literal("release"), // cancelled before dispatch: reserved → available
+  v.literal("commit"), // dispatched/completed: the shelf loses the units
+);
+/** Closed set of screens/jobs a movement can come from (audit `source`). */
+export const movementSource = v.union(
+  v.literal("admin"), // admin inventory screens
+  v.literal("attendant"), // attendant quick actions
+  v.literal("product"), // product editor stock field
+  v.literal("bulk"), // bulk update
+  v.literal("checkout"), // orders.place
+  v.literal("order"), // orders.staffUpdate (cancel/restock)
+  v.literal("stocktake"), // stocktake run
+  v.literal("import"), // CSV import
+  v.literal("system"), // cron or migration
+);
+/**
+ * What has already happened to the units an order is holding, recorded on the
+ * order itself so a later status change knows whether to give stock back
+ * (`release`) or receive it (`restock`) — and, critically, whether to do
+ * *anything* at all. Legacy orders predate the field and are treated as
+ * `reserved` while they are still open.
+ */
+export const stockState = v.union(
+  v.literal("reserved"),
+  v.literal("committed"),
+  v.literal("released"),
+  v.literal("restocked"),
+);
+/**
  * Icon keys for the homepage trust strip. Kept as a closed union so an
  * invalid key can never reach the client's icon registry — the matching
  * `Record` lives in `src/routes/index.tsx` and must be updated alongside.
@@ -78,6 +131,14 @@ export default defineSchema({
   }).index("by_user", ["user_id"]),
 
   // Replaces `public.products`; `slug` is the old text primary key (`id`).
+  //
+  // Stock numbers: `stock` is **available to sell** (what the storefront shows
+  // and what an order takes from); `reserved` is what open, unpaid orders hold.
+  // `on hand = stock + reserved`. Both live here so a single transaction can
+  // move them together — see `convex/lib/stock.ts`.
+  //
+  // Every field added by the inventory work is optional so rows written before
+  // it stay valid without a backfill (Convex validates on read).
   products: defineTable({
     slug: v.string(),
     name: v.string(),
@@ -91,7 +152,32 @@ export default defineSchema({
     image_key: v.string(),
     gallery: v.array(v.string()),
     verified: v.boolean(),
-  }).index("by_slug", ["slug"]),
+    // Units promised to open orders. Missing → 0 (no reservations yet).
+    reserved: v.optional(v.number()),
+    // Optimistic-concurrency token: bumped on every product save so a stale
+    // editor loses loudly (VERSION_CONFLICT) instead of silently overwriting.
+    version: v.optional(v.number()),
+    // Cost the shop pays, never exposed by any public DTO (`lib/dto.ts`).
+    cost_price: v.optional(v.number()),
+    // Reorder point / suggested order quantity for the low-stock panel.
+    reorder_point: v.optional(v.number()),
+    reorder_quantity: v.optional(v.number()),
+    // Draft → active → archived. Missing → derived from `verified`
+    // (verified → active, else draft) so existing rows keep working.
+    status: v.optional(v.union(v.literal("draft"), v.literal("active"), v.literal("archived"))),
+    // Hidden from the storefront without archiving (in-store-only lines).
+    visible: v.optional(v.boolean()),
+    // When a scheduled sale starts/ends; `null`/missing = no schedule.
+    sale_starts: v.optional(v.union(v.number(), v.null())),
+    sale_ends: v.optional(v.union(v.number(), v.null())),
+    // Staff-facing free text; never rendered to shoppers.
+    internal_notes: v.optional(v.string()),
+    // Admin-defined extra columns (`custom_fields` table), keyed by field key.
+    custom: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_status", ["status"])
+    .index("by_category", ["category"]),
 
   // Replaces `public.categories`.
   categories: defineTable({
@@ -182,6 +268,15 @@ export default defineSchema({
     // about (see `convex/emails/webhook.ts`), cleared by the next message
     // that reaches the address. Never set by checkout itself.
     needs_attention: v.optional(v.string()),
+    // What has already happened to the physical units of this order, so a
+    // later status change returns them exactly once:
+    //   reserved  — held on the shelf (order placed, goods still here)
+    //   committed — the goods left; the shelf no longer holds them
+    //   released  — cancelled before dispatch; the hold was given back
+    //   restocked — cancelled after dispatch; the goods were received back
+    // Missing means "legacy": written before this field existed, and treated
+    // as `reserved` while the order is still open (see `lib/stock` callers).
+    stock_state: v.optional(stockState),
   })
     .index("by_reference", ["reference"])
     .index("by_user", ["user_id"]),
@@ -204,6 +299,12 @@ export default defineSchema({
 
   // Every stock movement (staff adjust, order sale, cancellation restock)
   // leaves a trace so the inventory page can explain any number it shows.
+  //
+  // The ledger is append-only: rows are written once by `applyStockChange`
+  // (`convex/lib/stock.ts`) and never patched or deleted. `previous_stock` /
+  // `new_stock` are the **available** counts; `on_hand_before` / `on_hand_after`
+  // include reserved units so a sale that only moves stock from available to
+  // reserved still explains itself.
   inventory_history: defineTable({
     product_slug: v.string(),
     product_name: v.string(),
@@ -211,7 +312,27 @@ export default defineSchema({
     new_stock: v.number(),
     reason: v.string(),
     actor_id: v.optional(v.id("users")),
-  }).index("by_product", ["product_slug"]),
+    // What happened. Missing on legacy rows → `movementDTO` infers it.
+    movement_type: v.optional(movementType),
+    // Signed change in available units (`new_stock - previous_stock`).
+    delta: v.optional(v.number()),
+    on_hand_before: v.optional(v.number()),
+    on_hand_after: v.optional(v.number()),
+    // Where the change came from (which screen or job).
+    source: v.optional(movementSource),
+    // Order reference, stocktake id or import batch this movement belongs to.
+    reference: v.optional(v.string()),
+    // Client-generated key making retried writes no-ops (`applyStockChange`).
+    operation_key: v.optional(v.string()),
+    // Free-text detail: stocktake counted vs system, transfer destination…
+    note: v.optional(v.string()),
+    // If set, this row undoes `reverses`; if undone, points at the undo row.
+    reverses: v.optional(v.id("inventory_history")),
+    reversed_by: v.optional(v.id("inventory_history")),
+  })
+    .index("by_product", ["product_slug"])
+    .index("by_operation", ["operation_key"])
+    .index("by_type", ["movement_type"]),
 
   // Audit trail of day-to-day staff/admin activity (catalogue, settings,
   // roles). Order changes already have `order_history`.

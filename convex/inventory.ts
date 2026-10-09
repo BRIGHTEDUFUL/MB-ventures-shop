@@ -1,76 +1,77 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import { mutation, query, type QueryCtx } from "./_generated/server";
 import { requireStaff } from "./lib/auth";
 import { logActivity } from "./lib/activity";
-
-export type StockChange = {
-  product_slug: string;
-  product_name: string;
-  previous_stock: number;
-  new_stock: number;
-  reason: string;
-  actor_id?: Doc<"users">["_id"] | undefined;
-};
-
-/**
- * One traceable stock movement. Called by staff adjustments, order placement
- * (sale) and cancellation (restock) so `inventory_history` always explains
- * the current number.
- */
-export async function recordStockChange(ctx: MutationCtx, change: StockChange): Promise<void> {
-  await ctx.db.insert("inventory_history", {
-    product_slug: change.product_slug,
-    product_name: change.product_name,
-    previous_stock: change.previous_stock,
-    new_stock: change.new_stock,
-    reason: change.reason,
-    ...(change.actor_id !== undefined ? { actor_id: change.actor_id } : {}),
-  });
-}
+import { LIMITS } from "./catalogue";
+import { applyStockChange, type MovementSource, type MovementType } from "./lib/stock";
 
 /**
  * Stock correction from the inventory page: a signed whole-number delta plus
- * a reason (delivery received, damage, count fix, …). Never below zero.
+ * a reason (delivery received, damage, count fix, …). Never below zero —
+ * `applyStockChange` owns that rule, along with the movement row.
+ *
+ * `operation_key` makes a double tap or a retried request a no-op: the client
+ * sends a fresh key per tap and reuses it while retrying, so one intent
+ * produces exactly one movement.
  */
 export const adjust = mutation({
   args: {
     product_id: v.string(),
     delta: v.number(),
     reason: v.string(),
+    movement_type: v.optional(
+      v.union(
+        v.literal("receive"),
+        v.literal("adjustment"),
+        v.literal("damage"),
+        v.literal("loss"),
+        v.literal("theft"),
+        v.literal("return"),
+        v.literal("correction"),
+        v.literal("transfer"),
+      ),
+    ),
+    operation_key: v.optional(v.string()),
+    note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const actorId = await requireStaff(ctx);
-    if (!Number.isInteger(args.delta) || args.delta === 0) {
-      throw new ConvexError({ message: "Enter a whole number change that is not zero." });
+    const reason = args.reason.trim() || "Stock adjustment";
+    if (reason.length > LIMITS.reason) {
+      throw new ConvexError({ message: `Keep the reason under ${LIMITS.reason} characters.` });
     }
+    const source: MovementSource = "attendant";
+    const movement_type: MovementType = args.movement_type ?? "adjustment";
+
     const product = await ctx.db
       .query("products")
       .withIndex("by_slug", (q) => q.eq("slug", args.product_id))
       .first();
     if (product === null) throw new ConvexError({ message: "Product not found." });
-    const newStock = product.stock + args.delta;
-    if (newStock < 0) {
-      throw new ConvexError({
-        message: `Stock cannot go below zero — only ${product.stock} on hand.`,
-      });
-    }
-    await ctx.db.patch(product._id, { stock: newStock });
-    await recordStockChange(ctx, {
-      product_slug: product.slug,
-      product_name: product.name,
-      previous_stock: product.stock,
-      new_stock: newStock,
-      reason: args.reason.trim() || "Stock adjustment",
+    const before = product.stock;
+
+    const result = await applyStockChange(ctx, {
+      slug: args.product_id,
+      command: { kind: "adjust", delta: args.delta },
+      movement_type,
+      source,
+      reason,
       actor_id: actorId,
+      ...(args.operation_key !== undefined ? { operation_key: args.operation_key } : {}),
+      ...(args.note !== undefined && args.note.trim() !== "" ? { note: args.note.trim() } : {}),
     });
-    await logActivity(
-      ctx,
-      actorId,
-      "inventory.adjust",
-      `${product.name}: stock ${product.stock} → ${newStock}.`,
-    );
-    return { ok: true, stock: newStock };
+
+    // The activity feed only speaks in stock sentences; a replayed write must
+    // not add a second line claiming a change that never happened.
+    if (!result.skipped) {
+      await logActivity(
+        ctx,
+        actorId,
+        "inventory.adjust",
+        `${product.name}: stock ${before} → ${result.stock}.`,
+      );
+    }
+    return { ok: true, stock: result.stock };
   },
 });
 

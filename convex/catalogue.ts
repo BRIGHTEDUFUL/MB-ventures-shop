@@ -2,10 +2,24 @@ import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { logActivity } from "./lib/activity";
 import { requireAdmin, requireStaff } from "./lib/auth";
+import { fail } from "./lib/errors";
 import { getSettings } from "./lib/settings";
 import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
-import { recordStockChange } from "./inventory";
+import { applyStockChange } from "./lib/stock";
 import { trustIcon } from "./schema";
+
+/**
+ * Hard ceilings on catalogue payload size. Without these one product could
+ * store a megabyte of copy or a thousand gallery slots — nothing else in the
+ * stack caps them, and the browser cannot be trusted to.
+ */
+export const LIMITS = {
+  name: 120,
+  description: 4000,
+  specs: 40,
+  gallery: 8,
+  reason: 200,
+} as const;
 
 /** Product create/update from the staff product editor. */
 export const saveProduct = mutation({
@@ -23,27 +37,48 @@ export const saveProduct = mutation({
     gallery: v.array(v.string()),
     specs: v.record(v.string(), v.string()),
     verified: v.boolean(),
+    /**
+     * `products.version` the editor loaded. Omit it to force the save (used
+     * by scripts); the staff form always sends it, so a stale tab loses
+     * loudly instead of silently discarding someone else's work.
+     */
+    expected_version: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const actorId = await requireStaff(ctx);
 
     const slug = args.id.trim().toLowerCase();
     if (slug === "") throw new ConvexError({ message: "Enter a product name." });
-    if (!(args.price > 0)) throw new ConvexError({ message: "Enter a price above zero." });
+    const price = round2(args.price);
+    if (!(price > 0)) throw new ConvexError({ message: "Enter a price above zero." });
     if (!Number.isInteger(args.stock) || args.stock < 0) {
       throw new ConvexError({ message: "Stock must be a whole number." });
     }
-    if (
-      args.original_price !== null &&
-      args.original_price !== undefined &&
-      args.original_price <= args.price
-    ) {
+    const originalPrice =
+      args.original_price === null || args.original_price === undefined
+        ? null
+        : round2(args.original_price);
+    if (originalPrice !== null && originalPrice <= price) {
       throw new ConvexError({ message: "Original price must be higher than the sale price." });
     }
     if (args.image_key === "") throw new ConvexError({ message: "Add a main photo." });
     if (args.name.trim() === "") throw new ConvexError({ message: "Enter a product name." });
     if (args.description.trim().length < 10) {
       throw new ConvexError({ message: "Write a short description (at least 10 characters)." });
+    }
+    if (args.description.length > LIMITS.description) {
+      throw new ConvexError({
+        message: `Keep the description under ${LIMITS.description} characters.`,
+      });
+    }
+    if (args.name.length > LIMITS.name || args.brand.length > LIMITS.name) {
+      throw new ConvexError({ message: "Keep the name and brand under 120 characters." });
+    }
+    if (Object.keys(args.specs).length > LIMITS.specs) {
+      throw new ConvexError({ message: `Keep it to ${LIMITS.specs} specifications or fewer.` });
+    }
+    if (args.gallery.length > LIMITS.gallery) {
+      throw new ConvexError({ message: `Keep it to ${LIMITS.gallery} photos or fewer.` });
     }
     if (args.category === "") throw new ConvexError({ message: "Choose a category." });
     const category = await ctx.db
@@ -57,14 +92,28 @@ export const saveProduct = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
 
+    // Stale-editor guard: the form sends the `version` it loaded, so two
+    // people editing the same listing cannot silently overwrite each other.
+    if (args.expected_version !== undefined && existing !== null) {
+      const current = existing.version ?? 0;
+      if (current !== args.expected_version) {
+        fail(
+          "VERSION_CONFLICT",
+          "Someone else saved this product first. Reload to see their changes.",
+          {
+            expected: current,
+            your_version: args.expected_version,
+          },
+        );
+      }
+    }
+
     const row = {
-      slug,
       name: args.name.trim(),
       brand: args.brand.trim(),
       category: args.category,
-      price: args.price,
-      original_price: args.original_price ?? null,
-      stock: args.stock,
+      price,
+      original_price: originalPrice,
       description: args.description.trim(),
       image_key: args.image_key,
       gallery: args.gallery,
@@ -76,30 +125,39 @@ export const saveProduct = mutation({
       if (existing !== null) {
         throw new ConvexError({ message: "A product with this link name already exists." });
       }
-      await ctx.db.insert("products", row);
-      if (args.stock > 0) {
-        await recordStockChange(ctx, {
-          product_slug: slug,
-          product_name: row.name,
-          previous_stock: 0,
-          new_stock: args.stock,
-          reason: "Opening stock on product creation",
-          actor_id: actorId,
-        });
-      }
+      // Insert at zero, then move stock through the single writer so the
+      // opening quantity is a real, auditable movement like any other. No
+      // operation key: the insert and the move share one transaction, and a
+      // slug can only ever be created once, so there is nothing to replay.
+      await ctx.db.insert("products", {
+        slug,
+        ...row,
+        stock: 0,
+        reserved: 0,
+        version: 0,
+      });
+      await applyStockChange(ctx, {
+        slug,
+        command: { kind: "set_on_hand", value: args.stock },
+        movement_type: "opening",
+        source: "product",
+        reason: "Opening stock on product creation",
+        actor_id: actorId,
+      });
     } else {
       if (existing === null) throw new ConvexError({ message: "Product not found." });
-      await ctx.db.patch(existing._id, row);
-      if (existing.stock !== args.stock) {
-        await recordStockChange(ctx, {
-          product_slug: slug,
-          product_name: row.name,
-          previous_stock: existing.stock,
-          new_stock: args.stock,
-          reason: "Stock edited on the product form",
-          actor_id: actorId,
-        });
-      }
+      await applyStockChange(ctx, {
+        slug,
+        command: { kind: "set_on_hand", value: args.stock },
+        movement_type: "adjustment",
+        source: "product",
+        reason:
+          existing.stock === args.stock && (existing.reserved ?? 0) === 0
+            ? "Stock confirmed on the product form"
+            : "Stock edited on the product form",
+        actor_id: actorId,
+        patch: row,
+      });
     }
 
     await logActivity(
@@ -114,7 +172,13 @@ export const saveProduct = mutation({
 
 const moneyHint = (price: number) => `GH₵ ${round2(price)}`;
 
-/** Past orders keep their own item snapshots, so removing a listing is safe. */
+/**
+ * Past orders keep their own item snapshots, so removing a listing is safe —
+ * **except** while an order still holds its units. Cancelling an order whose
+ * product row is gone silently loses the restock, so those deletions are
+ * refused until the order is settled. Featured picks are scrubbed too, so the
+ * homepage never points at a product that no longer exists.
+ */
 export const deleteProduct = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
@@ -123,15 +187,52 @@ export const deleteProduct = mutation({
       .query("products")
       .withIndex("by_slug", (q) => q.eq("slug", args.id))
       .first();
-    if (product !== null) {
-      await ctx.db.delete(product._id);
-      await logActivity(
-        ctx,
-        actorId,
-        "product.delete",
-        `Removed product “${product.name}” from the catalogue.`,
+    if (product === null) return { ok: true };
+
+    // Bounded: only the newest orders can still hold stock (they are all
+    // opened within the retention window we show staff), and open orders are
+    // exactly the ones that matter here.
+    const open = await ctx.db
+      .query("orders")
+      .order("desc")
+      .take(500)
+      .then((rows) =>
+        rows.filter(
+          (o) => o.status !== "cancelled" && o.items.some((line) => line.id === product.slug),
+        ),
+      );
+    if (open.length > 0) {
+      fail(
+        "STATE_CONFLICT",
+        `“${product.name}” is still held by ${open.length} open order${
+          open.length === 1 ? "" : "s"
+        } (${open
+          .slice(0, 3)
+          .map((o) => o.reference)
+          .join(
+            ", ",
+          )}). Cancel those orders first, or mark the product as a sample instead — cancelling an order whose product is gone cannot return its stock.`,
       );
     }
+
+    await ctx.db.delete(product._id);
+
+    const settings = await ctx.db
+      .query("store_settings")
+      .withIndex("by_key", (q) => q.eq("key", "site"))
+      .first();
+    if (settings !== null && settings.featured_ids.includes(product.slug)) {
+      await ctx.db.patch(settings._id, {
+        featured_ids: settings.featured_ids.filter((id) => id !== product.slug),
+      });
+    }
+
+    await logActivity(
+      ctx,
+      actorId,
+      "product.delete",
+      `Removed product “${product.name}” from the catalogue.`,
+    );
     return { ok: true };
   },
 });
@@ -196,7 +297,6 @@ export const bulkUpdate = mutation({
         original_price: number | null;
         verified: boolean;
         category: string;
-        stock: number;
       }> = {};
       if (touchesPrice) {
         let price = product.price;
@@ -217,18 +317,27 @@ export const bulkUpdate = mutation({
       }
       if (c.verified !== undefined) patch.verified = c.verified;
       if (c.category !== undefined) patch.category = c.category;
-      if (c.stock !== undefined) patch.stock = c.stock;
 
-      await ctx.db.patch(product._id, patch);
-      if (c.stock !== undefined && c.stock !== product.stock) {
-        await recordStockChange(ctx, {
-          product_slug: product.slug,
-          product_name: product.name,
-          previous_stock: product.stock,
-          new_stock: c.stock,
+      // Stock never takes the direct path: the count goes through the single
+      // writer so reservations are respected and a movement row is written.
+      // A bulk count below what open orders already hold is refused rather
+      // than quietly overselling.
+      if (c.stock !== undefined) {
+        await applyStockChange(ctx, {
+          slug: product.slug,
+          command: { kind: "set_on_hand", value: c.stock },
+          movement_type: "adjustment",
+          source: "bulk",
           reason: "Bulk stock set",
           actor_id: actorId,
+          patch,
+          // No operation key: an absolute set is idempotent by construction
+          // (re-running it yields the same count), and deriving a key from the
+          // content would wrongly skip a *legitimate* later run after sales
+          // moved the number. Double-submit is stopped by the busy button.
         });
+      } else {
+        await ctx.db.patch(product._id, patch);
       }
       updated += 1;
     }

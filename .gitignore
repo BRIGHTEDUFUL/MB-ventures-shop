@@ -24,6 +24,9 @@ dist-ssr
 test-results/
 playwright-report/
 
+# Convex data snapshots (exported before every inventory migration)
+backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
