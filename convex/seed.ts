@@ -7,7 +7,7 @@ const SETTINGS = {
   hero_title: "Made for your workspace.",
   hero_subtitle: "Desks, chairs and everyday tech. From our Abelenkpe shop to your setup.",
   phone: "+233 24 000 0000",
-  email: "orders@mbventuresgh.com",
+  email: "info@mbventuresghana.com",
   address: "Abelenkpe taxi rank, Accra, Ghana",
   hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
   momo_number: "",
@@ -259,5 +259,28 @@ export const syncLocation = internalMutation({
       updated.push("hero_subtitle");
     }
     return { updated };
+  },
+});
+
+/**
+ * Rewrites `store_settings.email` when it still holds the original placeholder
+ * (`orders@mbventuresgh.com`). An address the shop chose itself is left alone,
+ * so this is safe to run repeatedly:
+ *
+ * `npx convex run seed:syncContactEmail` (add `--prod` for production)
+ */
+export const syncContactEmail = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db
+      .query("store_settings")
+      .withIndex("by_key", (q) => q.eq("key", "singleton"))
+      .unique();
+    if (settings === null) return { updated: false };
+
+    const stale = ["orders@mbventuresgh.com"];
+    if (!stale.includes(settings.email.trim().toLowerCase())) return { updated: false };
+    await ctx.db.patch(settings._id, { email: SETTINGS.email });
+    return { updated: true };
   },
 });

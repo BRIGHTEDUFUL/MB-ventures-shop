@@ -15,6 +15,7 @@ export type {
   HistoryEntry,
   HomeTrustItem,
   TrustIcon,
+  ProductMaster,
 } from "../../convex/lib/dto";
 
 // Shared with the backend so the storefront, the delivery page and the staff

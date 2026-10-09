@@ -125,6 +125,27 @@ export type SavedAddress = { id: string; name: string; address: string; phone: s
 
 export type StoreData = { products: Product[]; categories: Category[]; settings: Settings };
 
+/**
+ * Staff-only product master data — what the editor needs and the storefront
+ * must never see: codes, cost, supplier and reorder levels. Returned by
+ * `catalogue.productDetail`, never by `store.get`.
+ */
+export type ProductMaster = {
+  slug: string;
+  /**
+   * `products.version` at load time, sent back as `expected_version` so a
+   * stale tab loses loudly instead of overwriting someone else's save.
+   */
+  version: number;
+  sku: string | null;
+  barcode: string | null;
+  supplier: string | null;
+  cost_price: number | null;
+  reorder_point: number | null;
+  reorder_quantity: number | null;
+  status: "draft" | "active" | "archived";
+};
+
 export const productDTO = (product: Doc<"products">): Product => ({
   id: product.slug,
   name: product.name,

@@ -1,10 +1,11 @@
 import { ConvexError, v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { logActivity } from "./lib/activity";
+import type { ProductMaster } from "./lib/dto";
 import { fail } from "./lib/errors";
 import { requirePermission } from "./lib/permissions";
 import { getSettings } from "./lib/settings";
-import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
+import { isValidEmail, round2, validateMomoRecipient, validateWhatsApp } from "./lib/rules";
 import { applyStockChange } from "./lib/stock";
 import { trustIcon } from "./schema";
 
@@ -40,11 +41,15 @@ export const saveProduct = mutation({
     specs: v.record(v.string(), v.string()),
     verified: v.boolean(),
     /** Shop-facing codes; blank/absent means "has no code yet". */
-    sku: v.optional(v.string()),
-    barcode: v.optional(v.string()),
-    supplier: v.optional(v.string()),
+    sku: v.optional(v.union(v.string(), v.null())),
+    barcode: v.optional(v.union(v.string(), v.null())),
+    supplier: v.optional(v.union(v.string(), v.null())),
     /** What the shop pays a unit; staff-only, never in a public DTO. */
-    cost_price: v.optional(v.number()),
+    cost_price: v.optional(v.union(v.number(), v.null())),
+    /** Below this the product shows as low stock; null/absent = the default. */
+    reorder_point: v.optional(v.union(v.number(), v.null())),
+    /** Suggested order quantity when it does run low. */
+    reorder_quantity: v.optional(v.union(v.number(), v.null())),
     /**
      * `products.version` the editor loaded. Omit it to force the save (used
      * by scripts); the staff form always sends it, so a stale tab loses
@@ -110,6 +115,22 @@ export const saveProduct = mutation({
       args.cost_price === undefined || args.cost_price === null ? null : round2(args.cost_price);
     if (costPrice !== null && costPrice < 0) {
       throw new ConvexError({ message: "Cost cannot be below zero." });
+    }
+    // Reorder levels are whole units: "low stock" is a shelf decision, not a
+    // decimal one. Absent clears the product back to the default threshold.
+    const reorderPoint =
+      args.reorder_point === undefined || args.reorder_point === null
+        ? null
+        : Math.round(args.reorder_point);
+    const reorderQuantity =
+      args.reorder_quantity === undefined || args.reorder_quantity === null
+        ? null
+        : Math.round(args.reorder_quantity);
+    if (reorderPoint !== null && reorderPoint < 0) {
+      throw new ConvexError({ message: "The reorder point cannot be below zero." });
+    }
+    if (reorderQuantity !== null && reorderQuantity < 0) {
+      throw new ConvexError({ message: "The reorder quantity cannot be below zero." });
     }
     for (const [label, value] of [
       ["SKU", sku],
@@ -178,6 +199,8 @@ export const saveProduct = mutation({
       barcode: barcode === "" ? undefined : barcode,
       supplier: supplier === "" ? undefined : supplier,
       cost_price: costPrice ?? undefined,
+      reorder_point: reorderPoint ?? undefined,
+      reorder_quantity: reorderQuantity ?? undefined,
     };
 
     if (args.isNew) {
@@ -293,6 +316,35 @@ export const deleteProduct = mutation({
       `Removed product “${product.name}” from the catalogue.`,
     );
     return { ok: true };
+  },
+});
+
+/**
+ * Staff-only master data for one product: codes, cost, supplier and reorder
+ * levels. Split from `store.get` on purpose — the storefront bundle must never
+ * contain what a unit costs, so the editor pays for this extra query instead of
+ * everyone paying for the cost price in every page load.
+ */
+export const productDetail = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args): Promise<ProductMaster | null> => {
+    await requirePermission(ctx, "catalogue.edit");
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+    if (product === null) return null;
+    return {
+      slug: product.slug,
+      version: product.version ?? 0,
+      sku: product.sku ?? null,
+      barcode: product.barcode ?? null,
+      supplier: product.supplier ?? null,
+      cost_price: product.cost_price ?? null,
+      reorder_point: product.reorder_point ?? null,
+      reorder_quantity: product.reorder_quantity ?? null,
+      status: product.status ?? (product.verified ? "active" : "draft"),
+    };
   },
 });
 
@@ -633,6 +685,10 @@ export const saveDeliverySettings = mutation({
  * The Mobile Money recipient. Admin-floored: this decides whose wallet the
  * money lands in, so it stays behind `catalogue.momo` even though fees moved
  * to staff (`catalogue.delivery`).
+ *
+ * Validation and the write live in `applyMomoRecipient` so the admin mutation
+ * and its CLI twin below always behave the same. The recipient can be rewritten
+ * at any time; only *clearing* it needs ordering to be closed first.
  */
 export const saveMomoSettings = mutation({
   args: {
@@ -642,25 +698,55 @@ export const saveMomoSettings = mutation({
   handler: async (ctx, args) => {
     const actorId = await requirePermission(ctx, "catalogue.momo");
 
-    const number = args.momo_number.trim();
-    const name = args.momo_name.trim();
-    if (number !== "" && number.replace(/[^0-9]/g, "").length < 9) {
-      throw new ConvexError({ message: "Enter a valid Mobile Money number." });
-    }
-    if (number !== "" && name === "") {
-      throw new ConvexError({ message: "Enter the Mobile Money recipient name." });
-    }
-
-    const settings = await getSettings(ctx);
-    if (settings.ordering_enabled && (number === "" || name === "")) {
-      throw new ConvexError({
-        message: "Turn off ordering before clearing Mobile Money details.",
-      });
-    }
-
-    await ctx.db.patch(settings._id, { momo_number: number, momo_name: name });
+    await applyMomoRecipient(ctx, args.momo_number, args.momo_name);
 
     await logActivity(ctx, actorId, "settings.momo", "Updated the Mobile Money recipient.");
     return { ok: true };
   },
 });
+
+/**
+ * Deployment-operator twin of `saveMomoSettings`, for `npx convex run` when no
+ * admin session is available (bootstrap, CI, or simply setting the recipient
+ * before anyone has signed in):
+ *
+ *   npx convex run catalogue:setMomo '{"momo_number":"0532767269","momo_name":"Abdul Ganiwu Fusein"}'
+ *
+ * `internalMutation` keeps it out of the browser completely, it applies the
+ * exact same validation as the admin path, and it can be run again whenever the
+ * wallet changes — nothing is locked in by having been set once. It writes no
+ * activity line: a CLI call has no user to attribute.
+ */
+export const setMomo = internalMutation({
+  args: {
+    momo_number: v.string(),
+    momo_name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const saved = await applyMomoRecipient(ctx, args.momo_number, args.momo_name);
+    return { ok: true, ...saved };
+  },
+});
+
+/** Trim, validate and store the recipient. Throws `ConvexError` on bad input. */
+async function applyMomoRecipient(
+  ctx: MutationCtx,
+  rawNumber: string,
+  rawName: string,
+): Promise<{ momo_number: string; momo_name: string }> {
+  const number = rawNumber.trim();
+  const name = rawName.trim();
+
+  const invalid = validateMomoRecipient(number, name);
+  if (invalid !== null) throw new ConvexError({ message: invalid });
+
+  const settings = await getSettings(ctx);
+  if (settings.ordering_enabled && (number === "" || name === "")) {
+    throw new ConvexError({
+      message: "Turn off ordering before clearing Mobile Money details.",
+    });
+  }
+
+  await ctx.db.patch(settings._id, { momo_number: number, momo_name: name });
+  return { momo_number: number, momo_name: name };
+}

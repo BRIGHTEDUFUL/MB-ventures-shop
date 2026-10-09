@@ -1,13 +1,18 @@
 import type { EmailConfig, EmailMode } from "./config";
 
 /**
- * Plain-`fetch` transport for the Resend HTTP API.
+ * Plain-`fetch` transport for the Web3Forms submission API.
  *
  * Design rules from the spec:
  * - dry-run never touches the network;
  * - one retry after ~2s for network errors, 429 and 5xx, never for 4xx;
  * - `Retry-After` wins over the default delay;
- * - the API key and message bodies are never written to a log.
+ * - the access key and message bodies are never written to a log.
+ *
+ * Web3Forms is a form relay: a submission is forwarded to the one inbox bound
+ * to the access key, so it cannot pick a recipient itself. The intended
+ * address therefore travels inside the payload as `to`, and the body goes out
+ * as plain text (`body`) — HTML would arrive as source code in that inbox.
  *
  * The retry needs to *wait*, and Convex actions have no guaranteed timer, so
  * the caller may hand us a `sleep`. Without one (the Convex path) the call
@@ -15,27 +20,24 @@ import type { EmailConfig, EmailMode } from "./config";
  * waiting happens in the scheduler instead of in this process.
  */
 
-export const RESEND_SEND_ENDPOINT = "https://api.resend.com/emails";
+export const WEB3FORMS_SUBMIT_ENDPOINT = "https://api.web3forms.com/submit";
 const DEFAULT_RETRY_MS = 2000;
 const MAX_RETRY_MS = 15_000;
 const MAX_ATTEMPTS = 2;
 
 export type SendEmailInput = {
+  /** Intended recipient. Carried in the payload; the relay picks the inbox. */
   to: string;
   subject: string;
-  html: string;
+  /** Plain-text body: the only body a form relay can show its reader. */
   text: string;
   replyTo?: string | undefined;
-  tags?: string[] | undefined;
-  /** Adds `Idempotency-Key` so a double delivery is rejected by Resend. */
-  idempotencyKey?: string | undefined;
   /** How many attempts have already been made (1 = first try). */
   attempt?: number | undefined;
 };
 
 export type SendEmailResult = {
   ok: boolean;
-  providerMessageId?: string;
   error?: string;
   /** True when the message was deliberately not sent (dry-run, bad address). */
   skipped?: boolean;
@@ -51,7 +53,7 @@ export type SendEmailOptions = {
   now?: (() => number) | undefined;
 };
 
-/** Rejects anything Resend would bounce on anyway, without a round trip. */
+/** Rejects anything the relay would reject anyway, without a round trip. */
 export function isValidRecipient(email: string): boolean {
   return /^[^\s@,;<>"]+@[^\s@,;<>".]+\.[^\s@,;<>"]{2,}$/.test(email.trim());
 }
@@ -67,63 +69,54 @@ function retryAfterMs(response: Response): number | null {
 
 const isRetryableStatus = (status: number): boolean => status === 429 || status >= 500;
 
+/** Web3Forms reports errors either at the top level or under `body`. */
+function detailFrom(body: unknown): string {
+  if (body === null || typeof body !== "object") return "";
+  const record = body as Record<string, unknown>;
+  if (typeof record["message"] === "string") return record["message"];
+  const nested = record["body"];
+  if (nested !== null && typeof nested === "object") {
+    const message = (nested as Record<string, unknown>)["message"];
+    if (typeof message === "string") return message;
+  }
+  return "";
+}
+
 /** Only ever surfaces a short provider message, never the request/response. */
 async function errorFromResponse(response: Response, status: number): Promise<string> {
   let detail = "";
   try {
-    const body: unknown = await response.json();
-    if (body && typeof body === "object" && "message" in body) {
-      const message = (body as { message: unknown }).message;
-      if (typeof message === "string") detail = message.slice(0, 300);
-    }
+    detail = detailFrom(await response.json());
   } catch {
     // Non-JSON body: the status alone is enough for an admin to act on.
   }
+  detail = detail.slice(0, 300);
   return detail === ""
-    ? `Resend rejected the request (HTTP ${status}).`
-    : `Resend rejected the request (HTTP ${status}): ${detail}`;
+    ? `Web3Forms rejected the request (HTTP ${status}).`
+    : `Web3Forms rejected the request (HTTP ${status}): ${detail}`;
 }
 
 async function attemptOnce(
   input: SendEmailInput,
   options: SendEmailOptions,
-): Promise<
-  | { ok: true; providerMessageId: string }
-  | { ok: false; error: string; retryable: boolean; delayMs: number }
-> {
+): Promise<{ ok: true } | { ok: false; error: string; retryable: boolean; delayMs: number }> {
   const { config } = options;
   const fetchImpl = options.fetchImpl ?? fetch;
 
   const payload: Record<string, unknown> = {
-    from: config.from,
-    to: [input.to.trim()],
+    access_key: config.accessKey,
     subject: input.subject,
-    html: input.html,
-    text: input.text,
+    to: input.to.trim(),
+    body: input.text,
   };
   const replyTo = (input.replyTo ?? config.replyTo).trim();
-  if (replyTo !== "") payload["reply_to"] = replyTo;
-  const tags = (input.tags ?? []).filter((tag) => tag.trim() !== "").slice(0, 3);
-  if (tags.length > 0) {
-    payload["tags"] = tags.map((value, index) => ({
-      name: index === 0 ? "category" : `category_${index}`,
-      value: value.slice(0, 255),
-    }));
-  }
-
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${config.apiKey}`,
-    "Content-Type": "application/json",
-  };
-  if (input.idempotencyKey !== undefined && input.idempotencyKey !== "") {
-    headers["Idempotency-Key"] = input.idempotencyKey;
-  }
+  if (replyTo !== "") payload["replyto"] = replyTo;
 
   let response: Response;
   try {
-    response = await fetchImpl(RESEND_SEND_ENDPOINT, {
+    response = await fetchImpl(WEB3FORMS_SUBMIT_ENDPOINT, {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
   } catch {
@@ -131,24 +124,15 @@ async function attemptOnce(
     // headers attached in some runtimes.
     return {
       ok: false,
-      error: "Could not reach Resend (network error).",
+      error: "Could not reach Web3Forms (network error).",
       retryable: true,
       delayMs: DEFAULT_RETRY_MS,
     };
   }
 
   if (response.ok) {
-    let providerMessageId = "";
-    try {
-      const body: unknown = await response.json();
-      if (body && typeof body === "object" && "id" in body) {
-        const id = (body as { id: unknown }).id;
-        if (typeof id === "string") providerMessageId = id;
-      }
-    } catch {
-      // A missing id only costs us webhook correlation, not the delivery.
-    }
-    return { ok: true, providerMessageId };
+    // The relay acknowledges a submission; there is no delivery id to keep.
+    return { ok: true };
   }
 
   const status = response.status;
@@ -171,7 +155,7 @@ export async function sendEmail(
   if (config.mode !== "live") {
     return { ok: true, skipped: true };
   }
-  if (config.apiKey === "" || config.from === "") {
+  if (config.accessKey === "") {
     return { ok: false, error: "Email is not configured on this deployment." };
   }
   if (!isValidRecipient(input.to)) {
@@ -188,7 +172,7 @@ export async function sendEmail(
   for (let attempt = firstAttempt; attempt <= maxAttempts; attempt++) {
     const outcome = await attemptOnce(input, options);
     if (outcome.ok) {
-      return { ok: true, providerMessageId: outcome.providerMessageId };
+      return { ok: true };
     }
     lastError = outcome.error;
     if (!outcome.retryable || attempt >= maxAttempts) break;

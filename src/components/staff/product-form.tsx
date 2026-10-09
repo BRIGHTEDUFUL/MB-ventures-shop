@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useConvexMutation } from "@convex-dev/react-query";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { specs as specRows, errorMessage, type Category, type Product } from "@/lib/store";
+import {
+  specs as specRows,
+  errorMessage,
+  type Category,
+  type Product,
+  type ProductMaster,
+} from "@/lib/store";
 import { images } from "@/lib/store-images";
 import { useImageUpload } from "@/lib/upload-image";
 import { toast } from "sonner";
@@ -20,9 +26,16 @@ type Draft = {
   gallery: string[];
   specs: [string, string][];
   verified: boolean;
+  /** Master data — codes, cost and reorder levels (staff-only fields). */
+  sku: string;
+  barcode: string;
+  supplier: string;
+  cost_price: string;
+  reorder_point: string;
+  reorder_quantity: string;
 };
 
-const toDraft = (p?: Product): Draft => ({
+const toDraft = (p?: Product, m?: ProductMaster | null): Draft => ({
   id: p?.id ?? "",
   name: p?.name ?? "",
   brand: p?.brand ?? "",
@@ -35,6 +48,12 @@ const toDraft = (p?: Product): Draft => ({
   gallery: p?.gallery ?? [],
   specs: p ? (specRows(p.specs) as [string, string][]) : [],
   verified: p?.verified ?? false,
+  sku: m?.sku ?? "",
+  barcode: m?.barcode ?? "",
+  supplier: m?.supplier ?? "",
+  cost_price: m?.cost_price != null ? String(m.cost_price) : "",
+  reorder_point: m?.reorder_point != null ? String(m.reorder_point) : "",
+  reorder_quantity: m?.reorder_quantity != null ? String(m.reorder_quantity) : "",
 });
 
 /**
@@ -43,17 +62,20 @@ const toDraft = (p?: Product): Draft => ({
  */
 export function ProductForm({
   product,
+  master,
   categories,
   onSaved,
   onCancel,
 }: {
   product?: Product;
+  /** Staff-only master data for this product; `null` while it cannot load. */
+  master?: ProductMaster | null;
   categories: Category[];
   onSaved: () => void;
   onCancel: () => void;
 }) {
   const isNew = product === undefined;
-  const [d, setD] = useState<Draft>(() => toDraft(product));
+  const [d, setD] = useState<Draft>(() => toDraft(product, master));
   const [busy, setBusy] = useState(false);
   const uploadImage = useImageUpload();
   const saveProduct = useConvexMutation(api.catalogue.saveProduct);
@@ -83,9 +105,24 @@ export function ProductForm({
     e.preventDefault();
     const price = Number(d.price),
       stock = Number(d.stock),
-      orig = d.original_price ? Number(d.original_price) : null;
+      orig = d.original_price ? Number(d.original_price) : null,
+      cost = d.cost_price.trim() === "" ? null : Number(d.cost_price),
+      reorderPoint = d.reorder_point.trim() === "" ? null : Number(d.reorder_point),
+      reorderQty = d.reorder_quantity.trim() === "" ? null : Number(d.reorder_quantity);
     if (!(price > 0)) {
       toast.error("Enter a price above zero.");
+      return;
+    }
+    if (cost !== null && !(cost >= 0)) {
+      toast.error("Cost must be a number of zero or more.");
+      return;
+    }
+    if (reorderPoint !== null && (!Number.isInteger(reorderPoint) || reorderPoint < 0)) {
+      toast.error("Reorder point must be a whole number of zero or more.");
+      return;
+    }
+    if (reorderQty !== null && (!Number.isInteger(reorderQty) || reorderQty < 0)) {
+      toast.error("Reorder quantity must be a whole number of zero or more.");
       return;
     }
     if (!Number.isInteger(stock) || stock < 0) {
@@ -140,6 +177,15 @@ export function ProductForm({
           d.specs.filter(([k, v]) => k.trim() && v.trim()).map(([k, v]) => [k.trim(), v.trim()]),
         ),
         verified: d.verified,
+        sku: d.sku.trim(),
+        barcode: d.barcode.trim(),
+        supplier: d.supplier.trim(),
+        cost_price: cost,
+        reorder_point: reorderPoint,
+        reorder_quantity: reorderQty,
+        // The stale-editor guard: send the version we loaded so a second tab
+        // saving later loses loudly rather than silently discarding the edit.
+        ...(isNew || master == null ? {} : { expected_version: master.version }),
       });
       toast.success(isNew ? "Product added" : "Product saved");
       onSaved();
@@ -234,17 +280,6 @@ export function ProductForm({
             onChange={(e) => set("original_price", e.target.value)}
           />
         </label>
-        <label>
-          Stock on hand
-          <input
-            required
-            type="number"
-            min="0"
-            step="1"
-            value={d.stock}
-            onChange={(e) => set("stock", e.target.value)}
-          />
-        </label>
         <label className="sm:col-span-2">
           Description
           <textarea
@@ -254,6 +289,87 @@ export function ProductForm({
             onChange={(e) => set("description", e.target.value)}
           />
         </label>
+      </div>
+
+      <div>
+        <h3 className="mb-2 font-semibold">Stock &amp; codes</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label>
+            Available to sell
+            <input
+              required
+              type="number"
+              min="0"
+              step="1"
+              value={d.stock}
+              onChange={(e) => set("stock", e.target.value)}
+            />
+          </label>
+          <label>
+            Reorder point (low-stock warning)
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 5"
+              value={d.reorder_point}
+              onChange={(e) => set("reorder_point", e.target.value)}
+            />
+          </label>
+          <label>
+            Reorder quantity
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 12"
+              value={d.reorder_quantity}
+              onChange={(e) => set("reorder_quantity", e.target.value)}
+            />
+          </label>
+          <label>
+            Cost per unit GH₵ (staff only)
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={d.cost_price}
+              onChange={(e) => set("cost_price", e.target.value)}
+            />
+          </label>
+          <label>
+            SKU
+            <input
+              maxLength={40}
+              placeholder="e.g. SD-120-BLK"
+              value={d.sku}
+              onChange={(e) => set("sku", e.target.value)}
+            />
+          </label>
+          <label>
+            Barcode
+            <input
+              maxLength={40}
+              inputMode="numeric"
+              placeholder="e.g. 5901234123457"
+              value={d.barcode}
+              onChange={(e) => set("barcode", e.target.value)}
+            />
+          </label>
+          <label className="sm:col-span-2">
+            Supplier
+            <input
+              maxLength={120}
+              placeholder="e.g. Accra Office Supplies"
+              value={d.supplier}
+              onChange={(e) => set("supplier", e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          SKU and barcode must be unique across the catalogue — the save refuses a duplicate and
+          names the product already using it. Cost and supplier never appear on the storefront.
+        </p>
       </div>
 
       <div>

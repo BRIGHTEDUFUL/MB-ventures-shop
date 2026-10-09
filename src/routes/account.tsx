@@ -1,12 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexMutation } from "@convex-dev/react-query";
+import { CircleAlert, Info } from "lucide-react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "@/lib/use-session";
 import { pageHead, money, errorMessage } from "@/lib/store";
+import { images, imageSize } from "@/lib/store-images";
+import { AuthFrame } from "@/components/auth-frame";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -25,6 +28,20 @@ export const Route = createFileRoute("/account")({
     ),
   component: Account,
 });
+
+/**
+ * A failed submit sits on its own line above the button: one tinted notice
+ * with a glyph, so an error reads as an event rather than as stray red text.
+ */
+function FieldError({ children }: { children: ReactNode }) {
+  if (!children) return null;
+  return (
+    <p role="alert" className="auth-error">
+      <CircleAlert aria-hidden />
+      <span>{children}</span>
+    </p>
+  );
+}
 
 function Account() {
   const { next, code } = Route.useSearch(),
@@ -131,311 +148,325 @@ function Account() {
     }
   };
 
-  if (loading) return <div className="page-content wrap">Loading account…</div>;
-  return (
-    <div className="page-content wrap">
-      <h1 className="page-title">
-        {session ? "Your account" : signup ? "Create your account" : "Welcome back"}
-      </h1>
-      {session ? (
-        <>
-          <p className="page-lead">{session.user.email}</p>
-          {profile?.name || profile?.phone ? (
-            <p className="text-sm text-muted-foreground">
-              {profile.name}
-              {profile.name && profile.phone ? " · " : ""}
-              {profile.phone}
-            </p>
-          ) : null}
-          <div className="mt-5 flex gap-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                void signOut();
-              }}
-            >
-              Sign out
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/track">Track an order</Link>
-            </Button>
-          </div>
-          <h2 className="mb-5 mt-10 text-2xl">Your orders</h2>
-          {orders.isError ? (
-            <p>Orders could not load. Please try again.</p>
-          ) : orders.data?.length ? (
-            orders.data.map((o) => (
-              <div
-                key={o.id}
-                className="flex flex-wrap justify-between gap-3 border-b border-border py-5"
-              >
+  if (loading)
+    return (
+      <div className="page-content wrap auth-page auth-loading">
+        <img src={images["logo"]} {...imageSize("logo")} alt="" />
+        <p>Loading your account…</p>
+      </div>
+    );
+
+  // Signed in: the account itself, still inside the same frame so the page
+  // never switches identity between checking out and reading orders.
+  if (session)
+    return (
+      <AuthFrame
+        wide
+        title="Your account"
+        lead={
+          <>
+            <span>{session.user.email}</span>
+            {profile?.name || profile?.phone ? (
+              <span className="auth-profile">
+                {profile.name}
+                {profile.name && profile.phone ? " · " : ""}
+                {profile.phone}
+              </span>
+            ) : null}
+          </>
+        }
+      >
+        <div className="mt-6 flex flex-wrap gap-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              void signOut();
+            }}
+          >
+            Sign out
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/track">Track an order</Link>
+          </Button>
+        </div>
+        <h2 className="auth-section-heading">Your orders</h2>
+        {orders.isError ? (
+          <p className="auth-empty">Orders could not load. Please try again.</p>
+        ) : orders.data?.length ? (
+          <ul className="auth-orders">
+            {orders.data.map((o) => (
+              <li key={o.id}>
                 <span className="font-mono text-sm">{o.reference}</span>
                 <span className="text-sm capitalize">
                   {o.status} · Payment {o.payment_status}
                 </span>
-                <span>{money(o.total)}</span>
+                <span className="font-semibold">{money(o.total)}</span>
                 <Link className="text-sm underline" to="/track">
                   View with phone number
                 </Link>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No orders yet. Your first order will appear here.
-            </p>
-          )}
-          <h2 className="mb-5 mt-10 text-2xl">Saved addresses</h2>
-          {addresses.data?.map((a) => (
-            <div key={a.id} className="flex justify-between border-b border-border py-3 text-sm">
-              <span>{a.address}</span>
-              <Button
-                variant="ghost"
-                onClick={async () => {
-                  try {
-                    await removeAddress({ id: a.id });
-                  } catch (err) {
-                    toast.error(errorMessage(err, "Address could not be removed."));
-                  }
-                }}
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <form
-            className="mt-4 flex max-w-xl gap-3"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                await addAddress({ name: "Delivery", address, phone: "" });
-                setAddress("");
-              } catch (err) {
-                toast.error(errorMessage(err, "Address could not be saved."));
-              }
-            }}
-          >
-            <input
-              required
-              aria-label="Save delivery address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Street address & landmark"
-            />
-            <Button>Save</Button>
-          </form>
-        </>
-      ) : code ? (
-        <div className="mt-8 max-w-md">
-          <p className="mb-4 text-sm text-muted-foreground">
-            Choose a new password. The one-time code from your email is already attached to this
-            page, so all we need is the address it was sent to.
-          </p>
-          <form className="space-y-4" onSubmit={submitNewPassword}>
-            <label>
-              Email
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label>
-              New password
-              <input
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </label>
-            <label>
-              Confirm new password
-              <input
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </label>
-            {newPassword && confirmPassword && newPassword !== confirmPassword ? (
-              <p role="alert" className="text-sm text-destructive">
-                The two passwords do not match.
-              </p>
-            ) : null}
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <Button disabled={busy} className="w-full">
-              {busy ? "Please wait…" : "Set new password"}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="auth-empty">No orders yet. Your first order will appear here.</p>
+        )}
+        <h2 className="auth-section-heading">Saved addresses</h2>
+        {addresses.data?.map((a) => (
+          <div key={a.id} className="flex justify-between border-b border-border py-3 text-sm">
+            <span>{a.address}</span>
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                try {
+                  await removeAddress({ id: a.id });
+                } catch (err) {
+                  toast.error(errorMessage(err, "Address could not be removed."));
+                }
+              }}
+            >
+              Remove
             </Button>
-          </form>
-          <Button variant="link" className="mt-4 px-0" onClick={() => navigate({ to: "/" })}>
+          </div>
+        ))}
+        <form
+          className="auth-address-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              await addAddress({ name: "Delivery", address, phone: "" });
+              setAddress("");
+            } catch (err) {
+              toast.error(errorMessage(err, "Address could not be saved."));
+            }
+          }}
+        >
+          <input
+            required
+            aria-label="Save delivery address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Street address & landmark"
+          />
+          <Button>Save</Button>
+        </form>
+      </AuthFrame>
+    );
+
+  // The emailed reset link carries its one-time code.
+  if (code)
+    return (
+      <AuthFrame
+        title="Choose a new password"
+        lead="The one-time code from your email is already attached to this page, so all we need is the address it was sent to."
+      >
+        <form className="auth-form" onSubmit={submitNewPassword}>
+          <label>
+            Email
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label>
+            New password
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            Confirm new password
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </label>
+          {newPassword && confirmPassword && newPassword !== confirmPassword ? (
+            <FieldError>The two passwords do not match.</FieldError>
+          ) : null}
+          <FieldError>{error}</FieldError>
+          <Button disabled={busy} className="w-full">
+            {busy ? "Please wait…" : "Set new password"}
+          </Button>
+        </form>
+        <div className="auth-switch">
+          <Button variant="link" onClick={() => navigate({ to: "/" })}>
             Back to the store
           </Button>
         </div>
-      ) : forgot ? (
-        <div className="mt-8 max-w-md">
-          {resetSent ? (
+      </AuthFrame>
+    );
+
+  // Asking for a reset link, and the confirmation once it is queued.
+  if (forgot)
+    return (
+      <AuthFrame
+        title={resetSent ? "Check your email" : "Reset your password"}
+        lead={
+          resetSent ? (
             <>
-              <p className="font-semibold">Check your email</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                If <span className="font-medium">{email}</span> has an account, a reset link is on
-                its way. The link is valid for 60 minutes.
-              </p>
-              <Button
-                variant="outline"
-                className="mt-5"
-                onClick={() => {
-                  setForgot(false);
-                  setResetSent(false);
-                  setError("");
-                }}
-              >
-                Back to sign in
-              </Button>
+              If <strong>{email}</strong> has an account, a reset link is on its way. The link is
+              valid for 60 minutes.
             </>
           ) : (
-            <>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Enter the address you signed up with and we will email you a link to set a new
-                password.
-              </p>
-              <form className="space-y-4" onSubmit={submitForgot}>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </label>
-                {error && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {error}
-                  </p>
-                )}
-                <Button disabled={busy} className="w-full">
-                  {busy ? "Sending…" : "Email me a reset link"}
-                </Button>
-              </form>
-              <Button
-                variant="link"
-                className="mt-4 px-0"
-                onClick={() => {
-                  setForgot(false);
-                  setError("");
-                }}
-              >
-                Back to sign in
-              </Button>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="mt-8 max-w-md">
-          {redirectTo && (
-            <p className="mb-4 text-sm text-muted-foreground">
-              Sign in to continue to{" "}
-              <span className="font-medium">{redirectTo.replace("/", "")}</span>.
-            </p>
-          )}
-          <form className="space-y-4" onSubmit={submit}>
-            {signup && (
-              <>
-                <label>
-                  Full name
-                  <input
-                    required
-                    minLength={2}
-                    autoComplete="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </label>
-                <label>
-                  Phone number
-                  <input
-                    required
-                    type="tel"
-                    minLength={9}
-                    autoComplete="tel"
-                    placeholder="024 123 4567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </label>
-              </>
-            )}
-            <label>
-              Email
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                required
-                minLength={8}
-                autoComplete={signup ? "new-password" : "current-password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <Button disabled={busy} className="w-full">
-              {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
-            </Button>
-          </form>
+            "Enter the address you signed up with and we will email you a link to set a new password."
+          )
+        }
+      >
+        {resetSent ? (
           <Button
-            variant="link"
-            className="mt-4 px-0"
+            variant="outline"
+            className="w-full"
             onClick={() => {
-              setSignup(!signup);
+              setForgot(false);
+              setResetSent(false);
               setError("");
             }}
           >
-            {signup ? "Already have an account? Sign in" : "New here? Create an account"}
+            Back to sign in
           </Button>
-          {!signup && (
-            <div>
+        ) : (
+          <>
+            <form className="auth-form" onSubmit={submitForgot}>
+              <label>
+                Email
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              <FieldError>{error}</FieldError>
+              <Button disabled={busy} className="w-full">
+                {busy ? "Sending…" : "Email me a reset link"}
+              </Button>
+            </form>
+            <div className="auth-switch">
               <Button
                 variant="link"
-                className="px-0"
                 onClick={() => {
-                  setForgot(true);
+                  setForgot(false);
                   setError("");
                 }}
               >
-                Forgot your password?
+                Back to sign in
               </Button>
             </div>
-          )}
-          <p className="mt-4 text-xs text-muted-foreground">
-            An account is needed to place an order — your cart stays saved while you sign in. Staff
-            access is granted separately by the store owner.
-          </p>
-        </div>
+          </>
+        )}
+      </AuthFrame>
+    );
+
+  // Sign in and sign up share one form; the toggle below it swaps the flow.
+  return (
+    <AuthFrame
+      title={signup ? "Create your account" : "Welcome back"}
+      lead={
+        signup
+          ? "Create an account to place an order, follow a delivery and keep your details for next time."
+          : "Sign in to pick up where you left off — your cart stays saved while you do."
+      }
+    >
+      {redirectTo && (
+        <p className="auth-note">
+          <Info aria-hidden />
+          <span>
+            Sign in to continue to <strong>{redirectTo.replace("/", "")}</strong>.
+          </span>
+        </p>
       )}
-    </div>
+      <form className="auth-form" onSubmit={submit}>
+        {signup && (
+          <>
+            <label>
+              Full name
+              <input
+                required
+                minLength={2}
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <label>
+              Phone number
+              <input
+                required
+                type="tel"
+                minLength={9}
+                autoComplete="tel"
+                placeholder="024 123 4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </label>
+          </>
+        )}
+        <label>
+          Email
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <label>
+          Password
+          <input
+            type="password"
+            required
+            minLength={8}
+            autoComplete={signup ? "new-password" : "current-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        <FieldError>{error}</FieldError>
+        <Button disabled={busy} className="w-full">
+          {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
+        </Button>
+      </form>
+      <div className="auth-switch">
+        <Button
+          variant="link"
+          onClick={() => {
+            setSignup(!signup);
+            setError("");
+          }}
+        >
+          {signup ? "Already have an account? Sign in" : "New here? Create an account"}
+        </Button>
+        {!signup && (
+          <Button
+            variant="link"
+            onClick={() => {
+              setForgot(true);
+              setError("");
+            }}
+          >
+            Forgot your password?
+          </Button>
+        )}
+      </div>
+      <p className="auth-footnote">
+        An account is needed to place an order — your cart stays saved while you sign in. Staff
+        access is granted separately by the store owner.
+      </p>
+    </AuthFrame>
   );
 }

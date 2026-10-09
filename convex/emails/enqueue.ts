@@ -29,7 +29,6 @@ export type EnqueueInput = {
   /** Overrides the group derived from the template (contact mail is "contact"). */
   category?: EmailCategory | undefined;
   replyTo?: string | undefined;
-  tags?: string[] | undefined;
   /** One-time code for auth mail, kept only when EMAIL_DRY_RUN_LOG_CODES is on. */
   dryRunCode?: string | undefined;
   /** Set false for one-off messages that must never be deduped (test sends). */
@@ -231,7 +230,6 @@ export async function scheduleEmail(ctx: MutationCtx, input: EnqueueInput): Prom
       dedupe_ref: dedupeRef,
       data: toConvexValue(input.data) as Record<string, unknown>,
       ...(input.replyTo !== undefined && input.replyTo !== "" ? { reply_to: input.replyTo } : {}),
-      ...(input.tags !== undefined && input.tags.length > 0 ? { tags: input.tags } : {}),
       ...(config.logCodes && input.dryRunCode !== undefined
         ? { dry_run_code: input.dryRunCode }
         : {}),

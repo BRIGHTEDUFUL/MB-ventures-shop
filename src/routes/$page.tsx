@@ -143,8 +143,8 @@ function Content() {
                   <br />
                 </>
               )}
-              <a className="underline" href={`mailto:${s?.email || "orders@mbventuresgh.com"}`}>
-                {s?.email || "orders@mbventuresgh.com"}
+              <a className="underline" href={`mailto:${s?.email || "info@mbventuresghana.com"}`}>
+                {s?.email || "info@mbventuresghana.com"}
               </a>
             </p>
             <p>Contact details are from the store brief and should be verified before launch.</p>

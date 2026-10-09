@@ -22,9 +22,9 @@ import { StaffShell } from "@/components/staff/shell";
 /**
  * Email operations console.
  *
- * Until Resend credentials exist the whole page runs against dry-run rows:
- * every message is rendered and stored, none is transmitted. The banner is the
- * single place that states which mode the deployment is in.
+ * Until the Web3Forms access key exists the whole page runs against dry-run
+ * rows: every message is rendered and stored, none is transmitted. The banner
+ * is the single place that states which mode the deployment is in.
  */
 export const Route = createFileRoute("/admin/emails")({
   head: () =>
@@ -187,15 +187,13 @@ function EmailsConsole() {
       >
         <p className="font-semibold">
           {mode === "live"
-            ? "Live mode: Resend is configured and messages are delivered."
+            ? "Live mode: Web3Forms is configured and messages are forwarded to the shop inbox."
             : "Dry-run mode: messages are rendered and logged, nothing leaves the server."}
         </p>
         <p className="mt-1 text-muted-foreground">
           {mode === "live"
-            ? `Sender ${config.data?.from || "not set"} · daily limit ${
-                config.data?.dailyLimit ?? "-"
-              } · webhook ${config.data?.webhookEnabled ? "enabled" : "disabled"}`
-            : "Add RESEND_API_KEY and EMAIL_FROM to go live. No code changes are needed."}
+            ? `Forwarded by api.web3forms.com · daily limit ${config.data?.dailyLimit ?? "-"}`
+            : "Add WEB3FORMS_ACCESS_KEY to go live. No code changes are needed."}
           {config.data?.logCodes ? " · one-time auth codes are stored for local development" : ""}
         </p>
         {config.data?.devPreview ? (

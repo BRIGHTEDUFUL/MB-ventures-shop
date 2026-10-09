@@ -19,4 +19,5 @@
 - Prod runs its own auth keys (`JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL`); regenerate them with the `@convex-dev/auth` CLI if they ever leak. `SITE_URL` is a placeholder until the real frontend domain is known (runtime auth only reads `CONVEX_SITE_URL`, which Convex provides).
 - Idempotent seed: `npx convex run seed:seed` (add `--prod` for production).
 - Grant staff after the owner registers: `npx convex run users:grantStaff '{"email":"..."}'` (add `--prod` for production). Windows PowerShell strips quotes from native args — pass the JSON with escaped quotes (`'{\"email\":\"...\"}'`).
+- Staff/admin test sign-ins, password checks and the account-recovery path live in `docs/TEST-ACCOUNTS.md` (prod currently has no admin account — register, then grant).
 - Staff then flip settings from `/staff` (`ordering_enabled` stays off until MoMo recipient details are saved).

@@ -30,6 +30,25 @@ export const ORDER_STATUSES: OrderStatus[] = [
 export const PAYMENT_STATUSES: PaymentStatus[] = ["pending", "confirmed", "rejected"];
 export const MOMO_PROVIDERS = ["MTN MoMo", "Telecel Cash", "AirtelTigo Money"] as const;
 
+/**
+ * The Mobile Money recipient has to be a complete pair before it can be
+ * stored: a number with at least 9 digits and the name that wallet is
+ * registered to. An empty number clears the recipient (allowed only while
+ * ordering is closed — callers enforce that), so an empty pair is valid too.
+ *
+ * Returns the message to show, or null when the pair may be written. Shared by
+ * the admin mutation and its CLI twin so the two can never drift apart.
+ */
+export function validateMomoRecipient(number: string, name: string): string | null {
+  if (number !== "" && number.replace(/[^0-9]/g, "").length < 9) {
+    return "Enter a valid Mobile Money number.";
+  }
+  if (number !== "" && name.trim() === "") {
+    return "Enter the Mobile Money recipient name.";
+  }
+  return null;
+}
+
 /** The four numbers that decide what a customer pays for delivery. */
 export interface FeeBreakdown {
   central_fee: number;

@@ -50,67 +50,81 @@ describe("parseDailyLimit", () => {
 });
 
 describe("getEmailConfig mode detection", () => {
-  it("stays in dry-run until both the key and the sender exist", () => {
+  it("stays in dry-run until the Web3Forms access key exists", () => {
     expect(getEmailConfig(env({})).mode).toBe("dry-run");
-    expect(getEmailConfig(env({ RESEND_API_KEY: "re_123" })).mode).toBe("dry-run");
-    expect(getEmailConfig(env({ EMAIL_FROM: "Shop <info@mbventures.test>" })).mode).toBe("dry-run");
-    expect(
-      getEmailConfig(env({ RESEND_API_KEY: "re_123", EMAIL_FROM: "Shop <info@mbventures.test>" }))
-        .mode,
-    ).toBe("live");
+    expect(getEmailConfig(env({ WEB3FORMS_ACCESS_KEY: "" })).mode).toBe("dry-run");
+    expect(getEmailConfig(env({ WEB3FORMS_ACCESS_KEY: "   " })).mode).toBe("dry-run");
+    expect(getEmailConfig(env({ WEB3FORMS_ACCESS_KEY: "w3f_123" })).mode).toBe("live");
   });
 
-  it("never carries the API key in dry-run mode", () => {
-    const config = getEmailConfig(env({ EMAIL_FROM: "Shop <info@mbventures.test>" }));
-    expect(config.apiKey).toBe("");
-    expect(config.from).toBe("");
+  it("never carries the access key in dry-run mode", () => {
+    const config = getEmailConfig(env({ SITE_URL: "http://localhost:5173" }));
+    expect(config.accessKey).toBe("");
+    expect(config.mode).toBe("dry-run");
   });
 
   it("reads the supporting settings", () => {
     const config = getEmailConfig(
       env({
-        RESEND_API_KEY: "re_123",
-        EMAIL_FROM: "MB Ventures GH <info@mbventures.test>",
-        EMAIL_REPLY_TO: "orders@mbventuresgh.com",
-        ADMIN_ALERT_EMAIL: "alerts@mbventuresgh.com",
+        WEB3FORMS_ACCESS_KEY: "w3f_123",
+        EMAIL_REPLY_TO: "info@mbventuresghana.com",
+        ADMIN_ALERT_EMAIL: "alerts@mbventuresghana.com",
         EMAIL_DAILY_LIMIT: "40",
-        RESEND_WEBHOOK_SECRET: "whsec_abc",
         EMAIL_DRY_RUN_LOG_CODES: "true",
         SITE_URL: "http://localhost:5173",
       }),
     );
-    expect(config).toMatchObject({
+    expect(config).toEqual({
       mode: "live",
-      replyTo: "orders@mbventuresgh.com",
-      adminAlertEmail: "alerts@mbventuresgh.com",
+      accessKey: "w3f_123",
+      replyTo: "info@mbventuresghana.com",
+      adminAlertEmail: "alerts@mbventuresghana.com",
       dailyLimit: 40,
-      webhookSecret: "whsec_abc",
       logCodes: true,
       siteUrl: "http://localhost:5173",
     });
+    // The Resend-era fields are gone for good.
+    expect(config).not.toHaveProperty("from");
+    expect(config).not.toHaveProperty("apiKey");
+    expect(config).not.toHaveProperty("webhookSecret");
   });
 });
 
 describe("emailConfigView", () => {
-  it("hides the sender address until the deployment is live", () => {
-    const dry = emailConfigView(getEmailConfig(env({ RESEND_API_KEY: "re_123" })));
-    expect(dry.from).toBe("");
-    expect(dry.mode).toBe("dry-run");
+  it("exposes only non-secret settings", () => {
+    const dry = emailConfigView(getEmailConfig(env({})));
+    expect(dry).toEqual({
+      mode: "dry-run",
+      dailyLimit: 100,
+      logCodes: false,
+      siteUrl: "",
+      adminAlertEmail: "",
+    });
 
     const live = emailConfigView(
       getEmailConfig(
-        env({ RESEND_API_KEY: "re_123", EMAIL_FROM: "MB Ventures GH <info@mbventures.test>" }),
+        env({
+          WEB3FORMS_ACCESS_KEY: "w3f_123",
+          ADMIN_ALERT_EMAIL: "alerts@mbventuresghana.com",
+          SITE_URL: "https://mbventuresghana.com",
+        }),
       ),
     );
-    expect(live.from).toBe("MB Ventures GH <info@mbventures.test>");
-    expect(live.mode).toBe("live");
+    expect(live).toEqual({
+      mode: "live",
+      dailyLimit: 100,
+      logCodes: false,
+      siteUrl: "https://mbventuresghana.com",
+      adminAlertEmail: "alerts@mbventuresghana.com",
+    });
   });
 
-  it("reports webhook readiness", () => {
-    expect(emailConfigView(getEmailConfig(env({}))).webhookEnabled).toBe(false);
-    expect(
-      emailConfigView(getEmailConfig(env({ RESEND_WEBHOOK_SECRET: "whsec_abc" }))).webhookEnabled,
-    ).toBe(true);
+  it("never leaks the credential or a provider detail", () => {
+    const view = emailConfigView(getEmailConfig(env({ WEB3FORMS_ACCESS_KEY: "w3f_super_secret" })));
+    expect(view).not.toHaveProperty("accessKey");
+    expect(view).not.toHaveProperty("from");
+    expect(view).not.toHaveProperty("webhookEnabled");
+    expect(JSON.stringify(view)).not.toContain("w3f_super_secret");
   });
 });
 

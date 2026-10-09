@@ -98,6 +98,34 @@ export async function scanHealth(ctx: QueryCtx): Promise<HealthReport> {
     );
   }
 
+  // ── Duplicate codes ─────────────────────────────────────────────────────
+  // `saveProduct` refuses to write a second row with the same SKU or barcode,
+  // but rows created before that check (or seeded) can still collide, and a
+  // scan-to-find that lands on the wrong listing is worse than no code at all.
+  for (const field of ["sku", "barcode"] as const) {
+    const byCode = new Map<string, string[]>();
+    for (const p of products) {
+      const value = p[field];
+      if (value === undefined || value === null || value === "") continue;
+      byCode.set(value, [...(byCode.get(value) ?? []), p.name]);
+    }
+    const dupes = [...byCode.entries()].filter(([, names]) => names.length > 1);
+    if (dupes.length > 0) {
+      findings.push(
+        finding(
+          `duplicate_${field}`,
+          "high",
+          `${dupes.length} ${field === "sku" ? "SKU" : "barcode"}${dupes.length === 1 ? " is" : "s are"} shared by several products`,
+          field === "sku"
+            ? "The SKU is what staff scan to find a product. Two listings sharing one means a label or a scan opens the wrong item."
+            : "A barcode is meant to identify exactly one listing. Duplicates make checkout scanning ambiguous.",
+          `Open each product below and give it its own ${field === "sku" ? "SKU" : "barcode"}.`,
+          dupes.flatMap(([code, names]) => [`${code} (${names.join(", ")})`]),
+        ),
+      );
+    }
+  }
+
   // ── Negative or impossible quantities ─────────────────────────────────
   const negative = products.filter((p) => !Number.isInteger(p.stock) || p.stock < 0);
   if (negative.length > 0) {

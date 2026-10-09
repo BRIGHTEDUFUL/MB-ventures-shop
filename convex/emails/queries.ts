@@ -19,7 +19,7 @@ export async function renderContext(ctx: QueryCtx): Promise<RenderContext> {
     address: "Abelenkpe taxi rank, Accra, Ghana",
     hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
     phone: "+233 24 000 0000",
-    email: "orders@mbventuresgh.com",
+    email: "info@mbventuresghana.com",
   };
   try {
     const settings = await getSettings(ctx);
@@ -46,7 +46,6 @@ export type EmailLogRow = {
   mode: string;
   order_id: string | null;
   error: string | null;
-  provider_message_id: string | null;
   attempt: number;
   created_at: string;
   sent_at: string | null;
@@ -64,7 +63,6 @@ const logDTO = (row: Doc<"emailLogs">): EmailLogRow => ({
   mode: row.mode,
   order_id: row.order_id,
   error: row.error ?? null,
-  provider_message_id: row.provider_message_id ?? null,
   attempt: row.attempt,
   created_at: new Date(row._creationTime).toISOString(),
   sent_at: row.sent_at === undefined ? null : new Date(row.sent_at).toISOString(),

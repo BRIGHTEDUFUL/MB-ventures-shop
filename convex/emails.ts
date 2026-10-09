@@ -27,7 +27,6 @@ import {
 } from "./emails/queries";
 import { renderTemplate, isTemplateName } from "./emails/templates";
 import { sampleDataFor } from "./emails/sample";
-import { applyEmailEvent, alreadySeen, rememberEvent } from "./emails/webhook";
 
 /**
  * Convex entry points for the email system. Business logic lives in
@@ -169,24 +168,6 @@ function authSkipMessage(reason: string): string {
   return "The reset email could not be queued. Try again later.";
 }
 
-export const applyWebhookEvent = internalMutation({
-  args: {
-    svix_id: v.string(),
-    event_type: v.string(),
-    email_id: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    if (await alreadySeen(ctx, args.svix_id)) return { ok: true, duplicate: true };
-    const event = {
-      type: args.event_type,
-      data: args.email_id === undefined ? undefined : { email_id: args.email_id },
-    };
-    const result = await applyEmailEvent(ctx, event, args.svix_id);
-    await rememberEvent(ctx, args.svix_id, args.event_type, args.email_id ?? "");
-    return { ok: true, ...result };
-  },
-});
-
 /** Single writer for the tail of a delivery, so retries cannot race. */
 export const updateLog = internalMutation({
   args: {
@@ -197,7 +178,6 @@ export const updateLog = internalMutation({
     html: v.optional(v.string()),
     text: v.optional(v.string()),
     error: v.optional(v.string()),
-    providerMessageId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const row = await ctx.db.get(args.logId);
@@ -210,9 +190,6 @@ export const updateLog = internalMutation({
       ...(args.html !== undefined ? { html: args.html } : {}),
       ...(args.text !== undefined ? { text: args.text } : {}),
       ...(args.error !== undefined ? { error: args.error } : {}),
-      ...(args.providerMessageId !== undefined
-        ? { provider_message_id: args.providerMessageId }
-        : {}),
       ...(args.status === "sent" || args.status === "delivered" ? { sent_at: Date.now() } : {}),
     });
 
@@ -280,11 +257,8 @@ export const send = internalAction({
         {
           to: row.to,
           subject: rendered.subject,
-          html: rendered.html,
           text: rendered.text,
           replyTo: row.reply_to,
-          tags: row.tags,
-          idempotencyKey: row._id,
           attempt,
         },
         { config },
@@ -296,9 +270,6 @@ export const send = internalAction({
           status: "sent",
           attempt,
           subject: rendered.subject,
-          ...(result.providerMessageId !== undefined
-            ? { providerMessageId: result.providerMessageId }
-            : {}),
         });
         return { ok: true, mode: "live" };
       }
@@ -536,14 +507,6 @@ export const cleanup = internalMutation({
         .take(200);
     }
 
-    // Webhook receipts age out with the live rows they describe.
-    const events = await ctx.db.query("webhook_events").order("asc").take(500);
-    for (const event of events) {
-      if (now - event._creationTime > 90 * DAY) {
-        await ctx.db.delete(event._id);
-        removed += 1;
-      }
-    }
     return { removed };
   },
 });

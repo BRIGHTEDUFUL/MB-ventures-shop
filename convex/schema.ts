@@ -219,10 +219,10 @@ export default defineSchema({
     // editor loses loudly (VERSION_CONFLICT) instead of silently overwriting.
     version: v.optional(v.number()),
     // Cost the shop pays, never exposed by any public DTO (`lib/dto.ts`).
-    cost_price: v.optional(v.number()),
+    cost_price: v.optional(v.union(v.number(), v.null())),
     // Reorder point / suggested order quantity for the low-stock panel.
-    reorder_point: v.optional(v.number()),
-    reorder_quantity: v.optional(v.number()),
+    reorder_point: v.optional(v.union(v.number(), v.null())),
+    reorder_quantity: v.optional(v.union(v.number(), v.null())),
     // Draft → active → archived. Missing → derived from `verified`
     // (verified → active, else draft) so existing rows keep working.
     status: v.optional(v.union(v.literal("draft"), v.literal("active"), v.literal("archived"))),
@@ -235,10 +235,20 @@ export default defineSchema({
     internal_notes: v.optional(v.string()),
     // Admin-defined extra columns (`custom_fields` table), keyed by field key.
     custom: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    // Staff-facing identity codes. Both optional and both checked against the
+    // rest of the catalogue on save — there is no unique index for them (Convex
+    // indexes are not unique), so `catalogue.saveProduct` and the data-health
+    // scan are the two places a duplicate can be caught.
+    sku: v.optional(v.union(v.string(), v.null())),
+    barcode: v.optional(v.union(v.string(), v.null())),
+    // Who supplies it and what a unit costs; never in any public DTO.
+    supplier: v.optional(v.union(v.string(), v.null())),
   })
     .index("by_slug", ["slug"])
     .index("by_status", ["status"])
-    .index("by_category", ["category"]),
+    .index("by_category", ["category"])
+    .index("by_sku", ["sku"])
+    .index("by_barcode", ["barcode"]),
 
   // Replaces `public.categories`.
   categories: defineTable({
@@ -325,9 +335,10 @@ export default defineSchema({
         image_key: v.string(),
       }),
     ),
-    // Set when a message we sent to the customer bounced or was complained
-    // about (see `convex/emails/webhook.ts`), cleared by the next message
-    // that reaches the address. Never set by checkout itself.
+    // Set when a message we sent to the customer was reported as undeliverable
+    // by the shop, cleared by the next message that reaches the address. Never
+    // set by checkout itself; the provider no longer reports bounces, so staff
+    // set and dismiss it by hand.
     needs_attention: v.optional(v.string()),
     // What has already happened to the physical units of this order, so a
     // later status change returns them exactly once:
@@ -406,7 +417,7 @@ export default defineSchema({
 
   // One row per outbound message (see `convex/emails/`). `html`/`text` are
   // persisted in dry-run mode only so `/admin/emails` can preview exactly what
-  // would have been sent; live rows keep the provider id instead.
+  // would have been sent; live rows are re-rendered from `data` instead.
   emailLogs: defineTable({
     template: v.string(),
     category: emailCategory,
@@ -425,8 +436,6 @@ export default defineSchema({
     text: v.optional(v.string()),
     error: v.optional(v.string()),
     reply_to: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    provider_message_id: v.optional(v.string()),
     // Dry-run only: the one-time code an auth email carries, stored when
     // EMAIL_DRY_RUN_LOG_CODES="true" so a developer can complete a flow.
     dry_run_code: v.optional(v.string()),
@@ -436,7 +445,6 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_template", ["template"])
     .index("by_dedupe", ["dedupe_ref"])
-    .index("by_provider_id", ["provider_message_id"])
     .index("by_order", ["order_id"]),
 
   // Recipients we must stop emailing (hard bounces, complaints, manual opt
@@ -447,11 +455,4 @@ export default defineSchema({
     source: v.string(),
     actor_id: v.optional(v.id("users")),
   }).index("by_email", ["email"]),
-
-  // Svix delivery ids already applied, so a resent webhook is a no-op.
-  webhook_events: defineTable({
-    svix_id: v.string(),
-    event_type: v.string(),
-    provider_message_id: v.optional(v.string()),
-  }).index("by_svix_id", ["svix_id"]),
 });

@@ -474,6 +474,43 @@ describe("catalogue.saveMomoSettings — the money recipient is admin-only", () 
   });
 });
 
+describe("catalogue.setMomo — the recipient stays editable from the CLI", () => {
+  it("runs with no session, can be repeated to change the wallet, and validates", async () => {
+    const env = await setup();
+
+    // No identity at all: this is the `npx convex run catalogue:setMomo` shape.
+    await expect(
+      env.t.mutation(internal.catalogue.setMomo, {
+        momo_number: "0532767269",
+        momo_name: "Abdul Ganiwu Fusein",
+      }),
+    ).resolves.toEqual({ ok: true, momo_number: "0532767269", momo_name: "Abdul Ganiwu Fusein" });
+    expect((await readSettings(env))?.momo_name).toBe("Abdul Ganiwu Fusein");
+
+    // Set once is not set forever: run it again and the wallet changes.
+    await env.t.mutation(internal.catalogue.setMomo, {
+      momo_number: "0244000123",
+      momo_name: "Someone Else Ltd",
+    });
+    expect((await readSettings(env))?.momo_number).toBe("0244000123");
+
+    // Exactly the validation the admin path applies.
+    await expectConvexError(
+      env.t.mutation(internal.catalogue.setMomo, { momo_number: "12345", momo_name: "X" }),
+      /valid Mobile Money number/,
+    );
+    await expectConvexError(
+      env.t.mutation(internal.catalogue.setMomo, { momo_number: "0551234567", momo_name: "   " }),
+      /recipient name/,
+    );
+    expect((await readSettings(env))?.momo_number).toBe("0244000123");
+  });
+
+  it("stays off the public API surface, so a browser cannot call it", () => {
+    expect(api.catalogue).not.toHaveProperty("setMomo");
+  });
+});
+
 describe("users.ts — role management stays with the admins", () => {
   it("answers the role queries the dashboard gates on", async () => {
     const env = await setup();

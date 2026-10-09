@@ -19,12 +19,10 @@ import schema from "../../convex/schema";
 const modules = import.meta.glob("../../convex/**/*.*s");
 
 const ENV_KEYS = [
-  "RESEND_API_KEY",
-  "EMAIL_FROM",
+  "WEB3FORMS_ACCESS_KEY",
   "EMAIL_REPLY_TO",
   "ADMIN_ALERT_EMAIL",
   "EMAIL_DAILY_LIMIT",
-  "RESEND_WEBHOOK_SECRET",
   "EMAIL_DRY_RUN_LOG_CODES",
   "SITE_URL",
   "CONVEX_SITE_URL",

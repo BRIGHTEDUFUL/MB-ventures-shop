@@ -12,12 +12,10 @@ import { api, internal } from "../../convex/_generated/api";
 const modules = import.meta.glob("../../convex/**/*.*s");
 
 const ENV_KEYS = [
-  "RESEND_API_KEY",
-  "EMAIL_FROM",
+  "WEB3FORMS_ACCESS_KEY",
   "EMAIL_REPLY_TO",
   "ADMIN_ALERT_EMAIL",
   "EMAIL_DAILY_LIMIT",
-  "RESEND_WEBHOOK_SECRET",
   "EMAIL_DRY_RUN_LOG_CODES",
   "SITE_URL",
   "CONVEX_SITE_URL",
@@ -148,7 +146,6 @@ describe("dry-run mode", () => {
       // would have gone out.
       expect(row.html).toBeTruthy();
       expect(row.text).toBeTruthy();
-      expect(row.provider_message_id).toBeUndefined();
     }
     expect(rows.find((row) => row.template === "contact-received")?.to).toBe("kwame@example.com");
   });
@@ -384,135 +381,75 @@ describe("order triggers", () => {
   });
 });
 
-describe("delivery webhooks", () => {
-  async function orderWithEmailLog() {
-    const base = await setup();
-    const order = await placeOrder(base.t, base.me, base.productSlug);
-    const logId = await base.t.run(async (ctx) => {
-      const rows = await ctx.db.query("emailLogs").collect();
-      const row = rows.find((candidate) => candidate.template === "order-received");
-      if (row === undefined) throw new Error("no confirmation row");
-      await ctx.db.patch(row._id, { provider_message_id: "email_live_1" });
-      return row._id;
+describe("attention flag", () => {
+  it("clears a flag staff have dealt with", async () => {
+    const { t, me, productSlug } = await setup();
+    const order = await placeOrder(t, me, productSlug);
+
+    // Simulate the flag a staff member has already acted on: the webhook path
+    // that used to set it is gone, so patch it directly.
+    await t.run(async (ctx) => {
+      const id = ctx.db.normalizeId("orders", order.id);
+      if (id === null) throw new Error("unknown order");
+      await ctx.db.patch(id, { needs_attention: "Customer email bounced" });
     });
-    return { ...base, order, logId };
-  }
-
-  it("flags the order when a message bounces, and only once per delivery", async () => {
-    const { t, order } = await orderWithEmailLog();
-
-    const first = await t.mutation(internal.emails.applyWebhookEvent, {
-      svix_id: "svix_msg_1",
-      event_type: "email.bounced",
-      email_id: "email_live_1",
-    });
-    expect(first).toMatchObject({ ok: true, applied: true });
-    expect(first).toHaveProperty("logId");
-
-    const flagged = await readOrder(t, order.id);
-    expect(flagged?.needs_attention).toBe("Customer email bounced");
-
-    const history = await t.run((ctx) => ctx.db.query("order_history").collect());
-    expect(history.some((entry) => entry.note.includes("Customer email bounced"))).toBe(true);
-
-    const again = await t.mutation(internal.emails.applyWebhookEvent, {
-      svix_id: "svix_msg_1",
-      event_type: "email.bounced",
-      email_id: "email_live_1",
-    });
-    expect(again).toEqual({ ok: true, duplicate: true });
-
-    const after = await t.run((ctx) => ctx.db.query("order_history").collect());
-    expect(after).toHaveLength(history.length);
-  });
-
-  it("suppresses the address when the customer complains", async () => {
-    const { t } = await orderWithEmailLog();
-
-    await t.mutation(internal.emails.applyWebhookEvent, {
-      svix_id: "svix_msg_2",
-      event_type: "email.complained",
-      email_id: "email_live_1",
-    });
-
-    const suppressed = await t.run((ctx) => ctx.db.query("suppressedEmails").collect());
-    expect(suppressed).toHaveLength(1);
-    expect(suppressed[0]?.email).toBe("ama@example.com");
-    expect(suppressed[0]?.source).toBe("webhook");
-  });
-
-  it("ignores events it cannot correlate", async () => {
-    const { t } = await orderWithEmailLog();
-
-    const unknown = await t.mutation(internal.emails.applyWebhookEvent, {
-      svix_id: "svix_msg_3",
-      event_type: "email.delivered",
-      email_id: "email_does_not_exist",
-    });
-    expect(unknown).toEqual({ ok: true, applied: false, reason: "unknown_message" });
-
-    const irrelevant = await t.mutation(internal.emails.applyWebhookEvent, {
-      svix_id: "svix_msg_4",
-      event_type: "email.opened",
-      email_id: "email_live_1",
-    });
-    expect(irrelevant).toEqual({ ok: true, applied: false, reason: "ignored_event" });
-
-    const log = await t.run((ctx) => ctx.db.query("emailLogs").first());
-    expect(log?.status).toBe("skipped_dry_run");
-  });
-
-  it("dismisses the flag once staff have dealt with it", async () => {
-    const { t, me, order } = await orderWithEmailLog();
-    await t.mutation(internal.emails.applyWebhookEvent, {
-      svix_id: "svix_msg_5",
-      event_type: "email.bounced",
-      email_id: "email_live_1",
-    });
+    expect((await readOrder(t, order.id))?.needs_attention).toBe("Customer email bounced");
 
     await me.mutation(api.emails.clearAttention, { id: order.id });
+
     const after = await readOrder(t, order.id);
     expect(after?.needs_attention).toBeUndefined();
+    const history = await t.run((ctx) => ctx.db.query("order_history").collect());
+    expect(history.some((entry) => entry.note.includes("Email alert dismissed"))).toBe(true);
   });
 });
 
 describe("live mode", () => {
-  it("posts to Resend, keeps the provider id and drops the body", async () => {
+  it("posts to Web3Forms with the access key in the body and keeps no copy", async () => {
     const { t } = await setup();
-    process.env["RESEND_API_KEY"] = "re_live_key_for_tests";
-    process.env["EMAIL_FROM"] = "MB Ventures GH <info@mbventures.test>";
+    process.env["WEB3FORMS_ACCESS_KEY"] = "w3f_live_key_for_tests";
 
     const fetchSpy = vi.fn(async () => ({
       ok: true,
       status: 200,
       headers: { get: () => null },
-      json: async () => ({ id: "email_live_99" }),
+      json: async () => ({ success: true }),
     }));
     vi.stubGlobal("fetch", fetchSpy);
 
     await submitContact(t, "kwame@example.com");
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const calls = fetchSpy.mock.calls as unknown as Array<[string, RequestInit]>;
+    for (const [url] of calls) {
+      expect(url).toBe("https://api.web3forms.com/submit");
+    }
+
     const rows = await allLogs(t);
     expect(rows).toHaveLength(2);
     for (const row of rows) {
       expect(row.status).toBe("sent");
       expect(row.mode).toBe("live");
-      expect(row.provider_message_id).toBe("email_live_99");
       // Live rows never keep a copy of the message.
       expect(row.html).toBeUndefined();
       expect(row.text).toBeUndefined();
     }
 
-    const calls = fetchSpy.mock.calls as unknown as Array<[string, RequestInit]>;
     const headers = calls[0]![1].headers as Record<string, string>;
-    expect(headers["Authorization"]).toBe("Bearer re_live_key_for_tests");
-    expect(headers["Idempotency-Key"]).toBe(rows[0]!._id);
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["Authorization"]).toBeUndefined();
+
+    const body = JSON.parse(String(calls[0]![1].body)) as Record<string, unknown>;
+    expect(body["access_key"]).toBe("w3f_live_key_for_tests");
+    expect(body["to"]).toMatch(/@/);
+    expect(typeof body["subject"]).toBe("string");
+    expect((body["subject"] as string).length).toBeGreaterThan(0);
+    expect(typeof body["body"]).toBe("string");
+    expect((body["body"] as string).length).toBeGreaterThan(0);
   });
 
-  it("falls back to dry-run when only half the credential is present", async () => {
+  it("stays in dry-run when no access key is configured", async () => {
     const { t } = await setup();
-    process.env["RESEND_API_KEY"] = "re_only_a_key";
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
@@ -547,7 +484,7 @@ describe("contact form", () => {
         await ctx.db.insert("emailLogs", {
           template: "admin-contact-message",
           category: "contact",
-          to: "orders@mbventuresgh.com",
+          to: "info@mbventuresghana.com",
           subject: "Contact form: Delivery to Tema",
           status: "sent",
           mode: "dry-run",

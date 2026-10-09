@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { useSession } from "@/lib/use-session";
 import { Button } from "@/components/ui/button";
 import { pageHead } from "@/lib/store";
+import { AuthFrame } from "@/components/auth-frame";
 import { StaffShell } from "@/components/staff/shell";
 
 export const Route = createFileRoute("/staff")({
@@ -27,47 +28,46 @@ function StaffLayout() {
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
 
   if (loading || (session && role.isPending)) {
-    return <div className="page-content wrap">Checking access…</div>;
+    return <AuthFrame title="Staff access" lead="Checking access…" />;
   }
   if (!session) {
     return (
-      <div className="page-content wrap">
-        <h1 className="page-title">Staff access</h1>
-        <p className="page-lead">
-          Sign in with your staff account to verify payments, manage stock and update the store.
-        </p>
-        <Button asChild className="mt-6">
+      <AuthFrame
+        title="Staff access"
+        lead="Sign in with your staff account to verify payments, manage stock and update the store."
+      >
+        <Button asChild className="mt-6 w-full sm:w-auto">
           <Link to="/account" search={{ next: "/staff" }}>
             Go to account
           </Link>
         </Button>
-      </div>
+      </AuthFrame>
     );
   }
   if (role.isError) {
     return (
-      <div className="page-content wrap">
-        <h1 className="page-title">Staff access</h1>
-        <p className="page-lead" role="alert">
-          Your access could not be checked. Reload the page to try again.
-        </p>
-        <Button asChild className="mt-6">
+      <AuthFrame
+        title="Staff access"
+        lead={
+          <span role="alert">Your access could not be checked. Reload the page to try again.</span>
+        }
+      >
+        <Button asChild className="mt-6 w-full sm:w-auto">
           <Link to="/account">Go to account</Link>
         </Button>
-      </div>
+      </AuthFrame>
     );
   }
   if (role.data !== "admin" && role.data !== "staff") {
     return (
-      <div className="page-content wrap">
-        <h1 className="page-title">Staff access</h1>
-        <p className="page-lead">
-          Your account does not have staff permission. Ask the store owner to grant access.
-        </p>
-        <Button asChild className="mt-6">
+      <AuthFrame
+        title="Staff access"
+        lead="Your account does not have staff permission. Ask the store owner to grant access."
+      >
+        <Button asChild className="mt-6 w-full sm:w-auto">
           <Link to="/account">Go to account</Link>
         </Button>
-      </div>
+      </AuthFrame>
     );
   }
   return (

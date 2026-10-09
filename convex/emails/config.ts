@@ -2,10 +2,12 @@
  * Email configuration: one function decides live vs dry-run for the whole
  * backend, so nothing else has to guess.
  *
- * Until `RESEND_API_KEY` *and* `EMAIL_FROM` are both set the system runs in
- * dry-run: every message is rendered, logged to `emailLogs` and shown in the
- * admin UI, but no network request is ever made. Adding the two variables is
- * the only step needed to go live — no code changes.
+ * Every message is handed to Web3Forms (`convex/emails/transport.ts`), which
+ * forwards it to the one inbox bound to the access key. Until
+ * `WEB3FORMS_ACCESS_KEY` is set the system runs in dry-run: every message is
+ * rendered, logged to `emailLogs` and shown in the admin UI, but no network
+ * request is ever made. Adding that variable is the only step needed to go
+ * live — no code changes.
  */
 
 export type EmailMode = "live" | "dry-run";
@@ -13,15 +15,11 @@ export type EmailMode = "live" | "dry-run";
 export type EmailConfig = {
   mode: EmailMode;
   /** Empty in dry-run. Never logged, never sent to the browser. */
-  apiKey: string;
-  /** Empty in dry-run. */
-  from: string;
+  accessKey: string;
   replyTo: string;
   /** Where internal alerts go; falls back to the store contact address. */
   adminAlertEmail: string;
   dailyLimit: number;
-  /** Svix signing secret for `POST /resend/webhook`. Empty disables it. */
-  webhookSecret: string;
   /** Opt-in: persist one-time auth codes for local development. */
   logCodes: boolean;
   /** Absolute origin every link in an email is built from. */
@@ -83,22 +81,17 @@ export function assertEmailEnv(env: Env): void {
 /** Reads the process environment once and derives everything else from it. */
 export function getEmailConfig(env: Env = process.env): EmailConfig {
   assertEmailEnv(env);
-  const rawApiKey = (env["RESEND_API_KEY"] ?? "").trim();
-  const rawFrom = (env["EMAIL_FROM"] ?? "").trim();
+  const accessKey = (env["WEB3FORMS_ACCESS_KEY"] ?? "").trim();
   const siteUrl = (env["SITE_URL"] ?? env["CONVEX_SITE_URL"] ?? "").trim();
-  // Both halves are required: a key without a sender (or a sender without a
-  // key) would fail at Resend anyway, so we stay in dry-run instead.
-  const live = rawApiKey !== "" && rawFrom !== "";
+  const live = accessKey !== "";
   return {
     mode: live ? "live" : "dry-run",
     // Belt and braces: a dry-run deployment cannot carry the credential at
     // all, so nothing that reads or logs the config can leak it.
-    apiKey: live ? rawApiKey : "",
-    from: live ? rawFrom : "",
+    accessKey: live ? accessKey : "",
     replyTo: (env["EMAIL_REPLY_TO"] ?? "").trim(),
     adminAlertEmail: (env["ADMIN_ALERT_EMAIL"] ?? "").trim(),
     dailyLimit: parseDailyLimit(env["EMAIL_DAILY_LIMIT"]),
-    webhookSecret: (env["RESEND_WEBHOOK_SECRET"] ?? "").trim(),
     logCodes: ["true", "1"].includes((env["EMAIL_DRY_RUN_LOG_CODES"] ?? "").trim().toLowerCase()),
     siteUrl,
   };
@@ -109,9 +102,7 @@ export type EmailConfigView = {
   mode: EmailMode;
   dailyLimit: number;
   logCodes: boolean;
-  webhookEnabled: boolean;
   siteUrl: string;
-  from: string;
   adminAlertEmail: string;
 };
 
@@ -119,11 +110,7 @@ export const emailConfigView = (config: EmailConfig): EmailConfigView => ({
   mode: config.mode,
   dailyLimit: config.dailyLimit,
   logCodes: config.logCodes,
-  webhookEnabled: config.webhookSecret !== "",
   siteUrl: config.siteUrl,
-  // The sender address is not a secret and helps an admin confirm the
-  // unverified-domain warning before going live.
-  from: config.mode === "live" ? config.from : "",
   adminAlertEmail: config.adminAlertEmail,
 });
 
