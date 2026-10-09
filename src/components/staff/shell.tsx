@@ -3,6 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Boxes,
   ClipboardList,
+  HeartPulse,
   History,
   LayoutDashboard,
   Mail,
@@ -36,6 +37,7 @@ const NAV: NavItem[] = [
   { to: "/staff/products", label: "Products", icon: Package },
   { to: "/staff/categories", label: "Categories", icon: Tags },
   { to: "/staff/inventory", label: "Inventory", icon: Boxes },
+  { to: "/staff/health", label: "Data health", icon: HeartPulse },
   { to: "/staff/customization", label: "Customization", icon: Palette },
   { to: "/staff/activity", label: "Activity", icon: History },
   { to: "/staff/team", label: "Team", icon: Users, admin: true },

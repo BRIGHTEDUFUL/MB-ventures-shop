@@ -23,6 +23,15 @@ const REASONS = [
   "Display unit",
 ];
 
+/**
+ * Only movements that move physical stock can be undone here. Order-driven
+ * ones (`reserve` / `release` / `commit`) are reversed by cancelling the
+ * order — the server refuses them with that exact instruction, and rows from
+ * before the typed ledger arrived carry no type at all, so we do not guess.
+ */
+const reversible = (type: string | null): boolean =>
+  type !== null && !["reserve", "release", "commit"].includes(type);
+
 function InventoryPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "low" | "out">("all");
@@ -36,6 +45,16 @@ function InventoryPage() {
     }),
   });
   const adjust = useConvexMutation(api.inventory.adjust);
+  const reverse = useConvexMutation(api.inventory.reverse);
+
+  const undo = async (movementId: string, name: string) => {
+    try {
+      const result = await reverse({ movement_id: movementId });
+      toast.success(`${name}: movement undone, stock is back to ${result.stock}`);
+    } catch (err) {
+      toast.error(errorMessage(err, "That movement could not be undone."));
+    }
+  };
 
   const products = useMemo(() => {
     const list = store.data?.products ?? [];
@@ -196,19 +215,40 @@ function InventoryPage() {
                     className="flex flex-wrap items-center justify-between gap-3 py-3"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">{entry.product_name}</span>
+                      <span className="block truncate font-medium">
+                        {entry.product_name}
+                        {entry.movement_type && (
+                          <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold uppercase text-muted-foreground">
+                            {entry.movement_type}
+                          </span>
+                        )}
+                      </span>
                       <span className="block text-xs text-muted-foreground">
                         {entry.reason} · {entry.actor_name} ·{" "}
                         {new Date(entry.created_at).toLocaleString()}
+                        {entry.reversed && " · already reversed"}
                       </span>
                     </span>
-                    <span className="shrink-0 font-mono text-sm">
-                      {entry.previous_stock} → {entry.new_stock}
-                      <span
-                        className={`ml-2 font-semibold ${delta > 0 ? "text-success" : "text-offer"}`}
-                      >
-                        {delta > 0 ? `+${delta}` : delta}
+                    <span className="flex shrink-0 items-center gap-3 font-mono text-sm">
+                      <span>
+                        {entry.previous_stock} → {entry.new_stock}
+                        <span
+                          className={`ml-2 font-semibold ${delta > 0 ? "text-success" : "text-offer"}`}
+                        >
+                          {delta > 0 ? `+${delta}` : delta}
+                        </span>
                       </span>
+                      {entry.reversed ? (
+                        <span className="font-sans text-xs text-muted-foreground">Undone</span>
+                      ) : reversible(entry.movement_type) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => undo(entry.id, entry.product_name)}
+                        >
+                          Undo
+                        </Button>
+                      ) : null}
                     </span>
                   </li>
                 );
