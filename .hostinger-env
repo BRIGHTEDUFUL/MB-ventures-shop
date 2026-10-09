@@ -1,0 +1,31 @@
+# Hostinger Production Environment Variables
+# Copy this to .env.local on your Hostinger VPS
+
+# =============================================================================
+# CONVEX DEPLOYMENT
+# =============================================================================
+CONVEX_DEPLOYMENT=prod:necessary-newt-861
+VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
+VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+
+# =============================================================================
+# DOMAIN CONFIGURATION
+# =============================================================================
+# This MUST match your actual domain
+VITE_SITE_URL=https://mbventuresghana.com
+
+# =============================================================================
+# APPLICATION SETTINGS
+# =============================================================================
+NODE_ENV=production
+PORT=3000
+HOST=0.0.0.0
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# 1. Copy this file to .env.local on your Hostinger VPS server
+# 2. Do NOT commit .env.local to git (it's in .gitignore)
+# 3. Backend environment variables (email, etc.) are configured in Convex
+# 4. To view Convex variables: npx convex env list --prod
+# 5. After updating, rebuild: npm run build && pm2 restart mbventuresghana
