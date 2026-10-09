@@ -5,6 +5,25 @@ still open is listed under **Open**.
 
 ---
 
+## Production Auth, Roles & CI/CD Workflows Operational (9 October 2026)
+
+**Status:** Live authentication, staff/admin permissions, and deployment workflows verified full-stack.
+
+### Done
+
+- **Convex Auth Keypair Regeneration** — Fixed `InvalidSecret` ("Server Error") on production by generating and cleanly configuring fresh RSA-2048 JWT signing keys (`JWT_PRIVATE_KEY` and `JWKS`) on Convex production (`prod:necessary-newt-861`).
+- **Session State & Navigation Improvements** — Optimized `useSession()` in `src/lib/use-session.ts` for immediate session truthiness upon authentication. Added query invalidation and immediate redirect in `src/routes/account.tsx`.
+- **Role Permissions & Staff Access Gate** — Implemented enhanced access gate UI in `src/routes/staff.tsx` showing active signed-in email and one-click account switcher.
+- **New Production Accounts Provisioned & Verified**:
+  - `manager@mbventuresghana.com` (Admin — full back-office, team management, and settings)
+  - `attendant@mbventuresghana.com` (Staff — orders, inventory, catalogue)
+  - `admin@mbventuresghana.com` (Admin)
+  - `staff@mbventuresghana.com` (Staff)
+- **CI/CD & GitHub Actions** — Configured `.github/workflows/ci.yml` (quality gates, tests, build) and `.github/workflows/deploy-hostinger.yml` (PM2 deployment to Hostinger VPS).
+- **Automated Live E2E Testing** — Created Playwright live verification scripts (`scripts/test-new-accounts-live.mjs`, `scripts/verify-permissions.mjs`) confirming browser authentication, cookie/token persistence, and dashboard rendering on `https://mbventuresghana.com`.
+
+---
+
 ## Production Configuration Complete (9 October 2026)
 
 **Status:** All previously blocked items now configured and ready.
