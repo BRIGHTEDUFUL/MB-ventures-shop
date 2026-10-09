@@ -1,0 +1,45 @@
+name: CI & Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check code formatting
+        run: npx prettier --check .
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_CONVEX_URL: https://necessary-newt-861.convex.cloud
+          VITE_SITE_URL: https://mbventuresghana.com
