@@ -292,6 +292,18 @@ export const grantStaff = internalMutation({
   },
 });
 
+export const listAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    const roles = await ctx.db.query("user_roles").collect();
+    return {
+      users: users.map((u) => ({ id: u._id, email: u.email, name: u.name, phone: u.phone })),
+      roles: roles.map((r) => ({ id: r._id, user_id: r.user_id, role: r.role })),
+    };
+  },
+});
+
 /**
  * Update own profile (name, phone). Email cannot be changed.
  * Any authenticated user can update their own profile.
