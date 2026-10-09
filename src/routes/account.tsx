@@ -78,27 +78,37 @@ function Account() {
     if (!loading && session && redirectTo) navigate({ to: redirectTo });
   }, [loading, session, redirectTo, navigate]);
 
+  /** Wraps a promise with a timeout so a hung Convex connection never silently disables the button. */
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, timeoutMsg: string): Promise<T> => {
+    const timer = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(timeoutMsg)), ms),
+    );
+    return Promise.race([promise, timer]);
+  };
+
   const submit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await signIn(
-        "password",
-        signup
-          ? { flow: "signUp", email, password, name, phone }
-          : { flow: "signIn", email, password },
+      await withTimeout(
+        signIn(
+          "password",
+          signup
+            ? { flow: "signUp", email, password, name, phone }
+            : { flow: "signIn", email, password },
+        ),
+        15000,
+        "Connection was temporarily interrupted. Please try again.",
       );
       if (signup) toast.success("Account created. Welcome to MB Ventures GH.");
     } catch (err) {
-      setError(
-        signup
-          ? errorMessage(
-              err,
-              "Your account could not be created. Check your details and try again.",
-            )
-          : errorMessage(err, "Email or password is incorrect."),
-      );
+      const msg = signup
+        ? errorMessage(err, "Your account could not be created. Check your details and try again.")
+        : errorMessage(err, "Email or password is incorrect.");
+      setError(msg);
+      // Toast as backup so the error is always visible even if the form scrolls.
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -113,10 +123,16 @@ function Account() {
     setBusy(true);
     setError("");
     try {
-      await signIn("password", { flow: "reset", email });
+      await withTimeout(
+        signIn("password", { flow: "reset", email }),
+        15000,
+        "Connection was temporarily interrupted. Please try again.",
+      );
       setResetSent(true);
     } catch (err) {
-      setError(errorMessage(err, "We could not start a password reset for that address."));
+      const msg = errorMessage(err, "We could not start a password reset for that address.");
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

@@ -1,14 +1,24 @@
 name: Deploy to Hostinger
 
+# This workflow is DISABLED — Hostinger's built-in Git auto-deployment
+# handles deploys automatically when code is pushed to main.
+# See: Hostinger panel → Websites → mbventuresghana.com → Git
+#
+# To re-enable SSH-based deploys, add these secrets to the GitHub repo:
+#   HOSTINGER_HOST, HOSTINGER_USERNAME, HOSTINGER_PASSWORD, HOSTINGER_PATH
+
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DEPLOY" to confirm manual SSH deployment'
+        required: true
+        default: ""
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'DEPLOY'
 
     steps:
       - name: Checkout code
@@ -33,25 +43,13 @@ jobs:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           password: ${{ secrets.HOSTINGER_PASSWORD }}
-          port: ${{ secrets.HOSTINGER_PORT || 22 }}
+          port: 22
           script: |
-            cd ${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}
-
-            echo "🔄 Pulling latest changes..."
+            cd ${{ secrets.HOSTINGER_PATH }}
             git pull origin main
-
-            echo "📦 Installing dependencies..."
             npm ci
-
-            echo "🔧 Setting up environment..."
-            bash scripts/setup-production-env.sh
-
-            echo "🏗️ Building application..."
             npm run build
-
-            echo "🚀 Restarting PM2..."
             pm2 restart mb-ventures-gh || pm2 start ecosystem.config.js
             pm2 save
-
             echo "✅ Deployment complete!"
             pm2 status
