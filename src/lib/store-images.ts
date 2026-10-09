@@ -10,6 +10,7 @@ const base: Record<string, string> = {
   stand: "/images/arm.jpg",
   stream: "/images/mic.jpg",
   workspace: "/images/workspace.jpg",
+  "hero-workspace": "/images/hero-workspace.jpg",
   "chair-detail": "/images/chair-detail.jpg",
   logo: "/images/store-logo.jpeg",
   "carbon-fiber-gaming-desk": "/images/products/carbon-fiber-gaming-desk.png",
@@ -46,6 +47,7 @@ const sizes: Record<string, readonly [number, number]> = {
   stand: [1400, 1400],
   stream: [1800, 1269],
   workspace: [1400, 1400],
+  "hero-workspace": [1376, 768],
   "chair-detail": [1400, 1400],
   logo: [1024, 1024],
 };

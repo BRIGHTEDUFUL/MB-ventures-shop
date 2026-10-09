@@ -368,6 +368,10 @@ export const apply = internalMutation({
       await ctx.db.patch(settings._id, {
         ordering_enabled: true,
         featured_ids,
+        hero_image: "hero-workspace",
+        hero_title: "Your workspace. Elevated.",
+        hero_subtitle:
+          "Premium desks, gaming gear and everyday tech — delivered across Ghana or collected from Abelenkpe, Accra.",
       });
     }
 
@@ -377,6 +381,29 @@ export const apply = internalMutation({
       realUpdated,
       featured_ids,
       ordering_enabled: true,
+      hero_image: "hero-workspace",
     };
+  },
+});
+
+/**
+ * One-shot: switch the hero background to the product-scene image.
+ * `npx convex run inventory_import:patchHeroImage` (add `--prod` for production)
+ */
+export const patchHeroImage = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db
+      .query("store_settings")
+      .withIndex("by_key", (q) => q.eq("key", "singleton"))
+      .first();
+    if (!settings) return { ok: false, reason: "no settings row" };
+    await ctx.db.patch(settings._id, {
+      hero_image: "hero-workspace",
+      hero_title: "Your workspace. Elevated.",
+      hero_subtitle:
+        "Premium desks, gaming gear and everyday tech — delivered across Ghana or collected from Abelenkpe, Accra.",
+    });
+    return { ok: true, hero_image: "hero-workspace" };
   },
 });
