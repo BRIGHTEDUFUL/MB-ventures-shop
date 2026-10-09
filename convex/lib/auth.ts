@@ -66,3 +66,6 @@ export async function requireAdmin(ctx: Ctx): Promise<Id<"users">> {
   }
   return userId;
 }
+
+/** Internal query to get current user ID for actions */
+export { currentUserId };

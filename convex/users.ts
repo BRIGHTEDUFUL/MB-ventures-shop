@@ -281,3 +281,221 @@ export const grantStaff = internalMutation({
     return { ok: true, role: "admin" as const };
   },
 });
+
+/**
+ * Update own profile (name, phone). Email cannot be changed.
+ * Any authenticated user can update their own profile.
+ */
+export const updateProfile = mutation({
+  args: {
+    name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await currentUserId(ctx);
+    if (userId === null) throw new ConvexError({ message: "Sign in to update your profile." });
+
+    const user = await ctx.db.get(userId);
+    if (user === null) throw new ConvexError({ message: "Account not found." });
+
+    const updates: { name?: string; phone?: string } = {};
+
+    if (args.name !== undefined) {
+      const name = args.name.trim();
+      if (name.length < 2) throw new ConvexError({ message: "Name must be at least 2 characters." });
+      if (name.length > 100) throw new ConvexError({ message: "Name is too long." });
+      updates.name = name;
+    }
+
+    if (args.phone !== undefined) {
+      const phone = args.phone.trim();
+      if (phone.length > 0 && phone.length < 9) {
+        throw new ConvexError({ message: "Enter a valid phone number with at least 9 digits." });
+      }
+      updates.phone = phone;
+    }
+
+    if (Object.keys(updates).length === 0) return { ok: true };
+
+    await ctx.db.patch(userId, updates);
+    await logActivity(ctx, userId, "profile.update", "Updated profile information.");
+    return { ok: true };
+  },
+});
+
+/**
+ * Admin-only: Get detailed user information including role and permissions.
+ */
+export const getUserDetails = query({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "team.view");
+    const userId = ctx.db.normalizeId("users", args.user_id);
+    if (userId === null) throw new ConvexError({ message: "User not found." });
+
+    const user = await ctx.db.get(userId);
+    if (user === null) throw new ConvexError({ message: "User not found." });
+
+    const roleRow = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+
+    const role = roleRow?.role ?? null;
+    const overrides = (roleRow?.overrides ?? {}) as Partial<Record<PermissionKey, boolean>>;
+    const granted = role ? new Set(defaultPermissions(role)) : new Set<PermissionKey>();
+
+    for (const [key, value] of Object.entries(overrides)) {
+      if (value === true) granted.add(key as PermissionKey);
+      else if (value === false) granted.delete(key as PermissionKey);
+    }
+
+    const permissions = PERMISSION_KEYS_IN_ORDER.filter((key) => granted.has(key));
+
+    return {
+      id: user._id as string,
+      email: user.email ?? "",
+      name: user.name ?? "",
+      phone: user.phone ?? "",
+      role,
+      permissions,
+      permissionOverrides: overrides,
+    };
+  },
+});
+
+/**
+ * Admin-only: Update another user's profile (name, phone).
+ * Email cannot be changed.
+ */
+export const adminUpdateUser = mutation({
+  args: {
+    user_id: v.string(),
+    name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requirePermission(ctx, "team.manage");
+    const userId = ctx.db.normalizeId("users", args.user_id);
+    if (userId === null) throw new ConvexError({ message: "User not found." });
+
+    const user = await ctx.db.get(userId);
+    if (user === null) throw new ConvexError({ message: "User not found." });
+
+    const updates: { name?: string; phone?: string } = {};
+
+    if (args.name !== undefined) {
+      const name = args.name.trim();
+      if (name.length < 2) throw new ConvexError({ message: "Name must be at least 2 characters." });
+      if (name.length > 100) throw new ConvexError({ message: "Name is too long." });
+      updates.name = name;
+    }
+
+    if (args.phone !== undefined) {
+      const phone = args.phone.trim();
+      if (phone.length > 0 && phone.length < 9) {
+        throw new ConvexError({ message: "Enter a valid phone number with at least 9 digits." });
+      }
+      updates.phone = phone;
+    }
+
+    if (Object.keys(updates).length === 0) return { ok: true };
+
+    await ctx.db.patch(userId, updates);
+    const who = user.email?.trim() || user.name?.trim() || "a user";
+    await logActivity(ctx, actorId, "user.update", `Updated profile for ${who}.`);
+    return { ok: true };
+  },
+});
+
+/**
+ * Admin-only: Delete a user account and all associated data.
+ * Cannot delete yourself or the last admin.
+ */
+export const deleteUser = mutation({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    const actorId = await requirePermission(ctx, "team.manage");
+    const userId = ctx.db.normalizeId("users", args.user_id);
+    if (userId === null) throw new ConvexError({ message: "User not found." });
+
+    if (userId === actorId) {
+      throw new ConvexError({ message: "You cannot delete your own account." });
+    }
+
+    const user = await ctx.db.get(userId);
+    if (user === null) throw new ConvexError({ message: "User not found." });
+
+    const roleRow = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .first();
+
+    // Check if this is the last admin
+    if (roleRow?.role === "admin" && (await countAdmins(ctx)) <= 1) {
+      throw new ConvexError({
+        message: "Cannot delete the last admin. Promote someone else first.",
+      });
+    }
+
+    // Delete user role if exists
+    if (roleRow !== null) {
+      await ctx.db.delete(roleRow._id);
+    }
+
+    // Delete the user account
+    await ctx.db.delete(userId);
+
+    const who = user.email?.trim() || user.name?.trim() || "a user";
+    await logActivity(ctx, actorId, "user.delete", `Deleted account for ${who}.`);
+    return { ok: true };
+  },
+});
+
+/**
+ * Get all users (not just staff) - admin only.
+ * Useful for viewing all customer accounts and managing users.
+ */
+export const allUsers = query({
+  args: {
+    limit: v.optional(v.number()),
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "team.view");
+
+    const limit = Math.min(Math.max(args.limit ?? 50, 1), 200);
+    const search = (args.search ?? "").trim().toLowerCase();
+
+    let users = await ctx.db.query("users").take(limit);
+
+    // Filter by search term if provided
+    if (search !== "") {
+      users = users.filter((user) => {
+        const haystack =
+          `${user.email ?? ""} ${user.name ?? ""} ${user.phone ?? ""}`.toLowerCase();
+        return haystack.includes(search);
+      });
+    }
+
+    const usersWithRoles = await Promise.all(
+      users.map(async (user) => {
+        const roleRow = await ctx.db
+          .query("user_roles")
+          .withIndex("by_user", (q) => q.eq("user_id", user._id))
+          .first();
+
+        return {
+          id: user._id as string,
+          email: user.email ?? "",
+          name: user.name ?? "",
+          phone: user.phone ?? "",
+          role: roleRow?.role ?? null,
+          hasStaffAccess: roleRow !== null,
+        };
+      }),
+    );
+
+    return usersWithRoles;
+  },
+});
