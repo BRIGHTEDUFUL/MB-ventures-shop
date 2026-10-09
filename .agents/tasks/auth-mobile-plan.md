@@ -61,20 +61,20 @@ From code inspection:
       Problem: At 320px, 20px horizontal padding in `.auth-panel` and `.auth-brand` may leave insufficient content width.
       Fix: Add a new `@media (max-width: 360px)` block after the 480px block with:
       `css
-    .auth-panel {
-      padding: 24px 16px 28px;
-    }
-    .auth-brand {
-      padding: 14px 16px;
-    }
-    .auth-lockup img {
-      width: 42px;
-      height: 38px;
-    }
-    .auth-title {
-      font-size: 28px;
-    }
-    `
+.auth-panel {
+padding: 24px 16px 28px;
+}
+.auth-brand {
+padding: 14px 16px;
+}
+.auth-lockup img {
+width: 42px;
+height: 38px;
+}
+.auth-title {
+font-size: 28px;
+}
+`
       Rationale: 16px padding at 320px leaves 288px content width (vs 280px with 20px padding), and scaling down the lockup/title prevents overflow.
       Files: `src/styles.css` (new block after line 2060)
       Verify: Load `/account` at 320px in DevTools, confirm no horizontal scroll, title doesn't wrap awkwardly, lockup fits.

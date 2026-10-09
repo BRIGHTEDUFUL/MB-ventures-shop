@@ -50,8 +50,10 @@ export type CheckoutForm = {
 /**
  * Convex surfaces user-facing failures as `ConvexError({ message })`; plain
  * `Error` messages are redacted in production, so fall back to copy we choose.
+ * Raw connection/transport errors (like in-flight connection drops) are translated
+ * into clear, friendly messages rather than technical protocol traces.
  */
-export const errorMessage = (error: unknown, fallback: string) => {
+export const errorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof ConvexError) {
     const data: unknown = error.data;
     if (typeof data === "string" && data) return data;
@@ -60,8 +62,34 @@ export const errorMessage = (error: unknown, fallback: string) => {
       if (typeof message === "string" && message) return message;
     }
   }
-  if (error instanceof Error && error.message && error.message !== "Server Error")
-    return error.message;
+  if (error instanceof Error && error.message) {
+    const msg = error.message.trim();
+    if (msg === "Server Error") return fallback;
+
+    // Handle WebSocket / transport drop errors
+    if (/connection lost|in flight|websocket|network error|failed to fetch/i.test(msg)) {
+      return "Connection was temporarily interrupted. Please try again.";
+    }
+
+    // Handle authentication credentials failure
+    if (/invalid email or password|incorrect password|could not authenticate/i.test(msg)) {
+      return "Incorrect email or password. Please verify your credentials and try again.";
+    }
+
+    // Strip Convex internal tags like "[CONVEX A(auth:signIn)]" or "Called by client"
+    if (msg.startsWith("[CONVEX") || /called by client/i.test(msg)) {
+      const cleaned = msg
+        .replace(/^\[CONVEX[^\]]*\]\s*/i, "")
+        .replace(/\s*called by client\s*$/i, "")
+        .trim();
+      if (cleaned && !/connection lost/i.test(cleaned)) {
+        return cleaned;
+      }
+      return "Connection was temporarily interrupted. Please try again.";
+    }
+
+    return msg;
+  }
   return fallback;
 };
 export const specs = (value: unknown) =>
