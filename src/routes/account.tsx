@@ -472,7 +472,7 @@ function Account() {
           />
         </label>
         <FieldError>{error}</FieldError>
-        <Button disabled={busy} className="w-full">
+        <Button type="submit" disabled={busy} className="w-full">
           {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
         </Button>
       </form>
