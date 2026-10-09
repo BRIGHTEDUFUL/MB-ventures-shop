@@ -1,0 +1,9 @@
+# Hostinger Build Configuration
+build:
+  nodeVersion: 24
+  installCommand: npm ci
+  buildCommand: npm run build
+  outputDirectory: .output
+  environmentVariables:
+    NODE_ENV: production
+    NPM_CONFIG_PRODUCTION: false
