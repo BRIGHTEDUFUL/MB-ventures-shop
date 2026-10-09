@@ -1,23 +1,335 @@
-## Store architecture
+﻿# MB Ventures GH — Agent & AI IDE Reference
 
-- Use TanStack file routes with shared store components and a root cart provider so navigation preserves the shopping flow.
-- Backend is **Convex** (`convex/`): public queries serve read-only storefront DTOs, while `orders.place`, `orders.staffUpdate`, `catalogue.*` and `uploads.*` are the transactional functions that hold authoritative prices, stock, delivery settings and status transitions; browser totals are estimates only.
-- Auth is Convex Auth with the email + password provider only (no OAuth, no email verification). Sign-up stores name and phone; profile reads come from `users:me`, and staff privileges live in the `user_roles` table guarded by `lib/auth.requireStaff`. Storefront copy, featured picks, the announcement bar and the delivery fees are staff-level (`catalogue.saveSettings`, `catalogue.saveDeliverySettings`); the Mobile Money recipient is admin-only (`catalogue.saveMomoSettings`) because it decides whose wallet the money lands in. All user-facing failures must throw `ConvexError({ message })` so the text reaches the browser.
-- Guest tracking requires an unguessable receipt reference plus the order phone number (`orders.track`); no session needed.
-- Keep unverified demonstration products distinct from live inventory and block their checkout until staff confirms them; never present invented inventory as real store facts.
+This file is the single source of truth for any AI IDE, agent, or collaborator
+working in this repository. Read it in full before touching `convex/` or any route file.
 
-## Quality gates
+---
 
-- Run `npx tsc --noEmit`, `npm run lint`, `npm test`, `npx prettier --check .` and `npm run build` before calling anything done. Playwright adds two more: `npm run test:e2e` (storefront head/outline/crawler checks plus the 320/360/390/414 mobile matrix — 32 checks) and `npm run test:e2e:live`, which places a **real order** in dev, works it as staff, cancels it and verifies the restock (`e2e/purchase.spec.ts`; opt-in only, never part of a plain test run).
-- Absolute URLs (canonical, `og:url`, sitemap) come from `VITE_SITE_URL`; it is `http://localhost:5173` in `.env.development` and empty in `.env.production` until the real domain exists — empty omits the absolute URL rather than publishing a wrong host.
-- The live run signs in as `e2e.staff@example.com` (`E2E_STAFF_PASSWORD` overrides the default) and needs `npx convex run users:grantStaff '{"email":"e2e.staff@example.com"}'` once.
+## 1. Project overview
 
-## Deployments
+**MB Ventures GH** is a live e-commerce storefront at `https://mbventuresghana.com`
+selling workspace and computer accessories (desks, gaming gear, mounts, audio equipment)
+from the Abelenkpe taxi rank shop in Accra, Ghana.
 
-- **Dev** (day to day): `npm run dev` runs `vite dev` and `convex dev` together; `.env.local` points both at the dev deployment `dev:stoic-elephant-714`.
-- **Prod**: `npx convex deploy` with `CONVEX_DEPLOY_KEY` from `.env.prod.local` targets `prod:necessary-newt-861`. Tracked `.env` carries the production `VITE_CONVEX_URL`, so production builds need no extra configuration; `.env*.local` files are gitignored.
-- Prod runs its own auth keys (`JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL`); regenerate them with the `@convex-dev/auth` CLI if they ever leak. `SITE_URL` is a placeholder until the real frontend domain is known (runtime auth only reads `CONVEX_SITE_URL`, which Convex provides).
-- Idempotent seed: `npx convex run seed:seed` (add `--prod` for production).
-- Grant staff after the owner registers: `npx convex run users:grantStaff '{"email":"..."}'` (add `--prod` for production). Windows PowerShell strips quotes from native args — pass the JSON with escaped quotes (`'{\"email\":\"...\"}'`).
-- Staff/admin test sign-ins, password checks and the account-recovery path live in `docs/TEST-ACCOUNTS.md` (prod currently has no admin account — register, then grant).
-- Staff then flip settings from `/staff` (`ordering_enabled` stays off until MoMo recipient details are saved).
+- **Ordering is LIVE.** 11 real products are in the database with real stock (10 units each).
+- **Demo products** (10) are hidden (`visible: false, status: "draft"`) but preserved — never delete them.
+- **Currency:** Ghana cedis (GH₵).
+
+---
+
+## 2. Tech stack
+
+| Layer       | Choice                                                               |
+|-------------|----------------------------------------------------------------------|
+| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                 |
+| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono |
+| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions |
+| Auth        | Convex Auth · email + password only · no OAuth · no email verify     |
+| Client data | TanStack Query via `@convex-dev/react-query`                         |
+| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set             |
+| Tests       | Vitest (175 tests) + Playwright (32 e2e checks)                      |
+| CI/CD       | GitHub Actions → Hostinger VPS (Node/PM2)                           |
+
+---
+
+## 3. Repository layout (key paths)
+
+```
+convex/
+  schema.ts               Single source of truth for all table schemas
+  inventory_import.ts     Idempotent real-product migration — safe to re-run
+  lib/
+    stock.ts              applyStockChange — THE only way to mutate stock
+    auth.ts               requireStaff / requireAdmin guards
+    dto.ts                productDTO, categoryDTO, settingsDTO, orderDTO
+    rules.ts              Pure business rules shared by mutations and UI
+  orders.ts               orders.place, orders.staffUpdate, orders.track
+  catalogue.ts            catalogue.saveSettings, saveDeliverySettings, saveMomoSettings
+  users.ts                users.me, users.grantStaff
+  seed.ts                 seed:seed, seed:syncLocation
+
+src/
+  routes/
+    index.tsx             Homepage — hero, hotspots, featured rail
+    catalogue.tsx         Product listing with filters
+    product.$slug.tsx     Product detail page
+    checkout.tsx          3-step checkout
+    staff.tsx             Staff hub (orders, inventory, team, customization)
+  lib/
+    store-images.ts       Image key → URL mapping + intrinsic sizes
+    store.ts              storeQuery, money(), pageHead(), delivery()
+    use-session.ts        Session hook
+  components/
+    store-provider.tsx    Root cart provider (CartContext)
+    store-ui.tsx          ProductCard, PageError, SectionHeading, Quantity
+
+public/images/
+  hero-workspace.jpg      Hero background — cinematic workspace from real products (1376x768)
+  products/               Real product photos (PNG, named by product slug)
+    carbon-fiber-gaming-desk.png
+    electric-standing-desk-rgb-160.png
+    luminous-rgb-mouse-pad.png
+    custom-macro-mechanical-keyboard.png
+    custom-macro-mechanical-keyboard-gallery.png
+    dual-monitor-desk-mount.png
+    360-rotating-laptop-stand.png
+    rock-360-phone-tablet-stand.png
+    vertical-laptop-stand.png
+    monitor-light-bar.png
+    mottian-ai-smart-keyboard-mouse.png
+    rgb-dynamic-usb-microphone.png
+```
+
+---
+
+## 4. Architecture invariants — NEVER break these
+
+### 4a. Stock: applyStockChange is the only door
+
+All stock mutations (set, adjust, reserve, release) **must** route through
+`applyStockChange` in `convex/lib/stock.ts`. It enforces optimistic locking via
+`products.version` and writes to `stock_movements`.
+Bypassing it violates the single-writer invariant tested in `src/test/stock-single-writer.test.ts`.
+
+```ts
+// CORRECT
+await applyStockChange(ctx, {
+  slug: "carbon-fiber-gaming-desk",
+  command: { kind: "set_on_hand", value: 10 },
+  movement_type: "opening",
+  source: "import",
+  reason: "Initial stock",
+});
+
+// NEVER do this
+await ctx.db.patch(productId, { stock: 10 });
+```
+
+### 4b. Server is authoritative on prices
+
+`orders.place` recomputes price × quantity, delivery fee and total inside the
+mutation. The browser shows estimates only.
+
+### 4c. Product visibility
+
+- `visible: true`  → shown in catalogue, index, sitemap
+- `visible: false` → hidden from all public routes
+- `status: "draft"` → also hidden (demo/archived products)
+- `productDTO` in `convex/lib/dto.ts` maps these to a `visible` boolean
+- All listing routes check `p.visible !== false` — keep this filter in place
+
+### 4d. Auth roles
+
+| Role     | Access                                                             |
+|----------|--------------------------------------------------------------------|
+| customer | Browse, cart, checkout, account, order tracking                    |
+| staff    | + orders, inventory, catalogue editing (no MoMo settings)         |
+| admin    | + MoMo recipient settings, team management                        |
+
+Role rows live in `user_roles`. Guards: `lib/auth.requireStaff` / `requireAdmin`.
+All user-facing errors must throw `ConvexError({ message })`.
+
+### 4e. Image keys
+
+Images are referenced by a **string key**, not a URL. Key resolution is in
+`src/lib/store-images.ts`. To add a new image:
+1. Copy file to `public/images/` (or `public/images/products/`)
+2. Add `"key": "/images/path.ext"` to the `base` object
+3. Add `"key": [width, height]` to the `sizes` object
+
+---
+
+## 5. Deployments
+
+### Dev (daily work)
+```sh
+npm run dev   # runs vite dev + convex dev together
+```
+`.env.local` (gitignored) → dev deployment `dev:stoic-elephant-714`.
+
+### Convex production deploy
+```sh
+npx convex deploy --env-file .env.prod.local
+```
+Targets `prod:necessary-newt-861`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` — never commit it.
+
+### Frontend production deploy
+Automatic — GitHub Actions (`.github/workflows/deploy-hostinger.yml`) on every push to `main`.
+
+### Full production deploy (both layers)
+```sh
+npx convex deploy --env-file .env.prod.local   # backend first
+git add -A; git push origin main               # triggers GitHub Actions for frontend
+```
+
+### Inventory migration (idempotent — safe to re-run anytime)
+```sh
+npx convex run inventory_import:apply --env-file .env.prod.local
+```
+Hides demo products, upserts 11 real products, sets stock to 10 each,
+enables ordering, sets hero image + featured product IDs.
+
+### Seeding
+```sh
+npx convex run seed:seed                              # dev
+npx convex run seed:seed --env-file .env.prod.local   # prod
+```
+
+### Grant staff/admin role (run AFTER user has signed up)
+```powershell
+# Windows PowerShell — always use escaped quotes
+npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin\"}' --env-file .env.prod.local
+# Omit role to default to admin. Use \"role\":\"staff\" for standard staff.
+```
+
+---
+
+## 6. Quality gates — must all pass before any deploy
+
+```sh
+npx tsc --noEmit          # 0 errors
+npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
+npm test                  # 175/175
+npx prettier --check .    # clean
+npm run build             # succeeds
+npm run test:e2e          # 32/32 Playwright checks
+```
+
+Optional (places a real order in dev — opt-in only):
+```sh
+npm run test:e2e:live
+```
+
+---
+
+## 7. Live store state (as of 9 Oct 2026)
+
+### Real products — all visible, active, 10 units each
+
+| Slug | Name | Price GH₵ | Category |
+|------|------|-----------|----------|
+| carbon-fiber-gaming-desk | Black Carbon Fiber Gaming Desk (140x60cm) | 1450 | desks |
+| electric-standing-desk-rgb-160 | Electric Height-Adjustable Desk RGB (160x60cm) | 2800 | desks |
+| luminous-rgb-mouse-pad | Luminous RGB Oversized Mouse Pad (900x400mm) | 210 | accessories |
+| custom-macro-mechanical-keyboard | Custom Macro Mechanical Keyboard w/ LCD | 1500 | accessories |
+| mottian-ai-smart-keyboard-mouse | Mottian AI Smart Wireless Keyboard and Mouse | 1000 | accessories |
+| dual-monitor-desk-mount | Dual Monitor Desk Mount (14-30 inch) | 1120 | mounts |
+| 360-rotating-laptop-stand | 360 Degree Rotating Aluminum Laptop Stand | 230 | mounts |
+| vertical-laptop-stand | Vertical Laptop Stand Storage Base | 240 | mounts |
+| rock-360-phone-tablet-stand | Rock 360 Degree Foldable Phone and Tablet Stand | 100 | mounts |
+| monitor-light-bar | Monitor Light Bar Screen Lamp | 450 | accessories |
+| rgb-dynamic-usb-microphone | Professional RGB Dynamic USB Microphone | 2000 | audio |
+
+### Demo products — hidden (visible: false, status: draft — DO NOT DELETE)
+standing-desk, gaming-desk, ergonomic-chair, office-chair, mechanical-keyboard,
+wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
+
+### Store settings
+- ordering_enabled: true
+- hero_image: "hero-workspace" (public/images/hero-workspace.jpg — 1376x768)
+- hero_title: "Your workspace. Elevated."
+- Featured hotspots: electric-standing-desk-rgb-160, 360-rotating-laptop-stand, custom-macro-mechanical-keyboard
+- MoMo recipient: configured (admin-only at /staff Customization)
+
+---
+
+## 8. Staff / admin accounts (production)
+
+| Email | Role | Purpose |
+|-------|------|---------|
+| manager@mbventuresghana.com | admin | Full back-office, team, settings |
+| admin@mbventuresghana.com | admin | Full admin |
+| attendant@mbventuresghana.com | staff | Orders and inventory |
+| staff@mbventuresghana.com | staff | Orders and products |
+
+Full credentials and recovery steps: `docs/TEST-ACCOUNTS.md`.
+Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.
+
+---
+
+## 9. Environment files
+
+| File | Purpose | In git? |
+|------|---------|---------|
+| .env | Shared VITE_CONVEX_URL (production) | Yes |
+| .env.development | VITE_SITE_URL=http://localhost:5173 | Yes |
+| .env.production | VITE_SITE_URL=https://mbventuresghana.com | Yes |
+| .env.local | Dev CONVEX_DEPLOYMENT + secrets | No (gitignored) |
+| .env.prod.local | CONVEX_DEPLOY_KEY | No (gitignored) |
+| .env.example | Full variable template | Yes |
+
+Never commit .env.local or .env.prod.local.
+Never log CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY, or JWKS.
+
+---
+
+## 10. Common tasks
+
+### Add a new product
+1. Add image to `public/images/products/<slug>.png`
+2. Register key in `src/lib/store-images.ts` (base map + sizes map)
+3. Add entry to `REAL_PRODUCTS` in `convex/inventory_import.ts`
+4. `npx convex run inventory_import:apply --env-file .env.prod.local`
+5. `git push origin main` — GitHub Actions deploys the new image
+
+### Change the hero image
+1. Add image to `public/images/`
+2. Register key in `src/lib/store-images.ts`
+3. `npx convex run inventory_import:patchHeroImage --env-file .env.prod.local`
+4. `git push origin main`
+
+### Change featured hotspot products
+Edit `featured_ids` in `inventory_import.ts` apply mutation, re-run `inventory_import:apply`.
+Or use the staff panel at /staff Customization.
+
+### Verify a production password
+```powershell
+npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresghana.com\",\"password\":\"...\"}}' --env-file .env.prod.local
+```
+
+---
+
+## 11. Things that must NOT happen
+
+- Do NOT bypass applyStockChange — never patch products.stock directly
+- Do NOT delete demo products — they are preserved intentionally
+- Do NOT add OAuth, social login or email verification to signup
+- Do NOT use Resend or SendGrid — email transport is Web3Forms only
+- Do NOT push CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY or JWKS to git
+- Do NOT invent product slugs or prices — use only convex/inventory_import.ts
+- Do NOT show products with verified: false as confirmed stock
+
+---
+
+## 12. Windows PowerShell specifics
+
+PowerShell does not support && to chain commands. Use ; instead:
+```powershell
+git add -A; git commit -m "message"     # correct
+git add -A && git commit -m "message"   # syntax error in PowerShell
+```
+
+PowerShell strips inner quotes from native args — always escape JSON:
+```powershell
+# correct
+npx convex run users:grantStaff '{\"email\":\"x@y.com\",\"role\":\"admin\"}' --env-file .env.prod.local
+
+# wrong — PowerShell drops quotes
+npx convex run users:grantStaff '{"email":"x@y.com"}' --env-file .env.prod.local
+```
+
+---
+
+## 13. Docs map
+
+| File | Contents |
+|------|----------|
+| AGENTS.md (this file) | Architecture, invariants, workflow, full state |
+| README.md | Project overview, stack, live inventory table |
+| docs/TEST-ACCOUNTS.md | Staff/admin credentials, password recovery |
+| docs/PROGRESS.md | Chronological change log |
+| docs/EMAIL.md | Email system full guide |
+| docs/PRODUCTION-CONFIG.md | Deployment configuration reference |
+| docs/INVENTORY-AUDIT.md | Full product specs and original inventory doc |
+| roadmap.md | Feature completion status |
+| convex/inventory_import.ts | Canonical source of all real product data |

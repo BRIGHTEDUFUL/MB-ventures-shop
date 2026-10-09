@@ -1,20 +1,28 @@
-# Circle Shop Express
+# MB Ventures GH — Online Storefront
 
-Storefront for **MB Ventures GH** — a workspace and computer accessories shop at Abelenkpe taxi
-rank, Accra.
-Shoppers browse desks, office chairs, accessories, mounts and streaming gear in Ghana cedis, and
-order for delivery across Ghana or collection from the Abelenkpe shop.
+Live storefront for **MB Ventures GH** — a workspace and computer accessories shop at Abelenkpe taxi
+rank, Accra. Shoppers browse desks, gaming gear, accessories, mounts and streaming equipment in
+Ghana cedis, and order for delivery across Ghana or collection from the Abelenkpe shop.
+
+🌐 **Live at:** [`https://mbventuresghana.com`](https://mbventuresghana.com)
+
+## Current status
+
+**Ordering is LIVE.** Real inventory is stocked and customers can place orders now.
+
+- 11 real products live with actual photos
+- 10 demo products hidden from the storefront (kept as drafts)
+- Hero background is a cinematic workspace scene built from real product photos
+- Staff/admin accounts provisioned and verified on production
 
 ## Payments and fulfilment
-
-Two payment methods only — there is no pay-at-counter option:
 
 1. **Mobile Money** (MTN MoMo, Telecel Cash, AirtelTigo Money). The shopper submits a transaction
    reference, which staff verify manually before the order advances.
 2. **Cash on Delivery** when the courier arrives.
 
-**In-store pickup** at the Abelenkpe taxi rank shop is available as a fulfilment option alongside
-the three delivery zones (Accra Central, Greater Accra, Nationwide).
+**In-store pickup** at the Abelenkpe taxi rank shop is available alongside three delivery zones
+(Accra Central, Greater Accra, Nationwide).
 
 ## Stack
 
@@ -25,7 +33,8 @@ the three delivery zones (Accra Central, Greater Accra, Nationwide).
 | Data        | Convex — schema, queries/mutations, file storage                     |
 | Auth        | Convex Auth, email + password only (no OAuth, no email verification) |
 | Client data | TanStack Query via `@convex-dev/react-query`                         |
-| Tests       | Vitest + Testing Library                                             |
+| Tests       | Vitest + Testing Library + Playwright                                |
+| Hosting     | Hostinger VPS (Node/PM2) + GitHub Actions CI/CD                      |
 
 ## Development
 
@@ -42,14 +51,14 @@ Other commands:
 npm run build    # production build
 npm start         # run the built server
 npm run lint      # eslint
-npm test          # vitest
+npm test          # vitest (175 tests)
 npm run format    # prettier
+npm run test:e2e  # Playwright — 32 checks (head, outline, mobile overflow matrix)
 ```
 
 Environment variables are documented in `.env.example` — copy it to `.env.local`
 (gitignored) and fill in what you need. Email runs in **dry-run** until
-`WEB3FORMS_ACCESS_KEY` is set, so no credentials are required to develop; see
-`docs/EMAIL.md`.
+`WEB3FORMS_ACCESS_KEY` is set; see `docs/EMAIL.md`.
 
 ## Architecture notes
 
@@ -60,22 +69,41 @@ Environment variables are documented in `.env.example` — copy it to `.env.loca
 - **Browsing needs no account.** Placing an order does: signed-out shoppers are sent to
   `/account?next=/checkout` and the cart stays in `localStorage`.
 - **Guest tracking** uses an unguessable receipt reference plus the order phone number — no login.
-- Unverified demonstration products are labelled `Sample item` and cannot be checked out.
+- **Product visibility** is controlled by `visible` field in the `products` table. Demo products are
+  hidden (`visible: false, status: "draft"`) but preserved in the database.
+- **Stock management** routes through `convex/lib/stock.ts → applyStockChange`. Never bypass it.
+- Hero background at `public/images/hero-workspace.jpg` is a generated workspace scene using real
+  product photography.
 
 Read `AGENTS.md` for the full set of invariants before changing anything in `convex/`.
 
 ## Deployments
 
-- **Dev:** `npm run dev` targets the dev deployment configured in `.env.local`.
-- **Prod:** `npx convex deploy` (key in `.env.prod.local`). The tracked `.env` carries the
-  production `VITE_CONVEX_URL`, so production builds need no extra configuration.
+- **Dev:** `npm run dev` targets dev deployment `dev:stoic-elephant-714` (configured in `.env.local`).
+- **Prod Convex:** `npx convex deploy --env-file .env.prod.local` targets `prod:necessary-newt-861`.
+- **Prod Frontend:** GitHub Actions (`deploy-hostinger.yml`) builds and deploys to Hostinger VPS on every push to `main`.
+- **Inventory migration:** `npx convex run inventory_import:apply --env-file .env.prod.local` (idempotent — safe to re-run).
 
 See `AGENTS.md` for seed and staff-grant commands, and `docs/TEST-ACCOUNTS.md`
 for the staff/admin test sign-ins.
 
-## Status
+## Live inventory
 
-Production-ready. Email system live with Web3Forms, domain configured (`mbventuresghana.com`),
-inventory system with reservations complete. See `roadmap.md` for verification status,
-`docs/PROGRESS.md` for recent work, and `docs/PRODUCTION-CONFIG.md` for deployment guide.
-`CONVEX_PLAN.md` records the Supabase → Convex migration.
+11 real products, 10 units each, prices in Ghana cedis (GH₵):
+
+| Product | Price |
+|---|---|
+| Black Carbon Fiber Gaming Desk (140×60cm) | ₵1,450 |
+| Solid Wood Electric Height-Adjustable Desk RGB (160×60cm) | ₵2,800 |
+| Luminous RGB Oversized Mouse Pad (900×400mm) | ₵210 |
+| Custom Macro Mechanical Keyboard w/ LCD Display | ₵1,500 |
+| Mottian AI Smart Wireless Keyboard & Mouse | ₵1,000 |
+| Dual Monitor Desk Mount (14–30 inch) | ₵1,120 |
+| 360° Rotating Aluminum Laptop Stand | ₵230 |
+| Vertical Laptop Stand Storage Base | ₵240 |
+| Rock 360° Foldable Phone & Tablet Stand | ₵100 |
+| Monitor Light Bar Screen Lamp | ₵450 |
+| Professional RGB Dynamic USB Microphone | ₵2,000 |
+
+See `docs/PROGRESS.md` for full change history, `docs/TEST-ACCOUNTS.md` for staff credentials,
+and `docs/PRODUCTION-CONFIG.md` for deployment details.

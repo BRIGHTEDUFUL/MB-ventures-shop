@@ -5,6 +5,65 @@ still open is listed under **Open**.
 
 ---
 
+## Real Inventory Launch, Hero Image & Docs Overhaul (9 October 2026)
+
+**Status:** Live — ordering enabled, real products on the storefront.
+
+### Done
+
+- **Real inventory imported** — 11 products from the owner's inventory document
+  inserted into production via `convex/inventory_import:apply` (idempotent).
+  Each product has 10 units of stock, real pricing in GH₵, and verified product
+  photos extracted from the inventory document.
+- **Demo products hidden** — 10 placeholder products set to `visible: false,
+  status: "draft"`. They remain in the database but are invisible on the
+  storefront, catalogue, search and sitemap.
+- **Product photos** — 12 PNG files (11 products + 1 gallery variant) extracted
+  and committed to `public/images/products/`. Image keys registered in
+  `src/lib/store-images.ts` with correct intrinsic dimensions.
+- **Hero background replaced** — Cinematic workspace photo (`hero-workspace.jpg`,
+  1376×768) generated from real product photography. Features the carbon fiber
+  gaming desk, custom macro keyboard, USB microphone, monitor light bar, and
+  gaming chair. Set on production via `inventory_import:patchHeroImage`.
+- **Hero copy updated** — Title: "Your workspace. Elevated." Subtitle describes
+  delivery and Abelenkpe pickup.
+- **Hero hotspots** — Click-to-reveal product cards feature the three flagship
+  products: electric standing desk, 360° laptop stand, custom macro keyboard.
+- **Storefront cleaned up** — Removed "Sample catalogue" disclaimer from catalogue
+  page. Specs disclaimer now only shows for unverified/demo products. Related
+  products section filters to visible items only.
+- **Ordering enabled** — `ordering_enabled: true` set in production store settings.
+- **AGENTS.md fully rewritten** — Authoritative AI context covering: tech stack,
+  key file paths, architecture invariants, stock rules, auth roles, image key
+  system, all deployment commands, live inventory state, staff accounts, env
+  files, common tasks, anti-patterns, and Windows PowerShell specifics.
+- **CLAUDE.md created** — Short alias picked up by Claude Code, Cursor, and
+  similar AI IDEs.
+- **`.agents/rules/mb-ventures.md` created** — Machine-readable rules file for
+  Antigravity IDE and compatible agents.
+- **README.md updated** — Live inventory table, current status, updated deployment
+  commands.
+- **docs/PROGRESS.md updated** (this section).
+
+### Verified
+
+- `npx tsc --noEmit` — 0 errors
+- `npm run lint` — 0 errors (7 pre-existing react-refresh warnings)
+- `npm run build` — succeeds
+- `npx convex run inventory_import:apply --env-file .env.prod.local` — 11 real
+  products updated, 10 demo products hidden, ordering enabled
+- `npx convex run inventory_import:patchHeroImage --env-file .env.prod.local` — OK
+- Pushed to `main` — GitHub Actions deploys frontend to Hostinger
+
+### Open
+
+- Run `npm run test:e2e` to verify Playwright checks still pass against updated
+  storefront (some tests may need tuning for the new product URLs).
+- Physical device testing (soft keyboard, iOS focus zoom, landscape) — see
+  `MOBILE_TASKS.md §3`.
+
+---
+
 ## Production Auth, Roles & CI/CD Workflows Operational (9 October 2026)
 
 **Status:** Live authentication, staff/admin permissions, and deployment workflows verified full-stack.
