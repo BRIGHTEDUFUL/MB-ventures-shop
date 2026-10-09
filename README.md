@@ -91,19 +91,19 @@ for the staff/admin test sign-ins.
 
 11 real products, 10 units each, prices in Ghana cedis (GH₵):
 
-| Product | Price |
-|---|---|
-| Black Carbon Fiber Gaming Desk (140×60cm) | ₵1,450 |
+| Product                                                   | Price  |
+| --------------------------------------------------------- | ------ |
+| Black Carbon Fiber Gaming Desk (140×60cm)                 | ₵1,450 |
 | Solid Wood Electric Height-Adjustable Desk RGB (160×60cm) | ₵2,800 |
-| Luminous RGB Oversized Mouse Pad (900×400mm) | ₵210 |
-| Custom Macro Mechanical Keyboard w/ LCD Display | ₵1,500 |
-| Mottian AI Smart Wireless Keyboard & Mouse | ₵1,000 |
-| Dual Monitor Desk Mount (14–30 inch) | ₵1,120 |
-| 360° Rotating Aluminum Laptop Stand | ₵230 |
-| Vertical Laptop Stand Storage Base | ₵240 |
-| Rock 360° Foldable Phone & Tablet Stand | ₵100 |
-| Monitor Light Bar Screen Lamp | ₵450 |
-| Professional RGB Dynamic USB Microphone | ₵2,000 |
+| Luminous RGB Oversized Mouse Pad (900×400mm)              | ₵210   |
+| Custom Macro Mechanical Keyboard w/ LCD Display           | ₵1,500 |
+| Mottian AI Smart Wireless Keyboard & Mouse                | ₵1,000 |
+| Dual Monitor Desk Mount (14–30 inch)                      | ₵1,120 |
+| 360° Rotating Aluminum Laptop Stand                       | ₵230   |
+| Vertical Laptop Stand Storage Base                        | ₵240   |
+| Rock 360° Foldable Phone & Tablet Stand                   | ₵100   |
+| Monitor Light Bar Screen Lamp                             | ₵450   |
+| Professional RGB Dynamic USB Microphone                   | ₵2,000 |
 
 See `docs/PROGRESS.md` for full change history, `docs/TEST-ACCOUNTS.md` for staff credentials,
 and `docs/PRODUCTION-CONFIG.md` for deployment details.

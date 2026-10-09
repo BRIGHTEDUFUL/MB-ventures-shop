@@ -16,7 +16,7 @@ still open is listed under **Open**.
   Each product has 10 units of stock, real pricing in GH₵, and verified product
   photos extracted from the inventory document.
 - **Demo products hidden** — 10 placeholder products set to `visible: false,
-  status: "draft"`. They remain in the database but are invisible on the
+status: "draft"`. They remain in the database but are invisible on the
   storefront, catalogue, search and sitemap.
 - **Product photos** — 12 PNG files (11 products + 1 gallery variant) extracted
   and committed to `public/images/products/`. Image keys registered in
