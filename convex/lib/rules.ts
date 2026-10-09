@@ -30,12 +30,31 @@ export const ORDER_STATUSES: OrderStatus[] = [
 export const PAYMENT_STATUSES: PaymentStatus[] = ["pending", "confirmed", "rejected"];
 export const MOMO_PROVIDERS = ["MTN MoMo", "Telecel Cash", "AirtelTigo Money"] as const;
 
-/** Fees + MoMo recipient + ordering switch, whichever settings doc we pass in. */
-export interface FeeSettings {
+/** The four numbers that decide what a customer pays for delivery. */
+export interface FeeBreakdown {
   central_fee: number;
   greater_fee: number;
   nationwide_fee: number;
   free_threshold: number;
+}
+
+/**
+ * Published defaults, used only while the settings row has not loaded.
+ * They must never win over a saved value — including a saved `0`, which is how
+ * staff turn a zone free (`fee || default` would silently resurrect 30).
+ */
+export const DEFAULT_FEES: FeeBreakdown = {
+  central_fee: 30,
+  greater_fee: 50,
+  nationwide_fee: 100,
+  free_threshold: 5000,
+};
+
+/** Settings-driven copy shown in the header facts bar; empty means "hide it". */
+export const DEFAULT_ANNOUNCEMENT = "Abelenkpe, Accra · Pickup in store · Delivery across Ghana";
+
+/** Fees + MoMo recipient + ordering switch, whichever settings doc we pass in. */
+export interface FeeSettings extends FeeBreakdown {
   momo_number: string;
   ordering_enabled: boolean;
 }
@@ -68,6 +87,62 @@ export const normalizePhone = (raw: string) => raw.replace(/[^0-9+]/g, "");
 
 /** Postgres checked `email NOT LIKE '%@%.%'`. */
 export const isValidEmail = (email: string) => /.+@.+\..+/.test(email.trim());
+
+/**
+ * Digits only, in the form `https://wa.me/<digits>` expects.
+ *
+ * Staff paste whatever is in their contacts — `024 123 4567`,
+ * `+233 (0) 24 123 4567` or `233241234567` — and all three must land on the
+ * same chat, otherwise `wa.me` silently opens a dead link. Ghana is the only
+ * country this store ships to, so a leading `0` (or a `2330` after a `+233`
+ * paste) is promoted to `233`.
+ */
+export function normalizeWhatsApp(raw: string): string {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("2330")) digits = digits.slice(3);
+  if (digits.startsWith("0")) digits = `233${digits.slice(1)}`;
+  return digits;
+}
+
+/**
+ * Message a staff member can fix, or `null` when the value is usable.
+ * Blank is valid: the storefront falls back to the shop phone number.
+ */
+export function validateWhatsApp(raw: string): string | null {
+  const digits = normalizeWhatsApp(raw);
+  if (digits === "") return null;
+  if (digits.length < 9 || digits.length > 15) {
+    return "Enter a valid WhatsApp number, e.g. 0241234567.";
+  }
+  return null;
+}
+
+/**
+ * `wa.me` link for the store's WhatsApp, or `null` when neither the WhatsApp
+ * field nor the shop phone yields a dialable number — callers then fall back
+ * to a `tel:` link instead of rendering a dead anchor.
+ */
+export function whatsappHref(
+  settings: { whatsapp: string; phone: string },
+  message?: string,
+): string | null {
+  const target = normalizeWhatsApp(settings.whatsapp) || normalizeWhatsApp(settings.phone);
+  if (target.length < 9) return null;
+  const base = `https://wa.me/${target}`;
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}
+
+/**
+ * The announcement to show, or `""` when the bar should not render at all.
+ * `""` is a deliberate "hide it" from staff, so it must not fall back to a
+ * default (the old `?? default` could never fire on an empty string).
+ */
+export const announcementText = (settings: { announcement: string } | null | undefined): string =>
+  settings ? settings.announcement.trim() : "";
+
+/** Display fees — the saved values once loaded, the published defaults before. */
+export const displayFees = (settings: FeeBreakdown | null | undefined): FeeBreakdown =>
+  settings ?? DEFAULT_FEES;
 
 /**
  * Delivery fee in cedis, or `null` when the zone is unusable

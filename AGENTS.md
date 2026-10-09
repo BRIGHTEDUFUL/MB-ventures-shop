@@ -2,7 +2,7 @@
 
 - Use TanStack file routes with shared store components and a root cart provider so navigation preserves the shopping flow.
 - Backend is **Convex** (`convex/`): public queries serve read-only storefront DTOs, while `orders.place`, `orders.staffUpdate`, `catalogue.*` and `uploads.*` are the transactional functions that hold authoritative prices, stock, delivery settings and status transitions; browser totals are estimates only.
-- Auth is Convex Auth with the email + password provider only (no OAuth, no email verification). Sign-up stores name and phone; profile reads come from `users:me`, and staff privileges live in the `user_roles` table guarded by `lib/auth.requireStaff`. All user-facing failures must throw `ConvexError({ message })` so the text reaches the browser.
+- Auth is Convex Auth with the email + password provider only (no OAuth, no email verification). Sign-up stores name and phone; profile reads come from `users:me`, and staff privileges live in the `user_roles` table guarded by `lib/auth.requireStaff`. Storefront copy, featured picks, the announcement bar and the delivery fees are staff-level (`catalogue.saveSettings`, `catalogue.saveDeliverySettings`); the Mobile Money recipient is admin-only (`catalogue.saveMomoSettings`) because it decides whose wallet the money lands in. All user-facing failures must throw `ConvexError({ message })` so the text reaches the browser.
 - Guest tracking requires an unguessable receipt reference plus the order phone number (`orders.track`); no session needed.
 - Keep unverified demonstration products distinct from live inventory and block their checkout until staff confirms them; never present invented inventory as real store facts.
 

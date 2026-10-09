@@ -13,7 +13,22 @@ export type {
   SavedAddress,
   StoreData,
   HistoryEntry,
+  HomeTrustItem,
+  TrustIcon,
 } from "../../convex/lib/dto";
+
+// Shared with the backend so the storefront, the delivery page and the staff
+// forms can never disagree about fees, the announcement or a WhatsApp link.
+export {
+  DEFAULT_ANNOUNCEMENT,
+  DEFAULT_FEES,
+  announcementText,
+  displayFees,
+  normalizeWhatsApp,
+  validateWhatsApp,
+  whatsappHref,
+  type FeeBreakdown,
+} from "../../convex/lib/rules";
 
 export const money = (n: number, decimals = false) =>
   `GH₵ ${n.toLocaleString("en-GH", { minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: 2 })}`;

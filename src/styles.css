@@ -213,6 +213,23 @@ input[type="checkbox"] {
   width: 18px;
   min-height: 18px;
 }
+/* `sr-only` lives in `@layer utilities`, and this file's unlayered `input`
+   rule (`width: 100%`, `min-height: 48px`, padding) outranks anything in a
+   layer regardless of specificity. Without this, a visually hidden file input
+   claims a full row and widens the page past the viewport. */
+input.sr-only {
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 label {
   display: block;
   font-size: 14px;
@@ -248,11 +265,14 @@ label textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   margin-bottom: 28px;
 }
 .section-heading h2 {
   font-size: 32px;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 .eyebrow {
   font-size: 11px;
@@ -1496,4 +1516,221 @@ h4 {
 }
 .sale-price {
   color: var(--offer-ink);
+}
+
+/* ── Staff hub: settings tabs, sticky save, mobile tab bar ─────────────── */
+
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.settings-tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.settings-tab:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.settings-tab[data-active="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* Search field in the featured picker. The icon is absolutely positioned, so
+   the input needs its own left padding — and it has to be plain CSS, because
+   this project's unlayered rules outrank Tailwind's `@layer utilities`, which
+   is why `pl-9` on its own silently loses to the global `input` padding. */
+.picker-search input {
+  padding-left: 40px;
+}
+
+/* Storefront bottom nav is suppressed on /staff; the hub ships its own. */
+.staff-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* ── Touch: 44px minimums and no iOS focus zoom ───────────────────── */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .toolbar select,
+  .filters select,
+  .filters input {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .filter-line,
+  label:has(input[type="checkbox"]) {
+    min-height: 44px;
+  }
+  .filter-line input[type="checkbox"],
+  label input[type="checkbox"] {
+    width: 22px;
+    min-height: 22px;
+    margin-right: 4px;
+  }
+  /* Compact controls (sm chips, row actions, the hero card's chevrons) ship
+     well under the 44px thumb minimum, so they grow without changing their
+     glyphs. Blanket `button { min-height }` would inflate icons everywhere. */
+  .toolbar button,
+  .form-actions button,
+  .hero-product button,
+  .picker-move button,
+  td button,
+  li > button {
+    min-height: 44px;
+  }
+  .hero-product button,
+  .picker-move button {
+    min-width: 44px;
+  }
+  /* The stepper ships 36×38 — under the thumb minimum on the cart drawer. */
+  .quantity {
+    height: 48px;
+  }
+  .quantity button {
+    width: 44px;
+    height: 46px;
+  }
+  .quantity span {
+    width: 34px;
+    font-size: 14px;
+  }
+
+  /* ── Settings tabs scroll edge-to-edge on a phone ─────────────────── */
+  .settings-tabs {
+    margin-inline: -20px;
+    padding-inline: 20px;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+  }
+  .settings-tab {
+    scroll-snap-align: start;
+    min-height: 46px;
+  }
+
+  /* Save stays reachable no matter how long the form is, parked above the
+     hub's own tab bar so the two never overlap. */
+  .form-actions {
+    position: sticky;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    z-index: 25;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: var(--glass-shadow);
+  }
+  .form-actions > div {
+    width: 100%;
+  }
+  .form-actions button {
+    width: 100%;
+  }
+
+  /* ── Hub bottom tab bar ───────────────────────────────────────────── */
+  .staff-mobile-nav {
+    display: flex;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 45;
+    justify-content: space-around;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: 28px;
+    background: var(--card);
+    box-shadow: var(--glass-shadow);
+  }
+  .staff-mobile-nav a,
+  .staff-mobile-nav button {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 6px 2px;
+    border: 0;
+    border-radius: 22px;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 10px;
+    text-decoration: none;
+  }
+  .staff-mobile-nav a[data-status="active"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .staff-mobile-nav svg {
+    width: 20px;
+    height: 20px;
+  }
+  .staff-shell {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  /* ── Tables and lists that would otherwise push the page wide ─────── */
+  .spec-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Filters and toolbars stop being a squeezed row. */
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .toolbar input,
+  .toolbar select {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ── Storefront: section copy is staff-authored, so it must never overflow ── */
+@media (max-width: 767px) {
+  .brand-strip {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 18px;
+  }
+  /* A single trust row would otherwise sit in half the grid. */
+  .trust-strip:has(> .trust-item:last-child:nth-child(1)) {
+    grid-template-columns: 1fr;
+  }
 }

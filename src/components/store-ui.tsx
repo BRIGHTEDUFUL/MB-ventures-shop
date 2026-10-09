@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Minus, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
-import { type Product, money, specs, storeQuery } from "@/lib/store";
+import { type Product, money, specs, storeQuery, displayFees } from "@/lib/store";
 import { images } from "@/lib/store-images";
 import { remainingForFreeDelivery } from "../../convex/lib/rules";
 export function ProductCard({ product: p }: { product: Product }) {
@@ -122,7 +122,9 @@ export function CartLines() {
 export function FreeDelivery() {
   const { subtotal } = useCart(),
     { data } = useQuery(storeQuery);
-  const threshold = data?.settings.free_threshold || 5000;
+  // A saved threshold of 0 means "free delivery is on"; `|| 5000` would have
+  // resurrected the default and shown a progress bar for a perk already earned.
+  const threshold = displayFees(data?.settings).free_threshold;
   return (
     <div className="mt-6 text-xs text-muted-foreground">
       <p>

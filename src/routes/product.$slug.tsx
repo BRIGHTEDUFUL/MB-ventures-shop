@@ -13,7 +13,7 @@ import {
   SectionHeading,
 } from "@/components/store-ui";
 import { images } from "@/lib/store-images";
-import { storeQuery, pageHead, money, specs, delivery, zones } from "@/lib/store";
+import { storeQuery, pageHead, money, specs, delivery, zones, whatsappHref } from "@/lib/store";
 import { toast } from "sonner";
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ context, params }) => {
@@ -44,6 +44,10 @@ function ProductPage() {
     [zoom, setZoom] = useState(false);
   if (!p) return <PageNotFound />;
   const galleryImages = [images[p.image_key], ...(p.gallery ?? []).map((g) => images[g])];
+  // Prefers the staff-entered WhatsApp number, then the shop phone, and returns
+  // null when neither is dialable — in which case we drop the link entirely
+  // rather than ship a dead wa.me anchor.
+  const whatsapp = whatsappHref(settings, `Hello, I would like to ask about ${p.name}.`);
   return (
     <div className="page-content wrap page-product">
       <div className="breadcrumbs">
@@ -180,15 +184,17 @@ function ProductPage() {
               Store warranty support. Contact us for this item's terms.
             </p>
             <div className="mt-5 flex gap-5">
-              <a
-                href={`https://wa.me/${settings.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello, I would like to ask about ${p.name}.`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 text-xs text-link"
-              >
-                <MessageCircle className="size-4" />
-                Ask on WhatsApp
-              </a>
+              {whatsapp && (
+                <a
+                  href={whatsapp}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 text-xs text-link"
+                >
+                  <MessageCircle className="size-4" />
+                  Ask on WhatsApp
+                </a>
+              )}
               <Button
                 variant="link"
                 className="h-auto p-0 text-xs text-link"

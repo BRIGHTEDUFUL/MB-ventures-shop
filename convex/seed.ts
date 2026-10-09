@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
+import { HOME_CONTENT_DEFAULTS } from "./lib/dto";
 
 const SETTINGS = {
   key: "singleton",
@@ -21,6 +22,9 @@ const SETTINGS = {
   announcement: "Abelenkpe, Accra · Pickup in store · Delivery across Ghana",
   whatsapp: "",
   featured_ids: ["standing-desk", "ergonomic-chair", "mechanical-keyboard"],
+  // Homepage section copy — shared with `settingsDTO` so a fresh install and an
+  // old row that never saw these fields render the same page.
+  ...HOME_CONTENT_DEFAULTS,
 };
 
 const CATEGORIES = [

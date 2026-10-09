@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_ANNOUNCEMENT,
+  DEFAULT_FEES,
+  announcementText,
   deliveryFee,
+  displayFees,
   isValidEmail,
   normalizePhone,
+  normalizeWhatsApp,
   remainingForFreeDelivery,
+  validateWhatsApp,
+  whatsappHref,
   type FeeSettings,
 } from "../../convex/lib/rules";
 
@@ -99,5 +106,106 @@ describe("isValidEmail", () => {
     expect(isValidEmail("ama.mensah")).toBe(false);
     expect(isValidEmail("@example.com")).toBe(false);
     expect(isValidEmail("")).toBe(false);
+  });
+});
+
+describe("normalizeWhatsApp", () => {
+  it("maps every way of writing a Ghana number onto one wa.me target", () => {
+    expect(normalizeWhatsApp("024 123 4567")).toBe("233241234567");
+    expect(normalizeWhatsApp("+233 (0) 24 123 4567")).toBe("233241234567");
+    expect(normalizeWhatsApp("233241234567")).toBe("233241234567");
+  });
+
+  it("is idempotent, so saving a saved value cannot drift it", () => {
+    for (const raw of ["024 123 4567", "+233 (0) 24 123 4567", "233241234567"]) {
+      const once = normalizeWhatsApp(raw);
+      expect(normalizeWhatsApp(once)).toBe(once);
+    }
+  });
+
+  it("strips everything non-numeric", () => {
+    expect(normalizeWhatsApp("call or WhatsApp me")).toBe("");
+    expect(normalizeWhatsApp("")).toBe("");
+  });
+});
+
+describe("validateWhatsApp", () => {
+  it("treats blank as valid — the storefront then falls back to the shop phone", () => {
+    expect(validateWhatsApp("")).toBeNull();
+    expect(validateWhatsApp("   ")).toBeNull();
+  });
+
+  it("accepts a normalised Ghana number", () => {
+    expect(validateWhatsApp("024 123 4567")).toBeNull();
+    expect(validateWhatsApp("+233 24 123 4567")).toBeNull();
+  });
+
+  it("rejects numbers too short or too long to dial", () => {
+    expect(validateWhatsApp("1234")).toBeTypeOf("string");
+    expect(validateWhatsApp("1".repeat(16))).toBeTypeOf("string");
+  });
+});
+
+describe("whatsappHref", () => {
+  const settings = { whatsapp: "024 123 4567", phone: "+233 24 000 0000" };
+
+  it("prefers the staff-entered WhatsApp number over the shop phone", () => {
+    expect(whatsappHref(settings)).toBe("https://wa.me/233241234567");
+  });
+
+  it("falls back to the shop phone when the WhatsApp field is empty", () => {
+    expect(whatsappHref({ ...settings, whatsapp: "" })).toBe("https://wa.me/233240000000");
+  });
+
+  it("returns null rather than a dead anchor when neither number is dialable", () => {
+    expect(whatsappHref({ whatsapp: "", phone: "" })).toBeNull();
+    expect(whatsappHref({ whatsapp: "", phone: "1234" })).toBeNull();
+  });
+
+  it("URL-encodes the enquiry text", () => {
+    expect(whatsappHref(settings, "Ask about desks & chairs")).toBe(
+      "https://wa.me/233241234567?text=Ask%20about%20desks%20%26%20chairs",
+    );
+  });
+});
+
+describe("announcementText", () => {
+  it("returns the announcement so the header can render the bar", () => {
+    expect(announcementText({ announcement: DEFAULT_ANNOUNCEMENT })).toBe(DEFAULT_ANNOUNCEMENT);
+  });
+
+  it("returns an empty string when staff hide the bar", () => {
+    // The old `?? default` could never fire on "", so the bar never hid.
+    expect(announcementText({ announcement: "" })).toBe("");
+    expect(announcementText({ announcement: "   " })).toBe("");
+  });
+
+  it("returns an empty string before settings load, so nothing flashes", () => {
+    expect(announcementText(undefined)).toBe("");
+    expect(announcementText(null)).toBe("");
+  });
+});
+
+describe("displayFees", () => {
+  it("falls back to the published defaults only while settings are absent", () => {
+    expect(displayFees(undefined)).toEqual(DEFAULT_FEES);
+    expect(displayFees(null)).toEqual(DEFAULT_FEES);
+  });
+
+  it("keeps a saved 0 — zero is how staff turn a zone free", () => {
+    const saved = { ...DEFAULT_FEES, central_fee: 0 };
+    expect(displayFees(saved)).toEqual(saved);
+    // Regression: `fee || 30` used to resurrect the default and overcharge.
+    expect(displayFees(saved).central_fee).toBe(0);
+  });
+
+  it("passes a full set of saved fees through untouched", () => {
+    const saved = {
+      central_fee: 12,
+      greater_fee: 25,
+      nationwide_fee: 60,
+      free_threshold: 1500,
+    };
+    expect(displayFees(saved)).toEqual(saved);
   });
 });

@@ -30,6 +30,28 @@ export function Panel({
   );
 }
 
+/**
+ * Save row shared by every hub form. Below 768px it sticks to the bottom just
+ * above the staff tab bar, so the primary action stays reachable no matter how
+ * long the form is — the main thing a desktop-only layout gets wrong on a phone.
+ */
+export function FormActions({
+  busy,
+  children,
+  note,
+}: {
+  busy?: boolean;
+  children: ReactNode;
+  note?: ReactNode;
+}) {
+  return (
+    <div className="form-actions" aria-busy={busy || undefined}>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      <div className="flex flex-wrap gap-3">{children}</div>
+    </div>
+  );
+}
+
 /** One dashboard number with an optional tone. */
 export function Stat({
   label,

@@ -188,7 +188,7 @@ function CategoryEditor({
       description="The link name is generated from the category name when created."
     >
       <form onSubmit={save} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label>
             Name
             <input

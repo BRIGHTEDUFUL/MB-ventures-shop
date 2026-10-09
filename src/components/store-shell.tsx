@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ArrowRight,
   MapPin,
+  MessageCircle,
   Phone,
   Truck,
   X,
@@ -20,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
 import { CartLines, FreeDelivery } from "./store-ui";
-import { money, storeQuery } from "@/lib/store";
+import { money, storeQuery, announcementText, whatsappHref } from "@/lib/store";
 import { images } from "@/lib/store-images";
 export function StoreHeader() {
   const { data: hd } = useQuery(storeQuery),
@@ -29,18 +30,23 @@ export function StoreHeader() {
     [mega, setMega] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useEffect(() => setMega(false), [pathname]);
+  // Empty announcement = staff turned the bar off, so render nothing at all.
+  // While settings are still loading we also render nothing: flashing a
+  // default and then removing it shifts the sticky header underneath.
+  const announcement = announcementText(hd?.settings);
   return (
     <>
-      <div className="facts-bar flex items-center justify-between bg-primary px-8 py-2 text-[11px] text-primary-foreground">
-        <span className="flex items-center gap-2">
-          <MapPin className="size-3" />{" "}
-          {hd?.settings.announcement ??
-            "Abelenkpe, Accra · Pickup in store · Delivery across Ghana"}
-        </span>
-        <Link to="/track" className="flex items-center gap-2">
-          Track your order <ArrowRight className="size-3" />
-        </Link>
-      </div>
+      {announcement !== "" && (
+        <div className="facts-bar flex items-center justify-between gap-3 bg-primary px-8 py-2 text-[11px] text-primary-foreground">
+          <span className="flex min-w-0 items-center gap-2">
+            <MapPin className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{announcement}</span>
+          </span>
+          <Link to="/track" className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+            Track your order <ArrowRight className="size-3" aria-hidden />
+          </Link>
+        </div>
+      )}
       <header className="store-header glass">
         <div className="header-top">
           <Link to="/" className="header-logo">
@@ -337,13 +343,26 @@ export function StoreOverlays() {
 }
 export function MobileNavigation() {
   const cart = useCart();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The hub renders its own bottom tab bar (see `StaffShell`). Two bars stacked
+  // on a phone would halve the usable page and double every tap target, so the
+  // storefront one steps aside for /staff and /admin.
+  if (pathname.startsWith("/staff") || pathname.startsWith("/admin")) return null;
   return (
     <nav className="mobile-nav" aria-label="Mobile navigation">
-      <Link to="/" activeOptions={{ exact: true }}>
+      <Link
+        to="/"
+        activeOptions={{ exact: true }}
+        data-status={pathname === "/" ? "active" : undefined}
+      >
         <Home />
         Home
       </Link>
-      <Link to="/catalogue" search={{ category: "", q: "" }}>
+      <Link
+        to="/catalogue"
+        search={{ category: "", q: "" }}
+        data-status={pathname.startsWith("/catalogue") ? "active" : undefined}
+      >
         <Grid2X2 />
         Shop
       </Link>
@@ -355,7 +374,7 @@ export function MobileNavigation() {
         <ShoppingBag />
         Cart {cart.count || ""}
       </Button>
-      <Link to="/account">
+      <Link to="/account" data-status={pathname.startsWith("/account") ? "active" : undefined}>
         <User />
         Account
       </Link>
@@ -365,7 +384,8 @@ export function MobileNavigation() {
 export function StoreFooter() {
   const { data } = useQuery(storeQuery);
   const s = data?.settings,
-    categories = (data?.categories ?? []).filter((c) => c.visible);
+    categories = (data?.categories ?? []).filter((c) => c.visible),
+    whatsapp = s ? whatsappHref(s) : null;
   return (
     <footer className="store-footer wrap">
       <div className="footer-grid">
@@ -416,6 +436,12 @@ export function StoreFooter() {
             <Phone className="mr-1 inline size-3" />
             {s?.phone || "+233 24 000 0000"}
           </a>
+          {whatsapp && (
+            <a href={whatsapp} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+              <MessageCircle className="mr-1 inline size-3" />
+              Chat on WhatsApp
+            </a>
+          )}
           <a href={`mailto:${s?.email || "orders@mbventuresgh.com"}`}>
             {s?.email || "orders@mbventuresgh.com"}
           </a>

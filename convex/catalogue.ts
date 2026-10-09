@@ -3,8 +3,9 @@ import { mutation } from "./_generated/server";
 import { logActivity } from "./lib/activity";
 import { requireAdmin, requireStaff } from "./lib/auth";
 import { getSettings } from "./lib/settings";
-import { isValidEmail, round2 } from "./lib/rules";
+import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
 import { recordStockChange } from "./inventory";
+import { trustIcon } from "./schema";
 
 /** Product create/update from the staff product editor. */
 export const saveProduct = mutation({
@@ -253,10 +254,14 @@ export const bulkUpdate = mutation({
   },
 });
 
+/** Caps on the homepage fields staff edit — mirrored by `HOME_LIMITS` in the UI. */
+const HOME_BRAND_LIMIT = 6;
+
 /**
  * Storefront settings any staff member may edit: hero copy + images,
- * announcement bar, contact details, WhatsApp, homepage featured picks and
- * the ordering switch (money details are validated against, not edited here).
+ * announcement bar, contact details, WhatsApp, homepage section copy,
+ * homepage featured picks and the ordering switch. Delivery fees live in
+ * `saveDeliverySettings`; the Mobile Money recipient in `saveMomoSettings`.
  */
 export const saveSettings = mutation({
   args: {
@@ -272,6 +277,17 @@ export const saveSettings = mutation({
     setup_image: v.string(),
     ordering_enabled: v.boolean(),
     featured_ids: v.array(v.string()),
+    // Homepage section copy (see `HOME_CONTENT_DEFAULTS` for the rules:
+    // strings blank out to the default, an empty array hides the section).
+    home_category_heading: v.string(),
+    home_featured_heading: v.string(),
+    home_setup_eyebrow: v.string(),
+    home_setup_heading: v.string(),
+    home_setup_body: v.string(),
+    home_cta_heading: v.string(),
+    home_cta_body: v.string(),
+    home_brands: v.array(v.string()),
+    home_trust: v.array(v.object({ icon: trustIcon, title: v.string(), text: v.string() })),
   },
   handler: async (ctx, args) => {
     const actorId = await requireStaff(ctx);
@@ -298,6 +314,55 @@ export const saveSettings = mutation({
       }
     }
 
+    const whatsappProblem = validateWhatsApp(args.whatsapp);
+    if (whatsappProblem !== null) throw new ConvexError({ message: whatsappProblem });
+
+    // Homepage section copy: long enough to say something, short enough to fit.
+    for (const [label, value] of [
+      ["Category section heading", args.home_category_heading],
+      ["Featured section heading", args.home_featured_heading],
+      ["Setup eyebrow", args.home_setup_eyebrow],
+      ["Setup heading", args.home_setup_heading],
+      ["Closing heading", args.home_cta_heading],
+    ] as const) {
+      if (value.trim().length > 90) {
+        throw new ConvexError({ message: `${label} must be 90 characters or fewer.` });
+      }
+    }
+    for (const [label, value] of [
+      ["Setup paragraph", args.home_setup_body],
+      ["Closing paragraph", args.home_cta_body],
+    ] as const) {
+      if (value.trim().length > 500) {
+        throw new ConvexError({ message: `${label} must be 500 characters or fewer.` });
+      }
+    }
+    // The brand editor is a one-per-line textarea, so blank lines arrive while
+    // staff are still typing — drop them rather than rejecting the whole save.
+    const brands = args.home_brands.map((brand) => brand.trim()).filter((brand) => brand !== "");
+    if (brands.length > HOME_BRAND_LIMIT) {
+      throw new ConvexError({ message: `Show at most ${HOME_BRAND_LIMIT} brand names.` });
+    }
+    for (const brand of brands) {
+      if (brand.length > 30) {
+        throw new ConvexError({ message: "Brand names must be 30 characters or fewer." });
+      }
+    }
+    // An empty list is how staff hide the strip, so only real rows are checked.
+    if (args.home_trust.length > 4) {
+      throw new ConvexError({ message: "Show at most 4 trust items." });
+    }
+    for (const item of args.home_trust) {
+      if (item.title.trim() === "") {
+        throw new ConvexError({ message: "Every trust item needs a title." });
+      }
+      if (item.title.trim().length > 60 || item.text.trim().length > 90) {
+        throw new ConvexError({
+          message: "Trust titles are capped at 60 characters and lines at 90.",
+        });
+      }
+    }
+
     const settings = await getSettings(ctx);
     if (args.ordering_enabled && (!settings.momo_number.trim() || !settings.momo_name.trim())) {
       throw new ConvexError({
@@ -318,6 +383,19 @@ export const saveSettings = mutation({
       setup_image: args.setup_image,
       ordering_enabled: args.ordering_enabled,
       featured_ids: args.featured_ids,
+      home_category_heading: args.home_category_heading.trim(),
+      home_featured_heading: args.home_featured_heading.trim(),
+      home_setup_eyebrow: args.home_setup_eyebrow.trim(),
+      home_setup_heading: args.home_setup_heading.trim(),
+      home_setup_body: args.home_setup_body.trim(),
+      home_cta_heading: args.home_cta_heading.trim(),
+      home_cta_body: args.home_cta_body.trim(),
+      home_brands: brands,
+      home_trust: args.home_trust.map((item) => ({
+        icon: item.icon,
+        title: item.title.trim(),
+        text: item.text.trim(),
+      })),
     });
 
     await logActivity(
@@ -331,20 +409,21 @@ export const saveSettings = mutation({
 });
 
 /**
- * Money settings — delivery fees, free-delivery threshold and the Mobile
- * Money recipient. Admin-only: these change what customers are charged.
+ * Delivery fees and the free-delivery threshold.
+ *
+ * Staff-editable: these change what a customer pays for *shipping*, but no
+ * money is ever routed to the shop by them. The Mobile Money recipient — who
+ * actually receives the money — stays admin-only in `saveMomoSettings`.
  */
-export const saveFinanceSettings = mutation({
+export const saveDeliverySettings = mutation({
   args: {
     central_fee: v.number(),
     greater_fee: v.number(),
     nationwide_fee: v.number(),
     free_threshold: v.number(),
-    momo_number: v.string(),
-    momo_name: v.string(),
   },
   handler: async (ctx, args) => {
-    const actorId = await requireAdmin(ctx);
+    const actorId = await requireStaff(ctx);
 
     for (const [label, value] of [
       ["Central delivery fee", args.central_fee],
@@ -356,32 +435,63 @@ export const saveFinanceSettings = mutation({
         throw new ConvexError({ message: `${label} cannot be negative.` });
       }
     }
-    if (args.momo_number.trim() !== "" && args.momo_number.replace(/[^0-9]/g, "").length < 9) {
-      throw new ConvexError({ message: "Enter a valid Mobile Money number." });
-    }
-
-    const settings = await getSettings(ctx);
-    if (settings.ordering_enabled && (!args.momo_number.trim() || !args.momo_name.trim())) {
+    // A dropped decimal (5000 instead of 50) would silently price the shop out
+    // of every delivery, so refuse an amount no courier would ever charge.
+    if (Math.max(args.central_fee, args.greater_fee, args.nationwide_fee) > 10_000) {
       throw new ConvexError({
-        message: "Turn off ordering before clearing Mobile Money details.",
+        message: "That delivery fee looks too high — enter an amount under GH₵ 10,000.",
       });
     }
 
+    const settings = await getSettings(ctx);
     await ctx.db.patch(settings._id, {
-      central_fee: args.central_fee,
-      greater_fee: args.greater_fee,
-      nationwide_fee: args.nationwide_fee,
-      free_threshold: args.free_threshold,
-      momo_number: args.momo_number.trim(),
-      momo_name: args.momo_name.trim(),
+      central_fee: round2(args.central_fee),
+      greater_fee: round2(args.greater_fee),
+      nationwide_fee: round2(args.nationwide_fee),
+      free_threshold: round2(args.free_threshold),
     });
 
     await logActivity(
       ctx,
       actorId,
-      "settings.finance",
+      "settings.delivery",
       `Updated delivery fees (Central GH₵ ${args.central_fee}, Greater GH₵ ${args.greater_fee}, Nationwide GH₵ ${args.nationwide_fee}) and free threshold GH₵ ${args.free_threshold}.`,
     );
+    return { ok: true };
+  },
+});
+
+/**
+ * The Mobile Money recipient. Admin-only: this decides whose wallet the money
+ * lands in, so it stays behind `requireAdmin` even though fees moved to staff.
+ */
+export const saveMomoSettings = mutation({
+  args: {
+    momo_number: v.string(),
+    momo_name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requireAdmin(ctx);
+
+    const number = args.momo_number.trim();
+    const name = args.momo_name.trim();
+    if (number !== "" && number.replace(/[^0-9]/g, "").length < 9) {
+      throw new ConvexError({ message: "Enter a valid Mobile Money number." });
+    }
+    if (number !== "" && name === "") {
+      throw new ConvexError({ message: "Enter the Mobile Money recipient name." });
+    }
+
+    const settings = await getSettings(ctx);
+    if (settings.ordering_enabled && (number === "" || name === "")) {
+      throw new ConvexError({
+        message: "Turn off ordering before clearing Mobile Money details.",
+      });
+    }
+
+    await ctx.db.patch(settings._id, { momo_number: number, momo_name: name });
+
+    await logActivity(ctx, actorId, "settings.momo", "Updated the Mobile Money recipient.");
     return { ok: true };
   },
 });

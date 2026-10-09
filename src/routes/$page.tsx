@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useConvexMutation } from "@convex-dev/react-query";
 import { toast } from "sonner";
-import { storeQuery, pageHead, money, errorMessage } from "@/lib/store";
+import { storeQuery, pageHead, money, displayFees, whatsappHref, errorMessage } from "@/lib/store";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { PageNotFound } from "@/components/store-ui";
@@ -32,6 +32,10 @@ function Content() {
   const { page } = Route.useParams(),
     { data } = useQuery(storeQuery),
     s = data?.settings;
+  // Fees come from settings once loaded and from the published defaults before;
+  // a saved 0 is a real "free" value and must not be replaced by a default.
+  const fees = displayFees(s),
+    whatsapp = s ? whatsappHref(s) : null;
   return (
     <div className="page-content wrap">
       <h1 className="page-title">{titles[page]}</h1>
@@ -56,22 +60,22 @@ function Content() {
               <tbody>
                 <tr>
                   <th>Accra Central & Abelenkpe</th>
-                  <td>{money(s?.central_fee || 30)} · Same or next day</td>
+                  <td>{money(fees.central_fee)} · Same or next day</td>
                 </tr>
                 <tr>
                   <th>Greater Accra</th>
-                  <td>{money(s?.greater_fee || 50)} · 1–2 business days</td>
+                  <td>{money(fees.greater_fee)} · 1–2 business days</td>
                 </tr>
                 <tr>
                   <th>Other regions</th>
-                  <td>{money(s?.nationwide_fee || 100)} · 2–4 business days</td>
+                  <td>{money(fees.nationwide_fee)} · 2–4 business days</td>
                 </tr>
               </tbody>
             </table>
             <p>
               Greater Accra includes Tema, Kasoa, Adenta and Teshie. Free delivery on orders over{" "}
-              {money(s?.free_threshold || 5000)}. Timing is an estimate, subject to location and
-              courier availability.
+              {money(fees.free_threshold)}. Timing is an estimate, subject to location and courier
+              availability.
             </p>
             <h2 className="text-xl text-foreground">Abelenkpe in-store pickup</h2>
             <p>
@@ -106,7 +110,7 @@ function Content() {
             },
             {
               q: "Do you offer nationwide delivery?",
-              a: "Yes. Delivery fees depend on your zone, with free delivery on orders over GH₵ 5,000.",
+              a: `Yes. Delivery fees depend on your zone, with free delivery on orders over ${money(fees.free_threshold)}.`,
             },
             {
               q: "Why are items marked sample?",
@@ -131,6 +135,14 @@ function Content() {
                 {s?.phone || "+233 24 000 0000"}
               </a>
               <br />
+              {whatsapp && (
+                <>
+                  <a className="underline" href={whatsapp} target="_blank" rel="noreferrer">
+                    Chat on WhatsApp
+                  </a>
+                  <br />
+                </>
+              )}
               <a className="underline" href={`mailto:${s?.email || "orders@mbventuresgh.com"}`}>
                 {s?.email || "orders@mbventuresgh.com"}
               </a>

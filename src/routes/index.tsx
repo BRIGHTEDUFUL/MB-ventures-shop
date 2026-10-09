@@ -1,21 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  ArrowRight,
-  MapPin,
-  Truck,
-  ShieldCheck,
-  Wallet,
-  Plus,
-  ChevronRight,
-  ChevronLeft,
-} from "lucide-react";
+import { ArrowRight, MapPin, Truck, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard, SectionHeading, PageError, PageNotFound } from "@/components/store-ui";
 import { useCart } from "@/components/store-provider";
 import { money, storeQuery, pageHead } from "@/lib/store";
+import { heroProductIds, TRUST_ICONS } from "@/lib/home-content";
 import { images } from "@/lib/store-images";
+
+/** Fixed positions over the hero photo, one per hotspot we actually render. */
+const HOTSPOT_POSITIONS = ["hotspot-one", "hotspot-two", "hotspot-three"] as const;
+
 export const Route = createFileRoute("/")({
   head: () =>
     pageHead(
@@ -32,13 +28,37 @@ function Index() {
       data: { products, settings, categories: allCats },
     } = useSuspenseQuery(storeQuery),
     categories = allCats.filter((c) => c.visible),
-    { add } = useCart(),
-    [selected, setSelected] = useState(settings.featured_ids[1] ?? settings.featured_ids[0] ?? "");
-  const featured = products.find((p) => p.id === selected) || products[0];
+    { add } = useCart();
+
   const picks = settings.featured_ids
     .map((id) => products.find((p) => p.id === id))
     .filter((p): p is NonNullable<typeof p> => !!p);
   const rail = picks.length ? picks : products.slice(0, 4);
+
+  // Hotspots are simply the first three featured picks that still exist, so
+  // the staff featured list stays the single control — no slugs are written
+  // into this file. A pick that was deleted drops out of the photo instead of
+  // leaving a button that goes nowhere.
+  const hotspots = heroProductIds(
+    settings.featured_ids,
+    products.map((p) => p.id),
+  );
+  const [selected, setSelected] = useState(hotspots[1] ?? hotspots[0] ?? "");
+  const featured =
+    products.find((p) => p.id === selected) ??
+    products.find((p) => p.id === hotspots[0]) ??
+    products[0];
+
+  const stepHotspot = (direction: 1 | -1) => {
+    const count = hotspots.length;
+    if (count === 0) return;
+    const index = hotspots.indexOf(selected);
+    const next =
+      index === -1 ? (direction === 1 ? 0 : count - 1) : (index + direction + count) % count;
+    const nextId = hotspots[next];
+    if (nextId !== undefined) setSelected(nextId);
+  };
+
   return (
     <>
       <section className="hero">
@@ -65,36 +85,23 @@ function Index() {
             </Button>
           </div>
         </div>
-        <Button
-          className="hotspot hotspot-one"
-          data-active={selected === "standing-desk" ? "true" : undefined}
-          aria-pressed={selected === "standing-desk"}
-          title="View the desk"
-          aria-label="View the desk in this setup"
-          onClick={() => setSelected("standing-desk")}
-        >
-          <Plus />
-        </Button>
-        <Button
-          className="hotspot hotspot-two"
-          data-active={selected === "ergonomic-chair" ? "true" : undefined}
-          aria-pressed={selected === "ergonomic-chair"}
-          title="View the chair"
-          aria-label="View the chair in this setup"
-          onClick={() => setSelected("ergonomic-chair")}
-        >
-          <Plus />
-        </Button>
-        <Button
-          className="hotspot hotspot-three"
-          data-active={selected === "mechanical-keyboard" ? "true" : undefined}
-          aria-pressed={selected === "mechanical-keyboard"}
-          title="View the keyboard"
-          aria-label="View the keyboard in this setup"
-          onClick={() => setSelected("mechanical-keyboard")}
-        >
-          <Plus />
-        </Button>
+        {hotspots.map((id, index) => {
+          const hotspot = products.find((p) => p.id === id);
+          if (hotspot === undefined) return null;
+          return (
+            <Button
+              key={id}
+              className={`hotspot ${HOTSPOT_POSITIONS[index] ?? ""}`}
+              data-active={selected === id ? "true" : undefined}
+              aria-pressed={selected === id}
+              title={`View the ${hotspot.name}`}
+              aria-label={`View the ${hotspot.name} in this setup`}
+              onClick={() => setSelected(id)}
+            >
+              <Plus />
+            </Button>
+          );
+        })}
         {featured && (
           <div className="hero-product glass">
             <div className="mb-3 flex items-center justify-between">
@@ -104,9 +111,8 @@ function Index() {
                   variant="ghost"
                   className="h-6 w-6 p-0"
                   aria-label="Previous setup product"
-                  onClick={() =>
-                    setSelected(selected === "standing-desk" ? "ergonomic-chair" : "standing-desk")
-                  }
+                  onClick={() => stepHotspot(-1)}
+                  disabled={hotspots.length < 2}
                 >
                   <ChevronLeft />
                 </Button>
@@ -114,13 +120,8 @@ function Index() {
                   variant="ghost"
                   className="h-6 w-6 p-0"
                   aria-label="Next setup product"
-                  onClick={() =>
-                    setSelected(
-                      selected === "mechanical-keyboard"
-                        ? "ergonomic-chair"
-                        : "mechanical-keyboard",
-                    )
-                  }
+                  onClick={() => stepHotspot(1)}
+                  disabled={hotspots.length < 2}
                 >
                   <ChevronRight />
                 </Button>
@@ -155,24 +156,24 @@ function Index() {
         </div>
       </section>
       <div className="wrap">
-        <section className="trust-strip" aria-label="Store assurances">
-          {[
-            { icon: MapPin, title: "A real shop at Abelenkpe", text: "Visit us in Accra" },
-            { icon: Truck, title: "Delivery across Ghana", text: "Accra, Tema and beyond" },
-            { icon: ShieldCheck, title: "Store warranty", text: "Support from our shop" },
-            { icon: Wallet, title: "Pay your way", text: "Mobile Money or cash on delivery" },
-          ].map((f) => (
-            <div className="trust-item" key={f.title}>
-              <f.icon />
-              <div>
-                <strong>{f.title}</strong>
-                <p>{f.text}</p>
-              </div>
-            </div>
-          ))}
-        </section>
+        {settings.home_trust.length > 0 && (
+          <section className="trust-strip" aria-label="Store assurances">
+            {settings.home_trust.map((f) => {
+              const Icon = TRUST_ICONS[f.icon] ?? MapPin;
+              return (
+                <div className="trust-item" key={`${f.icon}-${f.title}-${f.text}`}>
+                  <Icon />
+                  <div>
+                    <strong>{f.title}</strong>
+                    <p>{f.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
         <section className="section">
-          <SectionHeading title="Find your workspace essentials" />
+          <SectionHeading title={settings.home_category_heading} />
           <div className="category-grid">
             {categories.map((c) => (
               <Link
@@ -194,7 +195,7 @@ function Index() {
           </div>
         </section>
         <section className="section">
-          <SectionHeading title="For your everyday setup" />
+          <SectionHeading title={settings.home_featured_heading} />
           <div className="product-grid product-rail">
             {rail.map((p) => (
               <ProductCard product={p} key={p.id} />
@@ -209,16 +210,9 @@ function Index() {
             loading="lazy"
           />
           <div>
-            <p className="eyebrow !mt-0">Work, play, and everything in between</p>
-            <h2 className="mt-4">
-              A place for
-              <br />
-              your best work.
-            </h2>
-            <p>
-              Start with a desk and chair. Add the tools you use every day. Put your workspace
-              together with help from our Abelenkpe shop.
-            </p>
+            <p className="eyebrow !mt-0">{settings.home_setup_eyebrow}</p>
+            <h2 className="mt-4">{settings.home_setup_heading}</h2>
+            <p>{settings.home_setup_body}</p>
             <div className="mt-6 divide-y divide-border">
               {rail.slice(0, 3).map((p) => (
                 <div className="flex items-center justify-between py-3" key={p.id}>
@@ -241,25 +235,20 @@ function Index() {
             </Button>
           </div>
         </section>
-        <div className="brand-strip section">
-          <span>Logitech</span>
-          <span>IKEA</span>
-          <span>elgato</span>
-        </div>
+        {settings.home_brands.length > 0 && (
+          <div className="brand-strip section">
+            {settings.home_brands.map((brand) => (
+              <span key={brand}>{brand}</span>
+            ))}
+          </div>
+        )}
         <section className="section grid gap-8 pb-4 md:grid-cols-[1fr_1fr]">
           <div>
             <p className="eyebrow text-muted-foreground">From online to in-store</p>
-            <h2 className="mt-4 text-3xl">
-              Your Abelenkpe shop.
-              <br />
-              Now closer to your doorstep.
-            </h2>
+            <h2 className="mt-4 text-3xl">{settings.home_cta_heading}</h2>
           </div>
           <div>
-            <p className="text-sm leading-7 text-muted-foreground">
-              Collect your order at Abelenkpe taxi rank, Accra, or have it delivered to your door.
-              Our shop team handles your order and confirms every Mobile Money payment personally.
-            </p>
+            <p className="text-sm leading-7 text-muted-foreground">{settings.home_cta_body}</p>
             <Link
               to="/$page"
               params={{ page: "about" }}

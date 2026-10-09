@@ -2,7 +2,14 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireStaff, requireUser } from "./lib/auth";
-import { orderDTO, receiptDTO, type Order, type Receipt } from "./lib/dto";
+import {
+  historyDTO,
+  orderDTO,
+  receiptDTO,
+  type HistoryEntry,
+  type Order,
+  type Receipt,
+} from "./lib/dto";
 import { getSettings } from "./lib/settings";
 import {
   deliveryFee,
@@ -179,17 +186,25 @@ export const track = query({
   },
 });
 
-/** The signed-in customer's own orders. */
+/**
+ * The signed-in customer's own orders, newest first, each carrying its timeline
+ * so `/orders` can show progress without a second round trip per order.
+ */
 export const mine = query({
   args: {},
-  handler: async (ctx): Promise<Order[]> => {
+  handler: async (ctx): Promise<(Order & { history: HistoryEntry[] })[]> => {
     const userId = await requireUser(ctx);
     const orders = await ctx.db
       .query("orders")
       .withIndex("by_user", (q) => q.eq("user_id", userId))
       .order("desc")
       .take(100);
-    return orders.map(orderDTO);
+    return await Promise.all(
+      orders.map(async (order) => ({
+        ...orderDTO(order),
+        history: historyDTO(await historyFor(ctx, order._id)),
+      })),
+    );
   },
 });
 

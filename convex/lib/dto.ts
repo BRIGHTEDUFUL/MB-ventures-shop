@@ -1,6 +1,12 @@
 import type { Doc } from "../_generated/dataModel";
 
 /**
+ * Icon key on a homepage trust-strip row, derived from the generated doc type
+ * so it can never drift from the `trustIcon` validator in `convex/schema.ts`.
+ */
+export type TrustIcon = NonNullable<Doc<"store_settings">["home_trust"]>[number]["icon"];
+
+/**
  * Public DTOs.
  *
  * These mirror the Supabase/Postgres row shapes the storefront already
@@ -32,6 +38,9 @@ export type Category = {
   visible: boolean;
 };
 
+/** One homepage trust-strip row: an icon key plus its two lines of copy. */
+export type HomeTrustItem = { icon: TrustIcon; title: string; text: string };
+
 export type Settings = {
   id: number;
   hero_title: string;
@@ -52,6 +61,16 @@ export type Settings = {
   announcement: string;
   whatsapp: string;
   featured_ids: string[];
+  // Homepage section copy — always concrete on the client (see settingsDTO).
+  home_category_heading: string;
+  home_featured_heading: string;
+  home_setup_eyebrow: string;
+  home_setup_heading: string;
+  home_setup_body: string;
+  home_cta_heading: string;
+  home_cta_body: string;
+  home_brands: string[];
+  home_trust: HomeTrustItem[];
 };
 
 export type OrderItem = {
@@ -130,9 +149,80 @@ export const categoryDTO = (category: Doc<"categories">): Category => ({
   visible: category.visible,
 });
 
+/**
+ * Homepage copy the store opened with.
+ *
+ * `store_settings` rows written before the section-copy fields existed come
+ * back `undefined`/blank, and `settingsDTO` fills them from here — so the
+ * storefront renders byte-for-byte what it did before, with no backfill and no
+ * seed re-run in either deployment.
+ *
+ * Rules:
+ *  - **strings**: blank or missing → default. A section cannot be blanked out;
+ *    staff rewrite the copy instead.
+ *  - **arrays**: missing → default items; `[]` → staff hid that section.
+ */
+export const HOME_CONTENT_DEFAULTS: Pick<
+  Settings,
+  | "home_category_heading"
+  | "home_featured_heading"
+  | "home_setup_eyebrow"
+  | "home_setup_heading"
+  | "home_setup_body"
+  | "home_cta_heading"
+  | "home_cta_body"
+  | "home_brands"
+  | "home_trust"
+> = {
+  home_category_heading: "Find your workspace essentials",
+  home_featured_heading: "For your everyday setup",
+  home_setup_eyebrow: "Work, play, and everything in between",
+  home_setup_heading: "A place for your best work.",
+  home_setup_body:
+    "Start with a desk and chair. Add the tools you use every day. Put your workspace together with help from our Abelenkpe shop.",
+  home_cta_heading: "Your Abelenkpe shop. Now closer to your doorstep.",
+  home_cta_body:
+    "Collect your order at Abelenkpe taxi rank, Accra, or have it delivered to your door. Our shop team handles your order and confirms every Mobile Money payment personally.",
+  home_brands: ["Logitech", "IKEA", "elgato"],
+  home_trust: [
+    { icon: "map-pin", title: "A real shop at Abelenkpe", text: "Visit us in Accra" },
+    { icon: "truck", title: "Delivery across Ghana", text: "Accra, Tema and beyond" },
+    { icon: "shield-check", title: "Store warranty", text: "Support from our shop" },
+    { icon: "wallet", title: "Pay your way", text: "Mobile Money or cash on delivery" },
+  ],
+};
+
 export const settingsDTO = (settings: Doc<"store_settings">): Settings => {
-  const { _id: _id, _creationTime: _creationTime, key: _key, ...fields } = settings;
-  return { id: 1, ...fields };
+  const {
+    _id: _id,
+    _creationTime: _creationTime,
+    key: _key,
+    home_category_heading,
+    home_featured_heading,
+    home_setup_eyebrow,
+    home_setup_heading,
+    home_setup_body,
+    home_cta_heading,
+    home_cta_body,
+    home_brands,
+    home_trust,
+    ...fields
+  } = settings;
+  const text = (value: string | undefined, fallback: string) =>
+    value !== undefined && value.trim() !== "" ? value : fallback;
+  return {
+    id: 1,
+    ...fields,
+    home_category_heading: text(home_category_heading, HOME_CONTENT_DEFAULTS.home_category_heading),
+    home_featured_heading: text(home_featured_heading, HOME_CONTENT_DEFAULTS.home_featured_heading),
+    home_setup_eyebrow: text(home_setup_eyebrow, HOME_CONTENT_DEFAULTS.home_setup_eyebrow),
+    home_setup_heading: text(home_setup_heading, HOME_CONTENT_DEFAULTS.home_setup_heading),
+    home_setup_body: text(home_setup_body, HOME_CONTENT_DEFAULTS.home_setup_body),
+    home_cta_heading: text(home_cta_heading, HOME_CONTENT_DEFAULTS.home_cta_heading),
+    home_cta_body: text(home_cta_body, HOME_CONTENT_DEFAULTS.home_cta_body),
+    home_brands: home_brands ?? HOME_CONTENT_DEFAULTS.home_brands,
+    home_trust: home_trust ?? HOME_CONTENT_DEFAULTS.home_trust,
+  };
 };
 
 export const orderDTO = (order: Doc<"orders">): Order => ({
@@ -158,6 +248,14 @@ export const orderDTO = (order: Doc<"orders">): Order => ({
   needs_attention: order.needs_attention ?? null,
 });
 
+/** Order timeline rows to the DTO shape shared by orders.track and orders.mine. */
+export const historyDTO = (entries: Doc<"order_history">[]): HistoryEntry[] =>
+  entries.map((entry) => ({
+    status: entry.status,
+    note: entry.note,
+    created_at: new Date(entry._creationTime).toISOString(),
+  }));
+
 export const receiptDTO = (order: Doc<"orders">, history: Doc<"order_history">[]): Receipt => ({
   reference: order.reference,
   status: order.status,
@@ -169,11 +267,7 @@ export const receiptDTO = (order: Doc<"orders">, history: Doc<"order_history">[]
   delivery_fee: order.delivery_fee,
   total: order.total,
   created_at: new Date(order._creationTime).toISOString(),
-  history: history.map((entry) => ({
-    status: entry.status,
-    note: entry.note,
-    created_at: new Date(entry._creationTime).toISOString(),
-  })),
+  history: historyDTO(history),
 });
 
 export const savedAddressDTO = (address: Doc<"saved_addresses">): SavedAddress => ({

@@ -18,7 +18,17 @@ const orderStatus = v.union(
   v.literal("completed"),
   v.literal("cancelled"),
 );
-
+/**
+ * Icon keys for the homepage trust strip. Kept as a closed union so an
+ * invalid key can never reach the client's icon registry — the matching
+ * `Record` lives in `src/routes/index.tsx` and must be updated alongside.
+ */
+export const trustIcon = v.union(
+  v.literal("map-pin"),
+  v.literal("truck"),
+  v.literal("shield-check"),
+  v.literal("wallet"),
+);
 const emailStatus = v.union(
   v.literal("queued"),
   v.literal("sent"),
@@ -41,6 +51,7 @@ export const validators = {
   paymentMethod,
   paymentStatus,
   orderStatus,
+  trustIcon,
   emailStatus,
   emailCategory,
 };
@@ -113,6 +124,31 @@ export default defineSchema({
     announcement: v.string(),
     whatsapp: v.string(),
     featured_ids: v.array(v.string()),
+
+    // ── Homepage section copy ────────────────────────────────────────────
+    // All optional: `store_settings` predates them and existing dev/prod rows
+    // would otherwise fail validation. `settingsDTO` fills the defaults, so no
+    // backfill or seed re-run is needed.
+    //
+    // Strings: blank or missing → default copy (staff cannot blank a section).
+    // Arrays: missing → default items, `[]` → staff hid the section.
+    home_category_heading: v.optional(v.string()),
+    home_featured_heading: v.optional(v.string()),
+    home_setup_eyebrow: v.optional(v.string()),
+    home_setup_heading: v.optional(v.string()),
+    home_setup_body: v.optional(v.string()),
+    home_cta_heading: v.optional(v.string()),
+    home_cta_body: v.optional(v.string()),
+    home_brands: v.optional(v.array(v.string())),
+    home_trust: v.optional(
+      v.array(
+        v.object({
+          icon: trustIcon,
+          title: v.string(),
+          text: v.string(),
+        }),
+      ),
+    ),
   }).index("by_key", ["key"]),
 
   // Replaces `public.orders`. `created_at` is derived from `_creationTime`.
