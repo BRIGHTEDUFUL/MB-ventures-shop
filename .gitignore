@@ -27,6 +27,11 @@ playwright-report/
 # Convex data snapshots (exported before every inventory migration)
 backups/
 
+# Production credentials and secrets
+docs/PRODUCTION-CREDENTIALS.md
+*.credentials.md
+.env.prod.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
