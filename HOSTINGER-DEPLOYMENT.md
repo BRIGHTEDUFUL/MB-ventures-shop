@@ -14,7 +14,7 @@ Before deploying to Hostinger:
 - [x] GitHub repository up to date
 - [x] Email system configured (Web3Forms)
 - [x] Production domain configured
-- [x] All tests passing (179/179)
+- [x] All tests passing (189/189)
 - [x] Build succeeds locally
 - [x] Environment variables documented
 

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexMutation } from "@convex-dev/react-query";
-import { CircleAlert, Info } from "lucide-react";
+import { CircleAlert, Info, LayoutDashboard, LogOut, MapPin, Package, Truck } from "lucide-react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "@/lib/use-session";
@@ -188,42 +188,91 @@ function Account() {
 
   // Signed in: the account itself, still inside the same frame so the page
   // never switches identity between checking out and reading orders.
-  if (session)
+  if (session) {
+    const isTeam = role.data === "admin" || role.data === "staff";
+    const displayName = profile?.name?.trim() || session.user.email || "Your account";
+    const initials = displayName
+      .split(/[@.\s]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+
+    // The lead under the title carries only the address (the one thing the
+    // strip does not repeat); name, role and phone live together below, so the
+    // page states who this is exactly once.
+    const roleLine = isTeam
+      ? role.data === "admin"
+        ? "Store owner · full access"
+        : "Shop team · orders and stock"
+      : "Customer account";
+
     return (
-      <AuthFrame
-        wide
-        title="Your account"
-        lead={
-          <>
-            <span>{session.user.email}</span>
-            {profile?.name || profile?.phone ? (
-              <span className="auth-profile">
-                {profile.name}
-                {profile.name && profile.phone ? " · " : ""}
-                {profile.phone}
-              </span>
-            ) : null}
-          </>
-        }
-      >
-        <div className="mt-6 flex flex-wrap gap-4">
-          {role.data === "admin" || role.data === "staff" ? (
-            <Button asChild>
-              <Link to="/staff">Store staff hub</Link>
-            </Button>
-          ) : null}
+      <AuthFrame wide title="Your account" lead={<span>{session.user.email}</span>}>
+        {/* Identity strip — who is signed in on this device. */}
+        <div className="auth-identity">
+          <span aria-hidden className="auth-identity-avatar">
+            {initials || "·"}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{displayName}</span>
+            <span className="block truncate text-sm text-muted-foreground">
+              {roleLine}
+              {profile?.phone ? ` · ${profile.phone}` : ""}
+            </span>
+          </span>
           <Button
             variant="outline"
+            size="sm"
+            className="ml-auto shrink-0"
             onClick={() => {
               void signOut();
             }}
           >
+            <LogOut aria-hidden />
             Sign out
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/track">Track an order</Link>
-          </Button>
         </div>
+
+        {/* Where to go next. The team entry only exists for people who
+            actually have team access, so a customer never sees a locked door. */}
+        {isTeam ? (
+          <Link to="/staff" className="auth-hub-card">
+            <span className="auth-hub-icon" aria-hidden>
+              <LayoutDashboard />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">Open the store hub</span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                Record payments, work orders, adjust stock
+                {role.data === "admin" ? ", manage the team and the storefront" : ""}.
+              </span>
+            </span>
+            <span className="auth-hub-cta">Open</span>
+          </Link>
+        ) : null}
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Link to="/track" className="auth-mini-card">
+            <Truck aria-hidden />
+            <span>
+              <span className="block font-semibold">Track an order</span>
+              <span className="block text-sm text-muted-foreground">
+                Follow a delivery with your reference and phone number.
+              </span>
+            </span>
+          </Link>
+          <Link to="/catalogue" search={{ category: "", q: "" }} className="auth-mini-card">
+            <Package aria-hidden />
+            <span>
+              <span className="block font-semibold">Keep shopping</span>
+              <span className="block text-sm text-muted-foreground">
+                Desks, mounts, audio and accessories in stock now.
+              </span>
+            </span>
+          </Link>
+        </div>
+
         <h2 className="auth-section-heading">Your orders</h2>
         {orders.isError ? (
           <p className="auth-empty">Orders could not load. Please try again.</p>
@@ -235,7 +284,7 @@ function Account() {
                 <span className="text-sm capitalize">
                   {o.status} · Payment {o.payment_status}
                 </span>
-                <span className="font-semibold">{money(o.total)}</span>
+                <span className="font-mono font-semibold tabular-nums">{money(o.total)}</span>
                 <Link className="text-sm underline" to="/track">
                   View with phone number
                 </Link>
@@ -246,9 +295,17 @@ function Account() {
           <p className="auth-empty">No orders yet. Your first order will appear here.</p>
         )}
         <h2 className="auth-section-heading">Saved addresses</h2>
+        {addresses.data?.length === 0 ? (
+          <p className="auth-empty">
+            Nothing saved yet. Add the places you deliver to and checkout fills them in.
+          </p>
+        ) : null}
         {addresses.data?.map((a) => (
           <div key={a.id} className="flex justify-between border-b border-border py-3 text-sm">
-            <span>{a.address}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <MapPin className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span className="min-w-0 truncate">{a.address}</span>
+            </span>
             <Button
               variant="ghost"
               onClick={async () => {
@@ -286,6 +343,7 @@ function Account() {
         </form>
       </AuthFrame>
     );
+  }
 
   // The emailed reset link carries its one-time code.
   if (code)

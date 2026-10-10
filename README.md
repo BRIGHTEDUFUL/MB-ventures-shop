@@ -54,7 +54,7 @@ Other commands:
 npm run build    # production build
 npm start         # run the built server
 npm run lint      # eslint
-npm test          # vitest (179 tests)
+npm test          # vitest (189 tests)
 npm run format    # prettier
 npm run test:e2e  # Playwright — 32 checks (head, outline, mobile overflow matrix)
 ```

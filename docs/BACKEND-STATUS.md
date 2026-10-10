@@ -256,7 +256,7 @@
 
 ### Testing
 
-- ✅ 179 unit tests passing
+- ✅ 189 unit tests passing
 - ✅ 32 E2E mobile viewport tests passing
 - ✅ 4 live E2E tests passing (real order flow)
 - ✅ Idempotency verified (operation_key tests)
@@ -396,7 +396,7 @@ All core systems are implemented, tested, deployed, and configured:
 - ✅ Authentication with staff privileges
 - ✅ All environment variables set correctly
 - ✅ Both deployments synced and validated
-- ✅ 179 tests passing
+- ✅ 189 tests passing
 - ✅ All business rules enforced
 
 **Ready for Hostinger deployment** - frontend can be built and served, backend is already live on Convex Cloud.

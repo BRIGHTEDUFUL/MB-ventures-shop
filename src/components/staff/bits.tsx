@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Order } from "@/lib/store";
 
@@ -52,33 +54,75 @@ export function FormActions({
   );
 }
 
-/** One dashboard number with an optional tone. */
+/**
+ * One dashboard number with an optional tone.
+ *
+ * `icon` and `delta` are additive: pages that already pass only
+ * label/value/sub/tone (the email console) render exactly as before. Values
+ * are set in the mono face with tabular figures so a column of numbers lines
+ * up the way a till readout does.
+ */
 export function Stat({
   label,
   value,
   sub,
   tone,
+  icon: Icon,
+  delta,
 }: {
   label: string;
   value: ReactNode;
   sub?: string;
   tone?: "success" | "offer" | "plain";
+  icon?: LucideIcon;
+  /** Week-on-week change. `direction` alone still draws the flat marker. */
+  delta?: { value: string; direction: "up" | "down" | "flat"; good?: boolean } | undefined;
 }) {
+  const deltaTone =
+    delta === undefined || delta.direction === "flat"
+      ? "text-muted-foreground"
+      : (delta.good ?? delta.direction === "up")
+        ? "text-success"
+        : "text-destructive";
+  const DeltaIcon =
+    delta?.direction === "up" ? ArrowUpRight : delta?.direction === "down" ? ArrowDownRight : Minus;
+
   return (
     <div className="solid-panel p-5">
-      <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-        {label}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          {label}
+        </p>
+        {Icon ? (
+          <Icon
+            className={cn(
+              "size-4 shrink-0",
+              tone === "success" && "text-success",
+              tone === "offer" && "text-offer",
+              !tone && "text-muted-foreground",
+            )}
+            aria-hidden
+          />
+        ) : null}
+      </div>
       <p
         className={cn(
-          "mt-2 text-3xl font-semibold",
+          "mt-2 font-mono text-3xl font-semibold tabular-nums",
           tone === "success" && "text-success",
           tone === "offer" && "text-offer",
         )}
       >
         {value}
       </p>
-      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        {delta ? (
+          <span className={cn("inline-flex items-center gap-0.5 text-xs font-semibold", deltaTone)}>
+            <DeltaIcon className="size-3.5" aria-hidden />
+            {delta.value}
+          </span>
+        ) : null}
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </div>
     </div>
   );
 }

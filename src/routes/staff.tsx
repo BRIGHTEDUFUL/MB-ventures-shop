@@ -28,29 +28,35 @@ function StaffLayout() {
   const { session, loading } = useSession();
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
 
-  const { signIn, signOut } = useAuthActions();
+  const { signOut } = useAuthActions();
 
   if (loading || (session && role.isPending)) {
-    return <AuthFrame title="Staff access" lead="Checking access…" />;
+    return <AuthFrame title="Store hub" lead="Checking who you are…" />;
   }
   if (!session) {
     return (
       <AuthFrame
-        title="Staff access"
-        lead="Sign in with your staff account to verify payments, manage stock and update the store."
+        title="Store hub"
+        lead="Sign in with your staff account to record payments, manage stock and keep the storefront current."
       >
         <Button asChild className="mt-6 w-full sm:w-auto">
           <Link to="/account" search={{ next: "/staff" }}>
-            Go to account
+            Sign in to continue
           </Link>
         </Button>
+        <p className="mt-5 text-sm text-muted-foreground">
+          Shopping instead?{" "}
+          <Link to="/" className="font-medium text-link hover:underline">
+            Back to the store
+          </Link>
+        </p>
       </AuthFrame>
     );
   }
   if (role.isError) {
     return (
       <AuthFrame
-        title="Staff access"
+        title="Store hub"
         lead={
           <span role="alert">Your access could not be checked. Reload the page to try again.</span>
         }
@@ -64,10 +70,13 @@ function StaffLayout() {
   if (role.data !== "admin" && role.data !== "staff") {
     return (
       <AuthFrame
-        title="Staff access"
+        title="No staff access"
         lead={
           <>
-            <span>Your account does not have staff permission.</span>
+            <span>
+              This account is signed in but is not on the shop team, so the store hub is closed to
+              it.
+            </span>
             {session.user.email ? (
               <span className="mt-1 block text-sm opacity-80">
                 Currently signed in as: <strong>{session.user.email}</strong>
@@ -90,6 +99,10 @@ function StaffLayout() {
             <Link to="/account">Go to account</Link>
           </Button>
         </div>
+        <p className="mt-5 text-sm text-muted-foreground">
+          Staff access is granted by the store owner from the Team page. If you work at the shop,
+          ask them to add your email.
+        </p>
       </AuthFrame>
     );
   }

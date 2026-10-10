@@ -27,7 +27,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Auth        | Convex Auth · email + password only · no OAuth · no email verify     |
 | Client data | TanStack Query via `@convex-dev/react-query`                         |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set              |
-| Tests       | Vitest (179 tests) + Playwright (32 e2e checks)                      |
+| Tests       | Vitest (189 tests) + Playwright (32 e2e checks)                      |
 | CI/CD       | GitHub Actions → Hostinger VPS (Node/PM2)                            |
 
 ---
@@ -216,7 +216,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 179/179
+npm test                  # 189/189
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 32/32 Playwright checks

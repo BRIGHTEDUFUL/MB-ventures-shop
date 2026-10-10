@@ -5,7 +5,63 @@ still open is listed under **Open**.
 
 ---
 
-## Documentation Sweep — all docs reconciled with production (10 October 2026)
+## Staff & Admin Hub Redesign — dashboard charts, grouped nav, sign-out (10 October 2026)
+
+**Status:** Complete — all gates green (tsc, lint, 189 unit tests, prettier,
+build, 32 e2e).
+
+### Done
+
+- **Dashboard rebuilt around a "Needs you" queue** — `/staff` opens with four
+  KPI cards (orders today, takings today, awaiting payment, products), then a
+  priority queue: unrecorded cash → empty shelves → thin stock → sample listings
+  awaiting verification, each deep-linking to the staff page that clears it.
+  Latest orders, activity, stock warnings and catalogue health follow.
+- **Four charts in a new `src/components/staff/charts.tsx`** — a composed
+  bar+line till tape (14 days of orders against confirmed takings), horizontal
+  pipeline bars covering all six order states, a pickup/delivery donut, and best
+  sellers ranked by units with cancelled orders excluded. Every chart has a
+  written `aria-label` summary and an empty state; recharts is drawn through the
+  existing shadcn wrapper at a fixed height with colours from the CSS vars.
+- **New backend query `stats.trends`** — guarded by `reports.view` and kept
+  separate from `overview` so the dashboard is two round trips. Returns the
+  14-day zero-filled daily series (UTC buckets, matching Accra's GMT+0), all six
+  status buckets, the fulfilment split, top 6 products, and this-week vs
+  last-week totals.
+- **Nav grouped, header given an identity** — the shell sidebar now reads
+  Selling / Catalogue / Shop settings, and the header shows the signed-in user's
+  initials, email and a Sign out button in place of the bare "Account" link.
+- **Gate and account hub polished** — `/staff`'s access gate has clearer copy
+  and a role-aware welcome; the signed-in `/account` view gains an identity
+  strip (avatar, name, role · phone, Sign out), a role-aware "Open the store
+  hub" card, and Track an order / Keep shopping mini-cards. The display name is
+  now stated once rather than in both the lead and the strip.
+- **`low_stock` no longer double-counts empty shelves** — `stats.overview` now
+  reports only _sellable-but-thin_ stock (0 < stock ≤ 5); counting the zero
+  shelves is `out_of_stock`'s job alone. Before this, one empty shelf appeared
+  as two rows in the "Needs you" queue.
+- **KPI copy made honest** — the products card claimed "Products live: 21" while
+  21 included the 10 hidden demo drafts; it now reads "Products · 11 live · 10
+  samples hidden". Deltas spell out "this week" and fall back to an absolute
+  gain when last week was zero, instead of an unlabelled percentage or the word
+  "new".
+- **10 new tests in `src/test/stats-trends.test.ts`** — both queries covered.
+  `_creationTime` cannot be written on insert, and convex-test only lets time
+  run forward (it clamps every insert after the previous one), so orders are
+  seeded oldest-first against a fixed midnight anchor with only `Date` faked —
+  never timers, so anything Convex schedules still runs for real.
+
+### Verified live
+
+- Dev dashboard: all four charts render as real SVG with aria summaries, zero
+  console errors/warnings; sign-out from the shell header lands on `/account`;
+  `recharts_measurement_span` is pinned at `top: -20000px`, so it cannot widen a
+  page under the 320px overflow check.
+- Test counts in AGENTS, README, roadmap and the deployment/status docs moved
+  179 → 189. PROGRESS.md's dated entries keep their original figures — they are
+  a log, not a current-state claim.
+
+---
 
 **Status:** Complete — every tracked doc now describes the store as it actually
 is; quality gates green (tsc, lint, 179 unit tests, prettier, build, 32 e2e).

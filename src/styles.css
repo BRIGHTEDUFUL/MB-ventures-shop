@@ -1888,12 +1888,6 @@ h4 {
   color: var(--foreground);
   font-weight: 600;
 }
-.auth-profile {
-  display: block;
-  margin-top: 5px;
-  font-size: 14px;
-  color: var(--muted-foreground);
-}
 .auth-form {
   display: grid;
   gap: 18px;
@@ -2004,6 +1998,112 @@ h4 {
   text-align: center;
   color: var(--muted-foreground);
   font-size: 14px;
+}
+/* --- Signed-in account hub ------------------------------------------------
+   Three parts: who is on this device, the door into the store hub (team
+   members only), and two shortcuts. Kept as one visual band so the page reads
+   as "you are signed in, here is where you can go" rather than a row of
+   buttons of equal weight. */
+.auth-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--secondary);
+}
+.auth-identity-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 14px;
+  font-weight: 600;
+}
+.auth-hub-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.auth-hub-card:hover {
+  border-color: color-mix(in oklch, var(--link) 45%, var(--border));
+  background: color-mix(in oklch, var(--link) 5%, var(--card));
+}
+.auth-hub-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--link) 14%, var(--card));
+  color: var(--link);
+}
+.auth-hub-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.auth-hub-cta {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+.auth-mini-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+.auth-mini-card:hover {
+  border-color: color-mix(in oklch, var(--foreground) 30%, var(--border));
+  text-decoration: none;
+}
+.auth-mini-card > svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--muted-foreground);
+}
+@media (max-width: 480px) {
+  .auth-identity {
+    flex-wrap: wrap;
+  }
+  .auth-identity .auth-identity-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .auth-identity button {
+    width: 100%;
+    margin-left: 0;
+    min-height: 44px;
+  }
+  .auth-hub-cta {
+    display: none;
+  }
 }
 .auth-loading img {
   width: 58px;

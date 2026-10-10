@@ -25,7 +25,7 @@
 | ------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `npx tsc --noEmit`       | 0 errors                                                                                                    |
 | `npm run lint`           | 0 errors, 7 warnings (all `react-refresh/only-export-components` inside the shadcn/ui kit)                  |
-| `npm test`               | 179/179 passing across 13 files (incl. `orders.place`/`track`/`staffUpdate`, inventory and settings guards) |
+| `npm test`               | 189/189 passing across 14 files (incl. `orders.place`/`track`/`staffUpdate`, inventory and settings guards) |
 | `npm run build`          | ✓ built in 5.7s                                                                                             |
 | `npx prettier --check .` | All matched files use Prettier code style                                                                   |
 | `npm run test:e2e`       | 32/32 passing — head, outline and the four-width mobile matrix                                              |
