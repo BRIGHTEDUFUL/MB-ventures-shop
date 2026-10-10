@@ -187,6 +187,13 @@ npx convex run inventory_import:apply --env-file .env.prod.local
 Hides demo products, upserts 11 real products, sets stock to 10 each,
 enables ordering, sets hero image + featured product IDs.
 
+Homepage copy refresh (pay-later wording; only replaces the exact old strings,
+so deliberate staff edits survive — run once on production with the deploy):
+
+```sh
+npx convex run inventory_import:patchHomeCopy --env-file .env.prod.local
+```
+
 ### Seeding
 
 ```sh

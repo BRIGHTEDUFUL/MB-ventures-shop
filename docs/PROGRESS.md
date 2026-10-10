@@ -5,6 +5,52 @@ still open is listed under **Open**.
 
 ---
 
+## Checkout Resilience & Storefront Hardening (9 October 2026)
+
+**Status:** Complete — all gates green (tsc, lint, 179 unit tests, prettier,
+build, 32 Playwright checks, live purchase journey 4/4).
+
+### Done
+
+- **Checkout draft persistence** (`src/routes/checkout.tsx`) — root cause found
+  via trace analysis: right after sign-up, Convex Auth can resolve to "signed
+  out" for a beat, which bounced checkout through `/account?next=/checkout` and
+  back, remounting the component — a Continue click landing in that window was
+  swallowed and every typed field was lost. The draft (`mb-checkout-draft` in
+  sessionStorage) now stores **step + form fields**, so any remount restores the
+  shopper exactly where they were; it is cleared when an order is placed. The
+  sign-out redirect also gained a one-second grace, so a transient auth flip
+  never navigates at all (a genuine sign-out still bounces, just a beat later).
+- **Product pages no longer overflow phones** — the specs table's min-content
+  stretched the overview grid track past the viewport (575px document at a 320px
+  viewport on the standing-desk page). `min-width: 0` on `.section.grid > *`
+  lets the existing `overflow-x: auto` scroll container do its job; all 11 real
+  product pages now fit the 320/360/390/414 overflow matrix.
+- **Sitemap filters hidden drafts** — `/sitemap.xml` was advertising
+  `/product/ergonomic-chair` and the other hidden demo products, which 404 for
+  shoppers (violating the visibility invariant in AGENTS.md §4c). The route now
+  drops `visible: false` rows.
+- **e2e specs point at real products** — the og:image and heading-outline checks
+  use real visible products (the old demo chair is a hidden draft), and the live
+  journey orders `rock-360-phone-tablet-stand` in place of the hidden chair.
+- **First-tap reliability in specs** — the product grid becomes interactive just
+  after the hydration marker clears, so the specs now retry the first
+  interaction (checkout Continue, homepage add-to-cart) until the app reflects
+  it — the same race a very fast shopper can hit.
+- **Live journey trace off** (`e2e/purchase.spec.ts`) — the trace writer races
+  context close on this Windows setup (`ENOENT` under `test-results`), turning
+  green runs red; screenshots and the error-context snapshot still capture on
+  failure.
+- **`inventory_import:patchHomeCopy`** — idempotent internal mutation that swaps
+  the pre-pay-later homepage copy (`home_cta_body` and the trust-strip wallet
+  row) for the current defaults **only when it still matches the exact old
+  text**, so a deliberate staff edit is never clobbered. Dev already carries the
+  new copy; production still has the old one, so run it as part of the next
+  production deploy: `npx convex run inventory_import:patchHomeCopy --env-file
+.env.prod.local`
+
+---
+
 ## Pay-later Checkout — In-App MoMo Flow Removed (9 October 2026)
 
 **Status:** Complete — all gates green (tsc, lint, 179 unit tests, prettier,

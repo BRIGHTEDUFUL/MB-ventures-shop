@@ -26,25 +26,55 @@ export const Route = createFileRoute("/checkout")({
   component: Checkout,
 });
 
+/** Draft survives an auth blip remounting the form — same idea as the cart. */
+const DRAFT_KEY = "mb-checkout-draft";
+
+const EMPTY_FORM: CheckoutForm = {
+  customer_name: "",
+  phone: "",
+  email: "",
+  address: "",
+  fulfillment: "delivery",
+  zone: "central",
+};
+
+/** The persisted draft (`{ step, ...form }`), or null when absent/unreadable. */
+function readDraft(): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function Checkout() {
   const cart = useCart(),
     { data } = useQuery(storeQuery),
     navigate = useNavigate();
   const { session, loading, profile } = useSession(),
     placeOrder = useConvexMutation(api.orders.place);
-  const [step, setStep] = useState(1),
+  // Right after sign-up Convex Auth can resolve to "signed out" for a beat,
+  // which bounces checkout through /account and back — remounting this
+  // component with fresh state. The draft keeps both the step and the fields
+  // intact so the shopper lands exactly where they were.
+  const [draft] = useState<Record<string, unknown>>(() => readDraft() ?? {}),
+    [step, setStep] = useState(() => (draft["step"] === 2 ? 2 : 1)),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [form, setForm] = useState<CheckoutForm>({
-      customer_name: "",
-      phone: "",
-      email: "",
-      address: "",
-      fulfillment: "delivery",
-      zone: "central",
+    [form, setForm] = useState<CheckoutForm>(() => {
+      const fields = { ...draft };
+      delete fields["step"];
+      return { ...EMPTY_FORM, ...fields } as CheckoutForm;
     });
   const set = (key: keyof CheckoutForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }) as CheckoutForm);
+
+  // Persist every keystroke and step change so a transient auth reconnect
+  // (which briefly swaps in the loading placeholder) cannot lose progress.
+  useEffect(() => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, ...form }));
+  }, [step, form]);
 
   // Prefill contact details from the account profile (only where empty).
   useEffect(() => {
@@ -57,9 +87,13 @@ function Checkout() {
       }));
   }, [profile]);
   // Placing an order requires an account; the cart lives in localStorage, so
-  // nothing is lost on the way to /account and back.
+  // nothing is lost on the way to /account and back. The one-second grace
+  // keeps a momentary post-sign-up auth flip from bouncing the shopper:
+  // a genuine sign-out still redirects, just a beat later.
   useEffect(() => {
-    if (!loading && !session) navigate({ to: "/account", search: { next: "/checkout" } });
+    if (loading || session) return;
+    const id = setTimeout(() => navigate({ to: "/account", search: { next: "/checkout" } }), 1_000);
+    return () => clearTimeout(id);
   }, [loading, session, navigate]);
 
   if (loading || !data) return <div className="page-content wrap">Loading checkout…</div>;
@@ -80,6 +114,7 @@ function Checkout() {
         items: cart.lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
       });
       sessionStorage.setItem("mb-receipt", JSON.stringify(order));
+      sessionStorage.removeItem(DRAFT_KEY);
       cart.clear();
       navigate({ to: "/confirmation", search: { ref: order.reference } });
     } catch (e) {
