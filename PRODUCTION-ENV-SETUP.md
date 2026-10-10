@@ -222,11 +222,10 @@ npx convex run users:grantStaff '{"email":"staff@mbventuresghana.com"}' --prod
 - [ ] Admin account registered
 - [ ] Staff account registered
 - [ ] Privileges granted (can access /staff)
-- [ ] Mobile Money wallet configured
 - [ ] Ordering enabled
 - [ ] Test order placed successfully
 
 ---
 
-**Last Updated:** 2025-01-10  
+**Last Updated:** October 10, 2026  
 **All credentials verified and ready for production** ✅

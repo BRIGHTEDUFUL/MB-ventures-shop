@@ -3,7 +3,7 @@
 **Project:** MB Ventures GH (Circle Shop Express)  
 **Domain:** mbventuresghana.com  
 **Date:** January 10, 2025  
-**Status:** ✅ **READY FOR DEPLOYMENT**
+**Status:** ✅ **DEPLOYED — LIVE IN PRODUCTION** (verified 10 Oct 2026)
 
 ---
 
@@ -104,8 +104,7 @@ certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
 
 - Sign in as admin
 - Navigate to /staff
-- Set Mobile Money details
-- Enable ordering
+- Enable ordering (payment collected offline — no wallet details needed)
 
 ---
 
@@ -143,7 +142,7 @@ EMAIL_DAILY_LIMIT=250
 - [x] Backend deployed to Convex production
 - [x] All functions validated
 - [x] Email system live
-- [x] 186 tests passing
+- [x] 179 tests passing
 - [x] No TypeScript errors
 
 ### Documentation
@@ -185,8 +184,8 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 
 ### 3. Verify Access (3 minutes)
 
-- Admin: Sign in → /staff → Check Mobile Money settings visible
-- Staff: Sign in → /staff → Check Mobile Money settings NOT visible
+- Admin: Sign in → /staff → all management tabs visible
+- Staff: Sign in → /staff → team/settings tabs hidden
 
 ### 4. Configure Store (10 minutes)
 
@@ -194,8 +193,7 @@ As admin at /staff:
 
 - Settings → Store: Set store details
 - Settings → Delivery: Verify zones and fees
-- Settings → Mobile Money: **Set wallet details**
-- Settings → Store: **Enable ordering**
+- Settings → Store: **Enable ordering** (no payment details — paid offline)
 
 ### 5. Test Order Flow (10 minutes)
 
@@ -234,7 +232,7 @@ As admin at /staff:
 
 ### Admin Features (Additional)
 
-- ✅ Mobile Money wallet configuration
+- ✅ Order payment confirmation (marks cash received)
 - ✅ Delivery fee management
 - ✅ Staff role management
 - ✅ Storefront customization
@@ -324,7 +322,7 @@ free -m
 
 ### Business Ready When:
 
-- [ ] Mobile Money details configured
+- [ ] Offline payment process confirmed (staff know how to record cash)
 - [ ] Inventory counts verified
 - [ ] Delivery zones confirmed
 - [ ] Ordering enabled
@@ -337,7 +335,7 @@ free -m
 
 1. **Change Default Passwords:** After first login, change admin and staff passwords immediately
 
-2. **Mobile Money Critical:** Set correct wallet details in Settings → Mobile Money before enabling ordering
+2. **Payment is offline:** Never ask customers for MoMo PINs, OTPs or transaction references — pickup pays at the counter, delivery pays cash on arrival
 
 3. **Test Before Go-Live:** Place and process at least one complete test order
 
@@ -366,6 +364,6 @@ free -m
 
 ---
 
-**Last Updated:** January 10, 2025  
+**Last Updated:** October 10, 2026  
 **Commit:** 5072d8a  
 **Ready for Production:** ✅ YES

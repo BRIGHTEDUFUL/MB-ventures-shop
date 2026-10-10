@@ -86,7 +86,7 @@ Maximum allowed: 5000 emails/day
 
 ### For Production Deployment
 
-When ready to deploy to production (`prod:necessary-newt-861`):
+Production (`prod:necessary-newt-861`) is already deployed. To re-apply:
 
 1. **Set the production site URL:**
 

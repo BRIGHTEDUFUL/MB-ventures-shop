@@ -5,6 +5,44 @@ still open is listed under **Open**.
 
 ---
 
+## Documentation Sweep — all docs reconciled with production (10 October 2026)
+
+**Status:** Complete — every tracked doc now describes the store as it actually
+is; quality gates green (tsc, lint, 179 unit tests, prettier, build, 32 e2e).
+
+### Done
+
+- **Payments docs de-MoMo'd** — DEPLOYMENT-READY, DEPLOYMENT-SUMMARY,
+  QUICK-START, SETUP-COMPLETE, HOSTINGER-SETUP-CHECKLIST, BACKEND-STATUS,
+  USER-MANAGEMENT, PRODUCTION-ENV-SETUP, HOSTINGER-DEPLOYMENT and
+  PRODUCTION-CREDENTIALS no longer instruct anyone to configure a Mobile Money
+  wallet, and no longer claim a MoMo verification gate exists. They now describe
+  the pay-later model: pickup pays at the counter, delivery pays cash, staff
+  record receipt in `/staff`.
+- **CONVEX_PLAN.md marked superseded** — §5 (the original `momo` +
+  transaction-reference rules) carries a dated note pointing at the current
+  derivation in AGENTS.md §4f instead of being silently rewritten (it is a
+  historical migration plan).
+- **Stale "ready to deploy" statuses corrected** — DEPLOYMENT-READY,
+  DEPLOYMENT-SUMMARY, QUICK-START, SETUP-COMPLETE, EMAIL-SETUP-STATUS,
+  GITHUB-AUTO-DEPLOY, HOSTINGER-SETUP-CHECKLIST now say _live in production_
+  (they still described a pre-launch store).
+- **Test counts normalised to 179** — five docs claimed 186/186; the real
+  Vitest count is 179. MOBILE_TASKS' dated 175/175 line is a historical log
+  entry and was left alone.
+- **AGENTS.md §7 date → 10 Oct 2026**, PRODUCTION-CREDENTIALS last-verified →
+  10 Oct (with the MoMo wallet row in the permission matrix replaced by
+  payment-receipt confirmation), INVENTORY-AUDIT's `store_settings` row notes
+  the MoMo columns are legacy/unused.
+- **Typos and footguns fixed** — `users:grantStaft` → `grantStaff` with proper
+  PowerShell JSON escaping in BACKEND-STATUS; four "Last Updated: 2025-01-10"
+  stamps corrected; "January 10, 2025" → "October 10, 2026".
+- **Left intentionally** — PROGRESS.md, MOBILE_TASKS.md, PLAN-*.md and
+  INVENTORY-DECISIONS.md contain dated historical records of how things were;
+  those read as history, not current-state claims, so they were not rewritten.
+
+---
+
 ## Auth Repair, UI/UX Audit & Performance Pass (10 October 2026)
 
 **Status:** Live on production — verified in a real browser (desktop + mobile).
@@ -75,8 +113,8 @@ still open is listed under **Open**.
 - Sign-in as `manager@…` (admin) and `attendant@…` (staff) on
   mbventuresghana.com — role badges render, `/staff` subpages load.
 - Account audit (10 Oct): manager/admin see every admin surface, staff are
-  gated out of Team grant form, MoMo recipient panel and the Emails console;
-  the role table matches the docs after the `1234@rmao.com` revocation.
+  gated out of Team grant forms and the Emails console; the role table matches
+  the docs after the `1234@rmao.com` revocation.
 - Homepage serves `hero-workspace.webp` (200), real `⌘`/`·` glyphs, and only
   the four populated category tiles.
 

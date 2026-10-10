@@ -230,7 +230,7 @@ npm run test:e2e:live
 
 ---
 
-## 7. Live store state (as of 9 Oct 2026)
+## 7. Live store state (as of 10 Oct 2026)
 
 ### Real products — all visible, active, 10 units each
 

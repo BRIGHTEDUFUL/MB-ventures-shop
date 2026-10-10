@@ -206,7 +206,7 @@ All prerequisites for production deployment are complete:
 
 - ✅ TypeScript: `npx tsc --noEmit` - 0 errors
 - ✅ Linting: `npm run lint` - 0 errors
-- ✅ Tests: `npm test` - 186/186 passing
+- ✅ Tests: `npm test` - 179/179 passing
 - ✅ Build: `npm run build` - successful
 - ✅ E2E: `npm run test:e2e` - 32/32 passing
 - ✅ Live E2E: `npm run test:e2e:live` - 4/4 passing
@@ -216,7 +216,7 @@ All prerequisites for production deployment are complete:
 
 ## Deployment Steps
 
-Ready to deploy when you want to go live:
+Already live — re-deploy with:
 
 ### 1. Deploy Backend
 
@@ -254,10 +254,10 @@ curl https://mbventuresghana.com
 ### 6. Enable Ordering
 
 1. Sign in as admin at `/staff`
-2. Navigate to Customization → Mobile Money
-3. Enter real wallet details
-4. Save
-5. Toggle "Accept orders" to ON
+2. Navigate to Customization → Ordering
+3. Toggle "Accept orders" to ON
+
+Payment is never configured in the app — pickup pays at the counter, delivery pays cash on arrival.
 
 ### 7. Seed Data (if needed)
 
@@ -320,15 +320,15 @@ These can be tested after going live and adjusted if needed.
 
 1. ✅ **Email system** - Web3Forms configured, live in dev and prod
 2. ✅ **Production domain** - `mbventuresghana.com` fully integrated
-3. ✅ **MoMo details** - System ready to accept via admin panel
+3. ✅ **Payment** - Collected offline (counter or cash on delivery); no wallet setup needed
 
 **📊 Current Status:**
 
 - **Development:** Fully operational with live email
-- **Production:** Configured and ready to deploy
+- **Production:** Live at https://mbventuresghana.com
 - **Email:** 250 emails/day limit, all templates working
 - **Domain:** All links point to `mbventuresghana.com`
-- **Quality:** All tests passing (186 unit + 32 E2E + 4 live)
+- **Quality:** All tests passing (179 unit + 32 E2E + 4 live)
 
 **🚀 Ready to launch when you are!**
 

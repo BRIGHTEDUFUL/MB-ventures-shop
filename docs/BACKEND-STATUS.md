@@ -136,7 +136,6 @@
 - ✅ **Categories:** Management and associations
 - ✅ **Settings:** Storefront copy, featured picks, announcement bar
 - ✅ **Delivery Settings:** Zone-based fees (staff-level)
-- ✅ **MoMo Settings:** Wallet recipient (admin-only)
 
 **Catalogue Features:**
 
@@ -191,7 +190,7 @@
 
 - Zone: central | greater | nationwide
 - Fulfillment: delivery | pickup
-- Payment method: momo | cod
+- Payment method: pay_at_store | cod (derived from fulfilment; `momo` kept only as a legacy literal for old orders)
 - Payment status: pending | confirmed | rejected
 - Order status: received | processing | ready | dispatched | completed | cancelled
 - Movement type: 13 distinct types (opening, sale, restock, receive, etc.)
@@ -215,7 +214,7 @@
 2. ✅ Stock reservation (concurrent purchase safety)
 3. ✅ Validated state transitions (processing cannot skip ready)
 4. ✅ Automatic restock on cancellation
-5. ✅ MoMo verification gate (confirmed payment before dispatch)
+5. ✅ Payment confirmation gate (confirmed payment before completing the order)
 6. ✅ Closed order protection (completed orders cannot change)
 7. ✅ Guest tracking (reference + phone required)
 
@@ -234,7 +233,7 @@
 1. ✅ Public: storefront queries, order tracking (with reference + phone)
 2. ✅ User: order placement, own order history
 3. ✅ Staff: catalogue edit, orders view/update, inventory adjust, settings
-4. ✅ Admin: MoMo wallet settings, staff grants
+4. ✅ Admin: team grants, store settings
 5. ✅ Permission keys in schema (never free text)
 6. ✅ Role defaults (owner vs attendant)
 7. ✅ Per-user overrides (exception handling)
@@ -257,7 +256,7 @@
 
 ### Testing
 
-- ✅ 186 unit tests passing
+- ✅ 179 unit tests passing
 - ✅ 32 E2E mobile viewport tests passing
 - ✅ 4 live E2E tests passing (real order flow)
 - ✅ Idempotency verified (operation_key tests)
@@ -343,9 +342,9 @@
 ### Production-Only Steps
 
 1. ⏸️ Register owner account on production
-2. ⏸️ Grant staff privileges: `npx convex run users:grantStaft '{"email":"owner@mbventuresghana.com"}' --prod`
+2. ⏸️ Grant staff privileges: `npx convex run users:grantStaff '{\"email\":\"owner@mbventuresghana.com\"}' --prod`
 3. ⏸️ Run seed (optional): `npx convex run seed:seed --prod`
-4. ⏸️ Set MoMo wallet details via /staff admin panel
+4. ➖ ~~Set MoMo wallet details~~ — not needed: payment is collected offline (no in-app payment step)
 5. ⏸️ Enable ordering toggle (ordering_enabled setting)
 6. ⏸️ Test order flow end-to-end
 7. ⏸️ Verify email delivery (place test order)
@@ -397,7 +396,7 @@ All core systems are implemented, tested, deployed, and configured:
 - ✅ Authentication with staff privileges
 - ✅ All environment variables set correctly
 - ✅ Both deployments synced and validated
-- ✅ 186 tests passing
+- ✅ 179 tests passing
 - ✅ All business rules enforced
 
 **Ready for Hostinger deployment** - frontend can be built and served, backend is already live on Convex Cloud.

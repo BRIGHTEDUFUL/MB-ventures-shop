@@ -14,7 +14,7 @@ Before deploying to Hostinger:
 - [x] GitHub repository up to date
 - [x] Email system configured (Web3Forms)
 - [x] Production domain configured
-- [x] All tests passing (186/186)
+- [x] All tests passing (179/179)
 - [x] Build succeeds locally
 - [x] Environment variables documented
 
@@ -787,7 +787,7 @@ dpkg-reconfigure --priority=low unattended-upgrades
 Once checklist complete:
 
 1. **Announce to team** - System is live
-2. **Enable ordering** - Set MoMo details, toggle ordering ON
+2. **Enable ordering** - Ordering is toggled ON in /staff (payment is collected offline, no wallet setup needed)
 3. **Monitor closely** - First 24-48 hours
 4. **Customer announcement** - Share domain and contact info
 5. **Social media** - Update with new website

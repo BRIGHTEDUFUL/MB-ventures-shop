@@ -31,7 +31,7 @@ behaviour a user will hit, **medium** = degraded or fragile, **low** = polish.
 | `inventory_history`                 | `product_slug`, `product_name`, `previous_stock`, `new_stock`, `reason`, `actor_id?`                                                              | `by_product`              |
 | `orders` + `order_items` (embedded) | snapshot of `id`, `name`, `price`, `quantity`, `image_key` per line                                                                               | `by_reference`, `by_user` |
 | `activity_log`                      | `actor_id?`, `actor_name`, `action`, `summary`                                                                                                    | none                      |
-| `store_settings`                    | fees, MoMo recipient, `ordering_enabled`, `featured_ids[]`                                                                                        | `by_key`                  |
+| `store_settings`                    | fees, `ordering_enabled`, `featured_ids[]`, hero copy, legacy (unused) MoMo recipient fields                                                      | `by_key`                  |
 | `user_roles`                        | `user_id`, `role`                                                                                                                                 | `by_user`                 |
 
 ### Every function that touches inventory

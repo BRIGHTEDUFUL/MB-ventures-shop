@@ -238,7 +238,7 @@ _Can be implemented to generate temporary password_
 
 - All permissions (full access)
 - Can manage team members
-- Can configure Mobile Money wallet
+- Can confirm payments on orders
 - Can adjust delivery fees
 
 **Staff Role:**
@@ -248,7 +248,7 @@ _Can be implemented to generate temporary password_
 - Adjust inventory
 - View customers
 - Cannot manage team
-- Cannot configure Mobile Money
+- Cannot grant or revoke roles
 - Cannot adjust delivery fees
 
 ### Custom Permissions (Per-User Overrides)
@@ -480,5 +480,5 @@ const reset = await requestPasswordReset({
 
 ---
 
-**Last Updated:** 2025-01-10  
+**Last Updated:** October 10, 2026  
 **Status:** ✅ Fully Implemented

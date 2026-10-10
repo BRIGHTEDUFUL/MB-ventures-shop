@@ -427,19 +427,13 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 
 ---
 
-### 8.4 Configure Mobile Money
+### 8.4 Payments — collected offline
 
-**Navigation:** /staff → Settings → Mobile Money
+**No configuration step.** There is no in-app payment form: pickup orders pay
+at the Abelenkpe shop counter, delivery orders pay cash to the courier, and
+staff record receipt in `/staff` → Orders.
 
-**Set:**
-
-- [x] Recipient name (wallet owner)
-- [x] Mobile Money phone number
-- [x] Provider (MTN/Vodafone/AirtelTigo)
-
-**⚠️ CRITICAL:** This determines where customer payments are directed
-
-**Status:** ⏸️ Waiting for configuration
+**Status:** ✅ No setup required
 
 ---
 
@@ -460,7 +454,6 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 - [x] Sign in as admin@mbventuresghana.com
 - [x] Access /staff dashboard
 - [x] View all menu items
-- [x] Access Mobile Money settings (admin-only)
 - [x] Create/edit a product
 - [x] Adjust inventory
 - [x] View order list
@@ -477,7 +470,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 - [x] Update order status
 - [x] Adjust inventory
 - [x] Edit products
-- [x] Verify Mobile Money settings NOT visible
+- [x] Verify no payment-details form anywhere in checkout
 
 **Status:** ⏸️ Waiting for testing
 
@@ -615,8 +608,7 @@ systemctl start fail2ban
 - [ ] Order confirmation email received
 - [ ] Admin can sign in at /staff
 - [ ] Staff can sign in at /staff
-- [ ] Admin sees Mobile Money settings
-- [ ] Staff does NOT see Mobile Money settings
+- [ ] Checkout asks for no payment details (pay-later flow)
 - [ ] Order status updates work
 - [ ] Inventory adjustments work
 - [ ] Email notifications arrive
@@ -697,5 +689,5 @@ pm2 restart mb-ventures-gh
 
 ---
 
-**Last Updated:** 2025-01-10  
-**Status:** Ready for deployment
+**Last Updated:** October 10, 2026  
+**Status:** Live in production

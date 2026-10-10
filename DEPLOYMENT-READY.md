@@ -1,7 +1,7 @@
 # 🚀 Circle Shop Express - PRODUCTION READY
 
 **Date:** October 9, 2026  
-**Status:** ✅ All configuration complete - Ready to deploy
+**Status:** ✅ Deployed — live at https://mbventuresghana.com (verified 10 Oct 2026)
 
 ---
 
@@ -25,12 +25,12 @@ All previously blocked items are now **COMPLETE**:
 - **Integration:** All links, SEO tags, sitemap use correct domain
 - **Verification:** Run `node scripts/verify-production-config.mjs`
 
-### 3. MoMo Recipient ✅
+### 3. Payments — collected offline ✅
 
-- **Admin Panel:** Ready at `/staff` → Customization → Mobile Money
-- **Database:** Schema ready with `momo_name` and `momo_number`
-- **Validation:** Prevents clearing MoMo with ordering enabled
-- **Status:** System ready to accept wallet details
+- **No in-app payment step** — `orders.place` derives `payment_method` from fulfilment (pickup → `pay_at_store`, delivery → `cod`)
+- **Customers pay in person** — at the Abelenkpe shop counter (pickup) or cash to the courier (delivery)
+- **Staff record receipt** in `/staff` → Orders → Payment status
+- **Legacy fields kept** — `momo_name` / `momo_number` remain as optional schema fields for old orders; no UI or mutation touches them
 
 ---
 
@@ -41,7 +41,7 @@ All previously blocked items are now **COMPLETE**:
 ```
 ✅ TypeScript:     npx tsc --noEmit         → 0 errors
 ✅ Linting:        npm run lint             → 0 errors
-✅ Unit Tests:     npm test                 → 186/186 passing
+✅ Unit Tests:     npm test                 → 179/179 passing
 ✅ Build:          npm run build            → Success
 ✅ E2E Tests:      npm run test:e2e         → 32/32 passing
 ✅ Live E2E:       npm run test:e2e:live    → 4/4 passing (real order)
@@ -139,7 +139,7 @@ curl https://mbventuresghana.com/robots.txt
 
 1. Navigate to `https://mbventuresghana.com/staff`
 2. Sign in as admin
-3. Go to Customization → Mobile Money
+3. Go to Customization → Ordering
 4. Enter wallet name and number
 5. Save
 6. Toggle "Accept orders" to ON
@@ -296,6 +296,6 @@ All systems are configured and tested. The storefront is ready to accept real or
 
 ---
 
-**Last Verified:** October 9, 2026  
+**Last Verified:** October 10, 2026  
 **Configuration Status:** ✅ Complete  
-**Production Readiness:** ✅ Ready to deploy
+**Production Readiness:** ✅ Live in production

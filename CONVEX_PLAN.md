@@ -140,6 +140,12 @@ All user-facing failures must `throw new ConvexError({ message })` — plain `Er
 
 ## 5. Business logic port (rule-for-rule)
 
+> **Superseded (9 Oct 2026) — payment rules below describe the original MoMo
+> flow.** Checkout is now pay-later: `orders.place` derives `payment_method`
+> from fulfilment (`pickup ⇒ "pay_at_store"`, `delivery ⇒ "cod"`) and accepts
+> no provider/transaction-reference arguments. Steps 4–5 and the momo advance
+> gate no longer exist; see AGENTS.md §4f.
+
 `place_store_order(payload)` → `convex/orders.ts place`:
 
 1. Load settings; reject when `ordering_enabled` is false.
