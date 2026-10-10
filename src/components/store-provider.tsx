@@ -4,6 +4,8 @@ import { toast } from "sonner";
 type Line = { product: Product; quantity: number };
 type Cart = {
   lines: Line[];
+  /** True once the localStorage cart has been restored; before that, `lines` is still []. */
+  ready: boolean;
   add: (p: Product, q?: number) => void;
   change: (id: string, q: number) => void;
   remove: (id: string) => void;
@@ -66,6 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider
       value={{
         lines,
+        ready,
         add,
         change,
         remove,

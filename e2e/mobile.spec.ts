@@ -66,9 +66,12 @@ test.describe("Touch and form ergonomics", () => {
   test("cart quantity steppers are 44px targets", async ({ page }) => {
     await page.goto("/");
     await waitForHydration(page);
-    // The product grid settles just after the hydration marker clears, so the
-    // very first tap can land on a node React then replaces — retry until the
-    // cart reflects the add.
+    // The cart provider restores from localStorage after the shell hydrates;
+    // a click before that lands on a button with no handler attached yet.
+    await page.waitForFunction(() => localStorage.getItem("mb-cart") !== null);
+    // The product grid can still settle just after the hydration marker clears,
+    // so retry the tap until the cart reflects the add, then make sure it was
+    // persisted before navigating — otherwise /cart can render its empty state.
     await expect(async () => {
       await page.locator(".product-add").first().click();
       await expect(page.locator('button[aria-label^="Open cart"]')).toHaveAttribute(
@@ -77,6 +80,9 @@ test.describe("Touch and form ergonomics", () => {
         { timeout: 1_000 },
       );
     }).toPass({ timeout: 15_000 });
+    await page.waitForFunction(
+      () => JSON.parse(localStorage.getItem("mb-cart") || "[]").length > 0,
+    );
 
     await page.goto("/cart");
     await waitForHydration(page);

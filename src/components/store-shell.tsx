@@ -65,7 +65,7 @@ export function StoreHeader() {
               <Search className="size-4" />
               Search desks, chairs, accessories...
             </span>
-            <kbd className="font-mono text-[10px]">âŒ˜ K</kbd>
+            <kbd className="font-mono text-[10px]">⌘ K</kbd>
           </Button>
           <div className="header-actions flex items-center gap-2">
             <Button
@@ -179,7 +179,7 @@ export function StoreHeader() {
 export function StoreOverlays() {
   const cart = useCart(),
     [query, setQuery] = useState("");
-  // `setSearchOpen` is a stable state setter, so the âŒ˜K listener below can depend
+  // `setSearchOpen` is a stable state setter, so the ⌘K listener below can depend
   // on it directly instead of on the whole context object, which is recreated on
   // every render of the provider.
   const { setSearchOpen } = cart;
@@ -306,7 +306,7 @@ export function StoreOverlays() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{p.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {p.brand} Â·{" "}
+                    {p.brand} ·{" "}
                     {p.verified ? (p.stock ? "In stock" : "Out of stock") : "Sample catalogue"}
                   </p>
                 </div>
@@ -315,7 +315,7 @@ export function StoreOverlays() {
             ))}
             {results.length === 0 && (
               <p className="py-8 text-sm text-muted-foreground">
-                No products match â€œ{query}â€. Try a different name.
+                No products match “{query}”. Try a different name.
               </p>
             )}
             <div className="mt-5 flex flex-wrap gap-2">
@@ -451,7 +451,7 @@ export function StoreFooter() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>Â© {new Date().getFullYear()} MB Ventures GH Â· Ghana</span>
+        <span>© {new Date().getFullYear()} MB Ventures GH · Ghana</span>
         <span>Pickup at Abelenkpe · Cash on delivery</span>
         <span className="flex gap-4">
           <Link to="/$page" params={{ page: "terms" }}>

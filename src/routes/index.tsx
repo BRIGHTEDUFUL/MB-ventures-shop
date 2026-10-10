@@ -28,7 +28,7 @@ function Index() {
       data: { products: allProducts, settings, categories: allCats },
     } = useSuspenseQuery(storeQuery),
     products = allProducts.filter((p) => p.visible !== false),
-    categories = allCats.filter((c) => c.visible),
+    categories = allCats.filter((c) => c.visible && products.some((p) => p.category === c.id)),
     { add } = useCart();
 
   const picks = settings.featured_ids
