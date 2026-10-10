@@ -231,14 +231,14 @@ function Index() {
             <div className="mt-6 divide-y divide-border">
               {rail.slice(0, 3).map((p) => (
                 <div className="flex items-center justify-between py-3" key={p.id}>
-                  <Link to="/product/$slug" params={{ slug: p.id }} className="text-sm">
+                  <Link to="/product/$slug" params={{ slug: p.id }} className="min-h-10 text-sm">
                     {p.name}
                   </Link>
                   <Button
                     variant="ghost"
                     aria-label={`Add ${p.name} to setup`}
                     onClick={() => add(p)}
-                    className="h-9 gap-3 px-2 text-xs"
+                    className="h-11 gap-3 px-3 text-xs"
                   >
                     {money(p.price)} <Plus className="size-3" />
                   </Button>
@@ -267,7 +267,7 @@ function Index() {
             <Link
               to="/$page"
               params={{ page: "about" }}
-              className="mt-5 inline-flex items-center gap-2 text-sm font-medium"
+              className="mt-5 inline-flex min-h-10 items-center gap-2 text-sm font-medium"
             >
               About MB Ventures GH <ArrowRight className="size-4" />
             </Link>

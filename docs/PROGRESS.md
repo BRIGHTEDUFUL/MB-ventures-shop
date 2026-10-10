@@ -5,6 +5,59 @@ still open is listed under **Open**.
 
 ---
 
+## Shop number unified on 0249564442 + a full mobile pass (10 October 2026)
+
+**Status:** Complete — all gates green (tsc, lint, 189 unit tests, prettier,
+build, 32 e2e).
+
+### Done
+
+- **One shop number everywhere: 0249564442** — production `store_settings` now
+  holds `0249564442` for both the phone and the WhatsApp recipient, so every
+  `tel:` link and every "Ask on WhatsApp" / "Chat on WhatsApp" button points at
+  the same number (WhatsApp normalises to `wa.me/233249564442`). Changed through
+  the staff Contact pane, which pre-fills the rest of the form, so the address,
+  hours and email were left untouched. The `+233 24 000 0000` placeholder is gone
+  from the seed default, the email render context and both UI fallbacks.
+- **Mobile audit became a repeatable check** — new `scripts/mobile-audit.mjs`
+  measures every public route plus the signed-in staff pages at 320/375/414px
+  and reports horizontal overflow, elements pushed off screen, sub-12px text,
+  sub-40px controls and inputs under 16px (the iOS focus-zoom trap). It takes a
+  base URL and optional credentials, so it can be pointed at dev or production:
+  `node scripts/mobile-audit.mjs http://localhost:8080 --email=… --password=…`.
+- **823 findings down to 0** — the baseline against production was 1 clipped
+  element, 528 undersized tap targets and 294 sub-12px text runs. All three
+  classes are now clean on every route and width measured.
+- **Hero calls-to-action no longer clip or hide** — the two hero buttons need
+  ~340px side by side and a 320px phone has 272px, so they ran off the edge and
+  were then covered by the "In this setup" card (a pre-existing bug on production
+  as well). They now wrap to full width, and the mobile hero grew from 710px to
+  800px so the card — which is anchored to the hero's bottom edge — clears them.
+  Measured gap is 20px at 320px and 127px at 414px.
+- **12px floor on mobile text** — the 10–11px micro-labels (announcement bar,
+  product brand and spec, badges, trust strip, footer legal, eyebrows, category
+  counts) are all 12px on phones. Desktop is untouched.
+- **Tap targets grown on phones only** — footer links 19px → 44px, Terms/Privacy
+  16px → 40px, "View all" → 40px, pagination and the setup-rail price buttons
+  36px → 44px, and the WhatsApp / Copy link / About / product-name links → 40px.
+  Breadcrumb links grew from 29×38 to 41×40 by expanding into the gaps between
+  the "/" separators rather than by moving them.
+- **Header de-cluttered on phones** — "YOUR WORKSPACE STORE" needs ~170px and the
+  header has ~86px to spare at 320px once the logo and three icon buttons are
+  placed, so it wrapped across three lines. Hidden below 768px, taking 40px off
+  the header height (110px → 70px at 320px).
+
+### Note
+
+Lightning CSS — which Tailwind v4 runs through both the Vite dev server and
+production builds — silently dropped a `.breadcrumbs a { … }` rule from the dev
+stylesheet while keeping every neighbouring rule. The breadcrumb fix is
+therefore written as Tailwind utilities on the `<Link>`s instead of a stylesheet
+rule, and the production bundle was checked rule-by-rule. Worth knowing if a CSS
+rule ever appears to have no effect in dev.
+
+---
+
 ## Staff & Admin Hub Redesign — dashboard charts, grouped nav, sign-out (10 October 2026)
 
 **Status:** Complete — all gates green (tsc, lint, 189 unit tests, prettier,

@@ -6,7 +6,7 @@ const SETTINGS = {
   key: "singleton",
   hero_title: "Made for your workspace.",
   hero_subtitle: "Desks, chairs and everyday tech. From our Abelenkpe shop to your setup.",
-  phone: "+233 24 000 0000",
+  phone: "0249564442",
   email: "info@mbventuresghana.com",
   address: "Abelenkpe taxi rank, Accra, Ghana",
   hours: "Monday to Saturday, 8:00 AM to 6:00 PM",

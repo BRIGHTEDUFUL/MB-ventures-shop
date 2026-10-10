@@ -1118,8 +1118,14 @@ label textarea {
     gap: 0 !important;
   }
   .facts-bar {
-    font-size: 10px !important;
-    padding: 7px 12px !important;
+    font-size: 12px !important;
+    /* Zero vertical padding because the bar's height is now carried by the
+       "Track your order" link below — 44px is a normal announcement-bar height
+       and gives that link a real thumb target instead of 16px. */
+    padding: 0 12px !important;
+  }
+  .facts-bar a {
+    min-height: 44px;
   }
   .facts-bar .secondary-facts {
     display: none;
@@ -1127,7 +1133,10 @@ label textarea {
   .hero {
     margin: 0;
     border-radius: 0 0 20px 20px;
-    height: 710px;
+    /* 710px left the "In this setup" card sitting on top of the hero buttons
+       once they stack on narrow screens. The card is anchored to the hero's
+       bottom edge, so the hero has to be tall enough to clear them. */
+    height: 800px;
     min-height: 0;
   }
   .hero-photo {
@@ -1140,7 +1149,7 @@ label textarea {
   .hero-content {
     left: 24px;
     right: 24px;
-    top: 124px;
+    top: 110px;
     max-width: none;
   }
   .hero h1 {
@@ -1154,9 +1163,14 @@ label textarea {
   }
   .hero-ctas {
     gap: 10px;
-    margin-top: 24px;
+    margin-top: 18px;
+    /* Two buttons side by side need ~340px; a 320px phone has 272px of hero
+       to work with, so the row used to spill past the edge and get clipped.
+       Wrapping lets them stack full width instead. */
+    flex-wrap: wrap;
   }
   .hero-ctas a {
+    flex: 1 1 auto;
     font-size: 12px;
     padding-inline: 18px;
   }
@@ -1190,10 +1204,10 @@ label textarea {
     gap: 10px;
   }
   .trust-item strong {
-    font-size: 11px;
+    font-size: 12px;
   }
   .trust-item p {
-    font-size: 10px;
+    font-size: 12px;
   }
   .trust-item svg {
     width: 20px;
@@ -1206,6 +1220,8 @@ label textarea {
   }
   .section-heading a {
     font-size: 12px;
+    /* "View all" measured 16px tall — below any comfortable thumb target. */
+    min-height: 40px;
   }
   .category-grid {
     display: flex;
@@ -1263,6 +1279,49 @@ label textarea {
     font-size: 19px;
     gap: 14px;
     padding: 28px 0;
+  }
+  /* Readability floor: no text below 12px on a phone. These micro-labels ship
+     at 10–11px, which is unreadable at arm's length. Raise them in the mobile
+     block only, so the desktop composition stays exactly as designed. */
+  .eyebrow {
+    font-size: 12px;
+  }
+  .category-label small {
+    font-size: 12px;
+  }
+  /* "YOUR WORKSPACE STORE" needs ~170px and the header only has ~86px to
+     spare at 320px once the logo and three icon buttons are placed, so it
+     wrapped across three lines and made the header 40px taller than it needs
+     to be. The logo and brand name carry the identity on a phone. */
+  .brand-text small {
+    display: none;
+  }
+  .product-card .brand {
+    font-size: 12px;
+  }
+  .product-card .spec {
+    font-size: 12px;
+  }
+  .product-badge {
+    font-size: 12px;
+  }
+  .footer-bottom {
+    font-size: 12px;
+  }
+  /* Tap targets: the footer ships 19px link boxes (and Terms/Privacy 16px),
+     which are comfortable with a mouse and useless with a thumb. Grow them
+     here rather than in the base rules, so the desktop footer is untouched. */
+  .footer-grid a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin: 0;
+  }
+  .footer-bottom a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-inline: 7px;
   }
   .footer-grid {
     grid-template-columns: 1fr 1fr;
@@ -1816,6 +1875,9 @@ h4 {
   display: flex;
   align-items: center;
   gap: 14px;
+  /* The mobile logo is 38px tall, which put the whole link 2px under a
+     comfortable target. No effect on desktop, where the image is 52px. */
+  min-height: 40px;
   color: inherit;
 }
 .auth-lockup img {

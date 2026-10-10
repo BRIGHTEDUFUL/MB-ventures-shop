@@ -157,7 +157,7 @@ node scripts/verify-production-config.mjs
 All contact information is properly set throughout the application:
 
 **Email:** `info@mbventuresghana.com`  
-**Phone:** `+233 24 000 0000`  
+**Phone:** `0249564442`  
 **Address:** Abelenkpe taxi rank, Accra, Ghana  
 **Hours:** Monday to Saturday, 8:00 AM to 6:00 PM  
 **Domain:** `https://mbventuresghana.com`

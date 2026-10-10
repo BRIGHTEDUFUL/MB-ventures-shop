@@ -228,6 +228,15 @@ Optional (places a real order in dev — opt-in only):
 npm run test:e2e:live
 ```
 
+Optional (needs a dev server or a live URL; run it whenever layout, CSS or
+mobile navigation is touched):
+
+```sh
+node scripts/mobile-audit.mjs http://localhost:8080                       # dev
+node scripts/mobile-audit.mjs https://mbventuresghana.com --email=… --password=…
+# Expect "CLEAN — no mobile defects found across 14 routes × 3 widths."
+```
+
 ---
 
 ## 7. Live store state (as of 10 Oct 2026)
@@ -259,6 +268,9 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 - hero_image: "hero-workspace" (public/images/hero-workspace.webp — 1376x768)
 - hero_title: "Your workspace. Elevated."
 - Featured hotspots: electric-standing-desk-rgb-160, mottian-ai-smart-keyboard-mouse, custom-macro-mechanical-keyboard
+- Contact: `phone` and `whatsapp` are both `0249564442` — one shop number for
+  every `tel:` link and every WhatsApp button. Edit both together in
+  `/staff` → Customization → Contact.
 - Payments: no in-app payment — pickup pays at the shop counter, delivery pays cash on
   arrival; staff mark payment received in /staff (legacy MoMo recipient fields are kept
   in the row for old orders but no UI or mutation touches them)

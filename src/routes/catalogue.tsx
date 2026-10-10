@@ -183,7 +183,7 @@ function Catalogue() {
                 <Button
                   key={i}
                   variant={page === i + 1 ? "default" : "outline"}
-                  className="h-9 w-9 p-0"
+                  className="h-11 w-11 p-0"
                   onClick={() => setPage(i + 1)}
                 >
                   {i + 1}

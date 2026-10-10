@@ -432,9 +432,9 @@ export function StoreFooter() {
           <h2>Visit us at Abelenkpe</h2>
           <p>{s?.address || "Abelenkpe taxi rank, Accra, Ghana"}</p>
           <p>{s?.hours || "Monday to Saturday, 8:00 AM to 6:00 PM"}</p>
-          <a href={`tel:${s?.phone || "+233240000000"}`} className="flex items-center gap-2">
+          <a href={`tel:${s?.phone || "0249564442"}`} className="flex items-center gap-2">
             <Phone className="mr-1 inline size-3" />
-            {s?.phone || "+233 24 000 0000"}
+            {s?.phone || "0249564442"}
           </a>
           {whatsapp && (
             <a href={whatsapp} target="_blank" rel="noreferrer" className="flex items-center gap-2">

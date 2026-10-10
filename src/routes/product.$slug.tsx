@@ -55,11 +55,19 @@ function ProductPage() {
   return (
     <div className="page-content wrap page-product">
       <div className="breadcrumbs">
-        <Link to="/catalogue" search={{ category: "", q: "" }}>
+        <Link
+          to="/catalogue"
+          search={{ category: "", q: "" }}
+          className="flex min-h-10 items-center px-1.5 -mx-1.5"
+        >
           Shop
         </Link>
         <span>/</span>
-        <Link to="/catalogue" search={{ category: p.category, q: "" }}>
+        <Link
+          to="/catalogue"
+          search={{ category: p.category, q: "" }}
+          className="flex min-h-10 items-center px-1.5 -mx-1.5"
+        >
           {p.category}
         </Link>
         <span>/</span>
@@ -100,7 +108,7 @@ function ProductPage() {
         <div>
           <p className="eyebrow text-muted-foreground">{p.brand}</p>
           <h1 className="mt-3 font-display text-4xl font-semibold">{p.name}</h1>
-          <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+          <p className="mt-4 font-mono text-xs text-muted-foreground">
             SKU: MB-{p.id.toUpperCase()}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -193,7 +201,7 @@ function ProductPage() {
                   href={whatsapp}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 text-xs text-link"
+                  className="flex min-h-10 items-center gap-2 text-xs text-link"
                 >
                   <MessageCircle className="size-4" />
                   Ask on WhatsApp
@@ -201,7 +209,7 @@ function ProductPage() {
               )}
               <Button
                 variant="link"
-                className="h-auto p-0 text-xs text-link"
+                className="min-h-10 h-auto p-0 text-xs text-link"
                 onClick={() =>
                   navigator.clipboard
                     .writeText(window.location.href)

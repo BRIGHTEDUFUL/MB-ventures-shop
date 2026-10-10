@@ -132,7 +132,7 @@ All email templates build links from `SITE_URL`:
 // Store settings
 {
   email: "info@mbventuresghana.com",
-  phone: "+233 24 000 0000",
+  phone: "0249564442",
   address: "Abelenkpe taxi rank, Accra, Ghana",
 }
 ```
@@ -344,7 +344,7 @@ npm start
 ## Contact Information
 
 **Store Email:** info@mbventuresghana.com  
-**Store Phone:** +233 24 000 0000  
+**Store Phone:** 0249564442  
 **Store Address:** Abelenkpe taxi rank, Accra, Ghana  
 **Store Hours:** Monday to Saturday, 8:00 AM to 6:00 PM
 
