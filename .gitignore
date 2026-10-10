@@ -45,3 +45,6 @@ docs/PRODUCTION-CREDENTIALS.md
 
 # Raw product assets
 /Products/
+
+# UI audit screenshots (scripts/audit-screenshots.mjs)
+.artifacts/

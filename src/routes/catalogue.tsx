@@ -55,7 +55,7 @@ function Catalogue() {
           : a.name.localeCompare(b.name),
     );
   const title = search.q
-    ? `Results for â€œ${search.q}â€`
+    ? `Results for “${search.q}”`
     : categories.find((c) => c.id === search.category)?.name || "All workspace essentials";
   const filterPanel = (
     <>

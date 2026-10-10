@@ -75,7 +75,7 @@ function Dashboard() {
                     <Link
                       to="/staff/orders/$id"
                       params={{ id: o.id }}
-                      className="flex items-center justify-between gap-3 py-3 hover:underline"
+                      className="flex flex-col gap-1 py-3 hover:underline sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                     >
                       <span className="min-w-0">
                         <span className="block font-mono text-sm font-semibold">{o.reference}</span>

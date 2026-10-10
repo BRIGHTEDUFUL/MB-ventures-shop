@@ -67,10 +67,16 @@ function Checkout() {
       }));
   }, [profile]);
   // Placing an order requires an account; the cart lives in localStorage, so
-  // nothing is lost on the way to /account and back.
+  // nothing is lost on the way to /account and back. Once the stored cart has
+  // been restored (`ready`), an empty one has nothing to check out — send it to
+  // /cart, which shows the empty state and the way back to the catalogue.
   useEffect(() => {
+    if (cart.ready && cart.lines.length === 0) {
+      navigate({ to: "/cart" });
+      return;
+    }
     if (!loading && !session) navigate({ to: "/account", search: { next: "/checkout" } });
-  }, [loading, session, navigate]);
+  }, [cart.ready, cart.lines.length, loading, session, navigate]);
 
   if (loading || !data) return <div className="page-content wrap">Loading checkout…</div>;
   if (!session) return <div className="page-content wrap">Taking you to sign in…</div>;
