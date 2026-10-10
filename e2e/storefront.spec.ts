@@ -34,7 +34,9 @@ test.describe("Document head", () => {
   });
 
   test("product pages share their own photo", async ({ page }) => {
-    await page.goto("/product/ergonomic-chair");
+    // A live catalogue product: hidden demo products 404 and legitimately fall
+    // back to the store default image.
+    await page.goto("/product/monitor-light-bar");
     const image = await page.locator('meta[property="og:image"]').getAttribute("content");
     expect(image).toBeTruthy();
     expect(image).not.toContain("/images/workspace.jpg");
@@ -42,7 +44,7 @@ test.describe("Document head", () => {
 });
 
 test.describe("Heading outline", () => {
-  for (const route of ["/", "/catalogue", "/product/ergonomic-chair", "/about", "/delivery"]) {
+  for (const route of ["/", "/catalogue", "/product/monitor-light-bar", "/about", "/delivery"]) {
     test(`${route} never skips a heading level`, async ({ page }) => {
       await page.goto(route);
       const levels = await page

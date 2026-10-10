@@ -66,7 +66,13 @@ test.describe("Touch and form ergonomics", () => {
   test("cart quantity steppers are 44px targets", async ({ page }) => {
     await page.goto("/");
     await waitForHydration(page);
+    // The cart provider restores from localStorage after the shell hydrates;
+    // a click before that lands on a button with no handler attached yet.
+    await page.waitForFunction(() => localStorage.getItem("mb-cart") !== null);
     await page.locator(".product-add").first().click();
+    // Wait until the add has actually been persisted, otherwise the immediate
+    // navigation can race the cart update and /cart renders its empty state.
+    await page.waitForFunction(() => (JSON.parse(localStorage.getItem("mb-cart") || "[]")).length > 0);
 
     await page.goto("/cart");
     await waitForHydration(page);
