@@ -64,20 +64,20 @@ src/
     store-ui.tsx          ProductCard, PageError, SectionHeading, Quantity
 
 public/images/
-  hero-workspace.jpg      Hero background — cinematic workspace from real products (1376x768)
-  products/               Real product photos (PNG, named by product slug)
-    carbon-fiber-gaming-desk.png
-    electric-standing-desk-rgb-160.png
-    luminous-rgb-mouse-pad.png
-    custom-macro-mechanical-keyboard.png
-    custom-macro-mechanical-keyboard-gallery.png
-    dual-monitor-desk-mount.png
-    360-rotating-laptop-stand.png
-    rock-360-phone-tablet-stand.png
-    vertical-laptop-stand.png
-    monitor-light-bar.png
-    mottian-ai-smart-keyboard-mouse.png
-    rgb-dynamic-usb-microphone.png
+  hero-workspace.webp      Hero background — cinematic workspace from real products (1376x768)
+  products/               Real product photos (WebP, named by product slug)
+    carbon-fiber-gaming-desk.webp
+    electric-standing-desk-rgb-160.webp
+    luminous-rgb-mouse-pad.webp
+    custom-macro-mechanical-keyboard.webp
+    custom-macro-mechanical-keyboard-gallery.webp
+    dual-monitor-desk-mount.webp
+    360-rotating-laptop-stand.webp
+    rock-360-phone-tablet-stand.webp
+    vertical-laptop-stand.webp
+    monitor-light-bar.webp
+    mottian-ai-smart-keyboard-mouse.webp
+    rgb-dynamic-usb-microphone.webp
 ```
 
 ---
@@ -240,7 +240,7 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 ### Store settings
 
 - ordering_enabled: true
-- hero_image: "hero-workspace" (public/images/hero-workspace.jpg — 1376x768)
+- hero_image: "hero-workspace" (public/images/hero-workspace.webp — 1376x768)
 - hero_title: "Your workspace. Elevated."
 - Featured hotspots: electric-standing-desk-rgb-160, 360-rotating-laptop-stand, custom-macro-mechanical-keyboard
 - MoMo recipient: configured (admin-only at /staff Customization)
@@ -281,7 +281,7 @@ Never log CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY, or JWKS.
 
 ### Add a new product
 
-1. Add image to `public/images/products/<slug>.png`
+1. Add image to `public/images/products/<slug>.webp`
 2. Register key in `src/lib/store-images.ts` (base map + sizes map)
 3. Add entry to `REAL_PRODUCTS` in `convex/inventory_import.ts`
 4. `npx convex run inventory_import:apply --env-file .env.prod.local`

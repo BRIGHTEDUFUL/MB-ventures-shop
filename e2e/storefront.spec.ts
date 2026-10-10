@@ -39,7 +39,7 @@ test.describe("Document head", () => {
     await page.goto("/product/monitor-light-bar");
     const image = await page.locator('meta[property="og:image"]').getAttribute("content");
     expect(image).toBeTruthy();
-    expect(image).not.toContain("/images/workspace.jpg");
+    expect(image).not.toContain("/images/workspace");
   });
 });
 

@@ -72,7 +72,7 @@ Environment variables are documented in `.env.example` — copy it to `.env.loca
 - **Product visibility** is controlled by `visible` field in the `products` table. Demo products are
   hidden (`visible: false, status: "draft"`) but preserved in the database.
 - **Stock management** routes through `convex/lib/stock.ts → applyStockChange`. Never bypass it.
-- Hero background at `public/images/hero-workspace.jpg` is a generated workspace scene using real
+- Hero background at `public/images/hero-workspace.webp` is a generated workspace scene using real
   product photography.
 
 Read `AGENTS.md` for the full set of invariants before changing anything in `convex/`.
