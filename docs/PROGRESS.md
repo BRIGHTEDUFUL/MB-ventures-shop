@@ -56,6 +56,19 @@ still open is listed under **Open**.
   from 9 October provisioning was revoked via the live Team page — the
   account remains as a plain customer. `user_roles` now matches
   `docs/TEST-ACCOUNTS.md` exactly.
+- **Contact numbers live** — shop phone and WhatsApp set to `053 276 7269`
+  (the former MoMo recipient number, repurposed as contact-only per the
+  owner) via the staff Contact pane; the footer, contact page and every
+  "Ask on WhatsApp" button now use `tel:053 276 7269` /
+  `wa.me/233532767269`, replacing the `+233 24 000 0000` placeholder. The
+  stale "verified before launch" disclaimers on the contact and privacy
+  pages were dropped in the same pass.
+- **Hero hotspot swap (owner request)** — the featured pick that reveals
+  first on the hero photo is now the Mottian AI Smart Voice Typing
+  Wireless Keyboard & Mouse Set instead of the 360° laptop stand.
+  Changed in production via Customization → Featured and mirrored in
+  `inventory_import.ts`'s featured list so a future
+  `inventory_import:apply` re-run keeps it.
 
 ### Verified live
 

@@ -362,7 +362,7 @@ export const apply = internalMutation({
 
     const featured_ids = [
       "electric-standing-desk-rgb-160",
-      "360-rotating-laptop-stand",
+      "mottian-ai-smart-keyboard-mouse",
       "custom-macro-mechanical-keyboard",
     ];
 

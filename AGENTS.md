@@ -258,7 +258,7 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 - ordering_enabled: true
 - hero_image: "hero-workspace" (public/images/hero-workspace.webp — 1376x768)
 - hero_title: "Your workspace. Elevated."
-- Featured hotspots: electric-standing-desk-rgb-160, 360-rotating-laptop-stand, custom-macro-mechanical-keyboard
+- Featured hotspots: electric-standing-desk-rgb-160, mottian-ai-smart-keyboard-mouse, custom-macro-mechanical-keyboard
 - Payments: no in-app payment — pickup pays at the shop counter, delivery pays cash on
   arrival; staff mark payment received in /staff (legacy MoMo recipient fields are kept
   in the row for old orders but no UI or mutation touches them)
