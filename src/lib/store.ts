@@ -108,7 +108,7 @@ export const absoluteUrl = (path: string) =>
   /^https?:\/\//.test(path) ? path : `${SITE_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
 
 /** Default social card image; product pages pass their own photo instead. */
-export const DEFAULT_SOCIAL_IMAGE = "/images/workspace.jpg";
+export const DEFAULT_SOCIAL_IMAGE = "/images/workspace.webp";
 
 export const pageHead = (
   name: string,

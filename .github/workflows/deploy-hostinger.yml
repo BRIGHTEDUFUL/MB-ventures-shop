@@ -52,10 +52,25 @@ jobs:
     name: Deploy to Hostinger VPS
     needs: [build-and-test]
     runs-on: ubuntu-latest
-    if: ${{ secrets.HOSTINGER_HOST != '' }}
 
     steps:
+      # `secrets` is not a valid context in a job-level `if:` (it made GitHub
+      # reject the whole workflow before any job could start), so the check
+      # runs as a step that reads the secret through `env` instead.
+      - name: Check Hostinger credentials
+        id: creds
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+        run: |
+          if [ -n "$HOSTINGER_HOST" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::HOSTINGER_HOST secret is not configured - skipping the VPS deploy step."
+          fi
+
       - name: Deploy via SSH to Hostinger
+        if: steps.creds.outputs.available == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_HOST }}

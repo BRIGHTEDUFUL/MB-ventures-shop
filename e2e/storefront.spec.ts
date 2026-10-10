@@ -38,7 +38,7 @@ test.describe("Document head", () => {
     await page.goto("/product/electric-standing-desk-rgb-160");
     const image = await page.locator('meta[property="og:image"]').getAttribute("content");
     expect(image).toBeTruthy();
-    expect(image).toContain("/images/products/electric-standing-desk-rgb-160.png");
+    expect(image).toContain("/images/products/electric-standing-desk-rgb-160.webp");
   });
 });
 

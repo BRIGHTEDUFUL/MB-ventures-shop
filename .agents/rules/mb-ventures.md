@@ -46,4 +46,4 @@ git add -A; git push origin main
 - Convex prod: necessary-newt-861
 - Ordering: ENABLED
 - Real products: 11 (see AGENTS.md §7)
-- Hero image key: `hero-workspace` → `public/images/hero-workspace.jpg`
+- Hero image key: `hero-workspace` → `public/images/hero-workspace.webp`
