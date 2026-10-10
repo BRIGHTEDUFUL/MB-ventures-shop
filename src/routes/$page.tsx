@@ -147,7 +147,6 @@ function Content() {
                 {s?.email || "info@mbventuresghana.com"}
               </a>
             </p>
-            <p>Contact details are from the store brief and should be verified before launch.</p>
             <ContactForm />
           </>
         )}
@@ -180,8 +179,7 @@ function Content() {
               your Mobile Money PIN or OTP.
             </p>
             <p>
-              Contact the store to request access to or correction of your customer information. A
-              store-approved retention policy should be published before launch.
+              Contact the store to request access to or correction of your customer information.
             </p>
           </>
         )}
