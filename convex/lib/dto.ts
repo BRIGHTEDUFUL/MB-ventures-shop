@@ -50,8 +50,6 @@ export type Settings = {
   email: string;
   address: string;
   hours: string;
-  momo_number: string;
-  momo_name: string;
   central_fee: number;
   greater_fee: number;
   nationwide_fee: number;
@@ -92,7 +90,9 @@ export type Order = {
   address: string;
   fulfillment: "delivery" | "pickup";
   zone: "central" | "greater" | "nationwide";
-  payment_method: "momo" | "cod";
+  /** Where the money changes hands: `cod` (courier) or `pay_at_store`; `momo` is legacy. */
+  payment_method: "momo" | "cod" | "pay_at_store";
+  /** Legacy MoMo fields — null on every order placed since pay-later ordering shipped. */
   provider: string | null;
   transaction_reference: string | null;
   payment_status: "pending" | "confirmed" | "rejected";
@@ -205,13 +205,13 @@ export const HOME_CONTENT_DEFAULTS: Pick<
     "Start with a desk and chair. Add the tools you use every day. Put your workspace together with help from our Abelenkpe shop.",
   home_cta_heading: "Your Abelenkpe shop. Now closer to your doorstep.",
   home_cta_body:
-    "Collect your order at Abelenkpe taxi rank, Accra, or have it delivered to your door. Our shop team handles your order and confirms every Mobile Money payment personally.",
+    "Collect your order at Abelenkpe taxi rank, Accra, or have it delivered to your door. Order online and pay when you collect or when your order arrives.",
   home_brands: ["Logitech", "IKEA", "elgato"],
   home_trust: [
     { icon: "map-pin", title: "A real shop at Abelenkpe", text: "Visit us in Accra" },
     { icon: "truck", title: "Delivery across Ghana", text: "Accra, Tema and beyond" },
     { icon: "shield-check", title: "Store warranty", text: "Support from our shop" },
-    { icon: "wallet", title: "Pay your way", text: "Mobile Money or cash on delivery" },
+    { icon: "wallet", title: "Pay your way", text: "Cash on delivery or pay in store" },
   ],
 };
 
@@ -220,6 +220,8 @@ export const settingsDTO = (settings: Doc<"store_settings">): Settings => {
     _id: _id,
     _creationTime: _creationTime,
     key: _key,
+    momo_number: _momo_number,
+    momo_name: _momo_name,
     home_category_heading,
     home_featured_heading,
     home_setup_eyebrow,

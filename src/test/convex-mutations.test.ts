@@ -58,10 +58,9 @@ afterEach(() => {
 type PlaceArgs = FunctionArgs<typeof api.orders.place>;
 
 /**
- * Seeds the store: ordering open, MoMo recipient on file, one verified
- * product whose price only exists in the database (the checkout payload
- * carries ids and quantities — never a price), plus a customer, a staff
- * member and an admin.
+ * Seeds the store: ordering open, one verified product whose price only
+ * exists in the database (the checkout payload carries ids and quantities —
+ * never a price), plus a customer, a staff member and an admin.
  */
 async function setup() {
   const t = convexTest(schema, modules);
@@ -84,8 +83,6 @@ async function setup() {
     if (settings === null) throw new Error("seed did not create settings");
     await ctx.db.patch(settings._id, {
       ordering_enabled: true,
-      momo_number: "0241234567",
-      momo_name: "MB Ventures GH",
     });
 
     const customerId = await ctx.db.insert("users", {
@@ -120,9 +117,6 @@ const DEFAULT_CHECKOUT: PlaceArgs = {
   address: "12 Abelenkpe Taxi Rank Road, Accra",
   fulfillment: "delivery",
   zone: "central",
-  payment_method: "momo",
-  provider: "MTN MoMo",
-  transaction_reference: "MP2610001234",
   items: [{ id: "standing-desk", quantity: 2 }],
 };
 
@@ -340,15 +334,18 @@ describe("orders.place — authoritative checkout", () => {
     expect((await readProduct(env, "standing-desk")).stock).toBe(50);
   });
 
-  it("requires a Mobile Money recipient before accepting a MoMo payment", async () => {
+  it("derives the payment method from fulfilment — no in-app payment", async () => {
     const env = await setup();
-    await patchSettings(env, { momo_number: "" });
+    const delivery = await placeOrder(env);
+    expect(delivery.payment_method).toBe("cod");
+    expect(delivery.provider).toBeNull();
+    expect(delivery.transaction_reference).toBeNull();
 
-    await expectConvexError(
-      env.customer.mutation(api.orders.place, checkout()),
-      /Mobile Money details or reference are missing/,
-    );
-    expect(await ordersIn(env)).toHaveLength(0);
+    const pickup = await placeOrder(env, { fulfillment: "pickup", address: "" });
+    expect(pickup.payment_method).toBe("pay_at_store");
+    expect(pickup.provider).toBeNull();
+    expect(pickup.transaction_reference).toBeNull();
+    expect(pickup.delivery_fee).toBe(0);
   });
 
   it("only takes orders — and order feeds — from a signed-in account", async () => {
@@ -471,23 +468,31 @@ describe("orders.staffUpdate — staff permissions and transitions", () => {
     expect(view.history.map((entry) => entry.actor_name)).toContain("Kofi Boateng");
   });
 
-  it("blocks advancing a MoMo order before the payment is verified", async () => {
+  it("lets staff advance an order while payment is still pending", async () => {
     const env = await setup();
     const order = await placeOrder(env);
+
+    // Money changes hands offline, so only *completing* needs payment in.
+    await env.staff.mutation(api.orders.staffUpdate, {
+      id: order.id,
+      status: "processing",
+      payment: "pending",
+    });
+    await drain(env);
+
+    const advanced = await readOrder(env, order.id);
+    expect(advanced?.status).toBe("processing");
+    expect(advanced?.payment_status).toBe("pending");
 
     await expectConvexError(
       env.staff.mutation(api.orders.staffUpdate, {
         id: order.id,
-        status: "processing",
+        status: "completed",
         payment: "pending",
       }),
-      /Verify Mobile Money before processing/,
+      /Confirm payment before completing/,
     );
-
-    const unchanged = await readOrder(env, order.id);
-    expect(unchanged?.status).toBe("received");
-    expect(unchanged?.payment_status).toBe("pending");
-    expect(await orderHistory(env, order.id)).toHaveLength(1);
+    expect((await readOrder(env, order.id))?.status).toBe("processing");
   });
 
   it("keeps 'ready' off delivery orders", async () => {

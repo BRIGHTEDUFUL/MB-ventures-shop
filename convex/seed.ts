@@ -10,8 +10,6 @@ const SETTINGS = {
   email: "info@mbventuresghana.com",
   address: "Abelenkpe taxi rank, Accra, Ghana",
   hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
-  momo_number: "",
-  momo_name: "",
   central_fee: 30,
   greater_fee: 50,
   nationwide_fee: 100,

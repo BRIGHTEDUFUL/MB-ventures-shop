@@ -21,10 +21,32 @@ export const Route = createFileRoute("/checkout")({
   head: () =>
     pageHead(
       "Checkout",
-      "Delivery or Abelenkpe pickup. Mobile Money confirmed manually, or cash on courier arrival.",
+      "Delivery across Ghana or pickup at Abelenkpe. Order now, pay when you collect or when your order arrives.",
     ),
   component: Checkout,
 });
+
+/** Draft survives an auth blip remounting the form — same idea as the cart. */
+const DRAFT_KEY = "mb-checkout-draft";
+
+const EMPTY_FORM: CheckoutForm = {
+  customer_name: "",
+  phone: "",
+  email: "",
+  address: "",
+  fulfillment: "delivery",
+  zone: "central",
+};
+
+/** The persisted draft (`{ step, ...form }`), or null when absent/unreadable. */
+function readDraft(): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 function Checkout() {
   const cart = useCart(),
@@ -32,29 +54,27 @@ function Checkout() {
     navigate = useNavigate();
   const { session, loading, profile } = useSession(),
     placeOrder = useConvexMutation(api.orders.place);
-  const [step, setStep] = useState(1),
+  // Right after sign-up Convex Auth can resolve to "signed out" for a beat,
+  // which bounces checkout through /account and back — remounting this
+  // component with fresh state. The draft keeps both the step and the fields
+  // intact so the shopper lands exactly where they were.
+  const [draft] = useState<Record<string, unknown>>(() => readDraft() ?? {}),
+    [step, setStep] = useState(() => (draft["step"] === 2 ? 2 : 1)),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [form, setForm] = useState<CheckoutForm>({
-      customer_name: "",
-      phone: "",
-      email: "",
-      address: "",
-      fulfillment: "delivery",
-      zone: "central",
-      payment_method: "momo",
-      provider: "MTN MoMo",
-      transaction_reference: "",
+    [form, setForm] = useState<CheckoutForm>(() => {
+      const fields = { ...draft };
+      delete fields["step"];
+      return { ...EMPTY_FORM, ...fields } as CheckoutForm;
     });
   const set = (key: keyof CheckoutForm, value: string) =>
-    setForm(
-      (f) =>
-        ({
-          ...f,
-          [key]: value,
-          ...(key === "fulfillment" && value === "pickup" ? { payment_method: "momo" } : {}),
-        }) as CheckoutForm,
-    );
+    setForm((f) => ({ ...f, [key]: value }) as CheckoutForm);
+
+  // Persist every keystroke and step change so a transient auth reconnect
+  // (which briefly swaps in the loading placeholder) cannot lose progress.
+  useEffect(() => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, ...form }));
+  }, [step, form]);
 
   // Prefill contact details from the account profile (only where empty).
   useEffect(() => {
@@ -69,13 +89,17 @@ function Checkout() {
   // Placing an order requires an account; the cart lives in localStorage, so
   // nothing is lost on the way to /account and back. Once the stored cart has
   // been restored (`ready`), an empty one has nothing to check out — send it to
-  // /cart, which shows the empty state and the way back to the catalogue.
+  // /cart, which shows the empty state and the way back to the catalogue. The
+  // one-second grace keeps a momentary post-sign-up auth flip from bouncing
+  // the shopper: a genuine sign-out still redirects, just a beat later.
   useEffect(() => {
     if (cart.ready && cart.lines.length === 0) {
       navigate({ to: "/cart" });
       return;
     }
-    if (!loading && !session) navigate({ to: "/account", search: { next: "/checkout" } });
+    if (loading || session) return;
+    const id = setTimeout(() => navigate({ to: "/account", search: { next: "/checkout" } }), 1_000);
+    return () => clearTimeout(id);
   }, [cart.ready, cart.lines.length, loading, session, navigate]);
 
   if (loading || !data) return <div className="page-content wrap">Loading checkout…</div>;
@@ -86,10 +110,7 @@ function Checkout() {
     const p = data.products.find((p) => p.id === l.product.id);
     return !p?.verified || p.stock < l.quantity;
   });
-  const canOrder =
-    data.settings.ordering_enabled &&
-    !unavailable &&
-    (form.payment_method !== "momo" || !!(data.settings.momo_number && data.settings.momo_name));
+  const canOrder = data.settings.ordering_enabled && !unavailable;
   const place = async () => {
     setBusy(true);
     setError("");
@@ -99,6 +120,7 @@ function Checkout() {
         items: cart.lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
       });
       sessionStorage.setItem("mb-receipt", JSON.stringify(order));
+      sessionStorage.removeItem(DRAFT_KEY);
       cart.clear();
       navigate({ to: "/confirmation", search: { ref: order.reference } });
     } catch (e) {
@@ -125,7 +147,7 @@ function Checkout() {
       ) : (
         <>
           <div className="checkout-steps">
-            {["Your details", "Payment", "Review & place order"].map((label, i) => (
+            {["Your details", "Review & place order"].map((label, i) => (
               <span key={label} className={step === i + 1 ? "active" : ""}>
                 {i + 1}. {label}
               </span>
@@ -137,16 +159,12 @@ function Checkout() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   setError("");
-                  if (step < 3) setStep(step + 1);
+                  if (step < 2) setStep(step + 1);
                   else place();
                 }}
               >
                 <h2 className="mb-6 text-2xl">
-                  {step === 1
-                    ? "Where should your order go?"
-                    : step === 2
-                      ? "How would you like to pay?"
-                      : "Check your order"}
+                  {step === 1 ? "Where should your order go?" : "Check your order"}
                 </h2>
                 {step === 1 && (
                   <>
@@ -191,12 +209,12 @@ function Checkout() {
                         {
                           id: "delivery" as const,
                           title: "Courier delivery",
-                          text: "To your address in Ghana",
+                          text: "To your address in Ghana · Pay cash on arrival",
                         },
                         {
                           id: "pickup" as const,
                           title: "Abelenkpe in-store pickup",
-                          text: "Collection only · Mobile Money required",
+                          text: "Collection only · Pay at the shop",
                         },
                       ].map((o) => (
                         <label className="solid-panel cursor-pointer" key={o.id}>
@@ -238,101 +256,13 @@ function Checkout() {
                       </div>
                     ) : (
                       <p className="mt-6 text-sm text-muted-foreground">
-                        {data.settings.address}. {data.settings.hours}. Wait for staff to confirm
-                        payment and mark your order ready before collecting.
+                        {data.settings.address}. {data.settings.hours}. Wait for your order to be
+                        marked ready, then collect it and pay at the counter.
                       </p>
                     )}
                   </>
                 )}
                 {step === 2 && (
-                  <>
-                    <div className="grid grid-cols-1 gap-3">
-                      <label className="solid-panel cursor-pointer">
-                        <input
-                          type="radio"
-                          className="!mr-2 !w-auto !min-h-0"
-                          name="payment"
-                          checked={form.payment_method === "momo"}
-                          onChange={() => set("payment_method", "momo")}
-                        />
-                        Mobile Money
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          MTN MoMo, Telecel Cash or AirtelTigo Money. Our staff verifies your
-                          reference manually.
-                        </p>
-                      </label>
-                      {form.fulfillment === "delivery" && (
-                        <label className="solid-panel cursor-pointer">
-                          <input
-                            type="radio"
-                            className="!mr-2 !w-auto !min-h-0"
-                            name="payment"
-                            checked={form.payment_method === "cod"}
-                            onChange={() => set("payment_method", "cod")}
-                          />
-                          Cash on Delivery
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Pay cash when the courier arrives at your delivery address.
-                          </p>
-                        </label>
-                      )}
-                    </div>
-                    {form.payment_method === "momo" ? (
-                      <div className="mt-6">
-                        <label>
-                          Mobile Money provider
-                          <select
-                            value={form.provider}
-                            onChange={(e) => set("provider", e.target.value)}
-                          >
-                            {["MTN MoMo", "Telecel Cash", "AirtelTigo Money"].map((p) => (
-                              <option key={p}>{p}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <div className="solid-panel my-5 text-sm">
-                          <p className="font-semibold">Transfer {money(total, true)}</p>
-                          {canOrder ? (
-                            <>
-                              <p className="mt-2">
-                                To {data.settings.momo_number} — {data.settings.momo_name}
-                              </p>
-                              <p className="mt-2">
-                                Confirm the recipient name before sending. Enter the reference from
-                                your provider below.
-                              </p>
-                            </>
-                          ) : (
-                            <p className="mt-2 text-muted-foreground">
-                              Do not send money yet. Ordering and recipient details are awaiting
-                              store verification.
-                            </p>
-                          )}
-                          <p className="mt-3 text-xs text-muted-foreground">
-                            Submitting a reference is not payment confirmation. Never share your
-                            MoMo PIN or OTP.
-                          </p>
-                        </div>
-                        <label>
-                          Transaction reference
-                          <input
-                            required
-                            minLength={5}
-                            value={form.transaction_reference}
-                            onChange={(e) => set("transaction_reference", e.target.value)}
-                            placeholder="Reference from your transfer receipt"
-                          />
-                        </label>
-                      </div>
-                    ) : (
-                      <p className="mt-5 text-sm text-muted-foreground">
-                        Have {money(total, true)} ready in cash for the courier. No online payment
-                        is required.
-                      </p>
-                    )}
-                  </>
-                )}
-                {step === 3 && (
                   <div className="space-y-6">
                     <div className="solid-panel">
                       <h3>Your details</h3>
@@ -349,14 +279,12 @@ function Checkout() {
                     <div className="solid-panel">
                       <h3>Payment</h3>
                       <p className="mt-3 text-sm">
-                        {form.payment_method === "momo"
-                          ? `${form.provider} — Reference: ${form.transaction_reference}`
-                          : "Cash on courier arrival"}
+                        {form.fulfillment === "pickup"
+                          ? "Pay at the shop when you collect your order."
+                          : "Pay cash to the courier when your order arrives."}
                       </p>
                       <p className="mt-2 text-xs text-muted-foreground">
-                        {form.payment_method === "momo"
-                          ? "Payment pending manual staff verification."
-                          : "Cash collected by the courier on delivery."}
+                        No payment is taken online. Have the exact amount ready where possible.
                       </p>
                     </div>
                     <label className="filter-line">
@@ -379,10 +307,10 @@ function Checkout() {
                       Back
                     </Button>
                   )}
-                  <Button type="submit" disabled={busy || (step === 3 && !canOrder)}>
+                  <Button type="submit" disabled={busy || (step === 2 && !canOrder)}>
                     {busy
                       ? "Placing order…"
-                      : step < 3
+                      : step < 2
                         ? "Continue"
                         : canOrder
                           ? "Place order"
@@ -420,12 +348,14 @@ function Checkout() {
                 <span>{money(total, true)}</span>
               </div>
               <p className="mt-4 text-xs text-muted-foreground">
-                Prices rechecked by the store when your order is placed.
+                {form.fulfillment === "pickup"
+                  ? "Pay at the shop when you collect your order."
+                  : "Pay cash when your order arrives."}{" "}
+                Prices are rechecked by the store when your order is placed.
               </p>
               {!canOrder && (
                 <p className="mt-4 rounded-lg bg-secondary p-3 text-xs">
-                  This is a sample catalogue. Orders remain disabled until inventory and payment
-                  details are verified.
+                  Orders are temporarily closed. Contact the Abelenkpe shop or check back soon.
                 </p>
               )}
             </aside>

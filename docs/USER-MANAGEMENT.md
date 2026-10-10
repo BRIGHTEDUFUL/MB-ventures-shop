@@ -289,7 +289,6 @@ await setPermission({
 - `catalogue.categories` - Manage categories
 - `catalogue.settings` - Storefront copy, featured picks
 - `catalogue.delivery` - Delivery zone fees
-- `catalogue.momo` - Mobile Money wallet (admin-only by default)
 
 **Inventory:**
 

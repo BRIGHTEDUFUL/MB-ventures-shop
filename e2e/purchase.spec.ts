@@ -16,6 +16,11 @@ import { waitForHydration } from "./helpers";
 const STAFF_EMAIL = process.env.E2E_STAFF_EMAIL ?? "e2e.staff@example.com";
 const STAFF_PASSWORD = process.env.E2E_STAFF_PASSWORD ?? "E2eStaff!2026";
 
+// The trace writer races context close on some Windows setups (sync/AV
+// scanning of test-results), turning green runs into ENOENT failures.
+// Screenshots and the error-context snapshot are still captured on failure.
+test.use({ trace: "off" });
+
 /** Shared between the tests in this file (one worker, tests run in order). */
 const journey = { reference: "", phone: "", initialStock: "" };
 
@@ -27,19 +32,19 @@ test.describe("Live purchase journey", () => {
     "opt in with `npm run test:e2e:live` — this writes a real order to dev",
   );
 
-  test("shopper signs up, checks out with MoMo and tracks the order", async ({ page, browser }) => {
+  test("shopper signs up, checks out and tracks the order", async ({ page, browser }) => {
     const stamp = Date.now();
     const email = `e2e.shopper.${stamp}@example.com`;
     const name = "E2E Shopper";
     journey.phone = "0240000444";
-    const reference = `E2E${stamp}`;
     const address = "12 Abelenkpe lane, Accra — opposite the taxi rank";
 
-    // 1. The only verified, in-stock product in the seed catalogue.
-    await page.goto("/product/ergonomic-chair");
+    // 1. A cheap, in-stock real product — the run orders one and cancels at
+    //    the end, so dev stock finishes where it started.
+    await page.goto("/product/rock-360-phone-tablet-stand");
     await waitForHydration(page);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Ergonomic mesh office chair" }),
+      page.getByRole("heading", { level: 1, name: /Rotating Foldable Phone/ }),
     ).toBeVisible();
     // Remember what the shelf says now — the run must leave it this way.
     const stockLine = await page.getByText(/In stock · \d+ available/).textContent();
@@ -60,6 +65,7 @@ test.describe("Live purchase journey", () => {
     await expect(page.locator(".cart-line")).toHaveCount(1);
     await page.getByRole("link", { name: /checkout/i }).click();
     await page.waitForURL(/\/account\?next=%2Fcheckout|\/account\?next=\/checkout/);
+    await waitForHydration(page);
 
     await page.getByRole("button", { name: /New here\? Create an account/ }).click();
     await page.getByLabel("Full name").fill(name);
@@ -68,19 +74,26 @@ test.describe("Live purchase journey", () => {
     await page.getByLabel("Password").fill("Shopper!2026");
     await page.locator("form").getByRole("button", { name: "Create account" }).click();
     await page.waitForURL(/\/checkout/, { timeout: 30_000 });
+    await waitForHydration(page);
 
     // 3. Step one — delivery details (the phone comes from the profile).
+    //    Right after sign-up the auth client can resolve to "signed out" for
+    //    a beat, which bounces checkout through /account and back — a click
+    //    landing inside that window is swallowed by the unmount. The form is
+    //    drafted to sessionStorage, so retrying loses nothing.
     await expect(page.getByRole("heading", { name: /Where should your order go/ })).toBeVisible();
     await page.getByLabel("Street address & landmark").fill(address);
-    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByLabel("Street address & landmark")).toHaveValue(address);
+    await expect(async () => {
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expect(page.getByRole("heading", { name: /Check your order/ })).toBeVisible({
+        timeout: 2_000,
+      });
+    }).toPass({ timeout: 30_000 });
 
-    // 4. Step two — Mobile Money reference.
-    await expect(page.getByRole("heading", { name: /How would you like to pay/ })).toBeVisible();
-    await page.getByLabel("Transaction reference").fill(reference);
-    await page.getByRole("button", { name: "Continue" }).click();
-
-    // 5. Step three — review and place.
-    await expect(page.getByRole("heading", { name: /Check your order/ })).toBeVisible();
+    // 4. Step two — review and place. No payment details are collected:
+    //    the courier takes cash on arrival.
+    await expect(page.getByText(/Pay cash to the courier when your order arrives/i)).toBeVisible();
     await page.locator('.filter-line input[type="checkbox"]').check();
     const placeButton = page.getByRole("button", { name: "Place order" });
     await expect(placeButton, "ordering must be open in dev for this run").toBeEnabled();
@@ -92,7 +105,7 @@ test.describe("Live purchase journey", () => {
     journey.reference = referenceFromUrl;
     await expect(page.getByText(referenceFromUrl)).toBeVisible();
 
-    // 6. Guest tracking — no session, reference + phone only.
+    // 5. Guest tracking — no session, reference + phone only.
     const guest = await browser.newContext();
     const tracker = await guest.newPage();
     await tracker.goto("/track");
@@ -105,13 +118,13 @@ test.describe("Live purchase journey", () => {
     await guest.close();
   });
 
-  test("staff verifies the payment, advances the order, then closes it", async ({
+  test("staff records the payment, advances the order, then closes it", async ({
     page,
     browser,
   }) => {
     test.skip(!journey.reference, "the shopper test did not place an order");
 
-    // Confirming a MoMo payment and cancelling both ask `window.confirm`, which
+    // Confirming a payment and cancelling both ask `window.confirm`, which
     // Playwright dismisses by default — dismissing would abort the save.
     page.on("dialog", (dialog) => void dialog.accept());
 
@@ -136,7 +149,7 @@ test.describe("Live purchase journey", () => {
     await page.goto("/staff/orders");
     await waitForHydration(page);
     await page
-      .getByPlaceholder("Search reference, customer, phone or MoMo reference")
+      .getByPlaceholder("Search reference, customer, phone or email")
       .fill(journey.reference);
     await page.getByRole("link", { name: new RegExp(escapeRegExp(journey.reference)) }).click();
     await page.waitForURL(/\/staff\/orders\//);
@@ -151,7 +164,7 @@ test.describe("Live purchase journey", () => {
     const paymentSelect = page.getByLabel("Payment status");
     const statusSelect = page.getByLabel("Order status");
 
-    // 3. Confirm the MoMo payment first — a MoMo order cannot advance otherwise.
+    // 3. Record the payment as received (cash on delivery), then advance.
     await paymentSelect.selectOption("confirmed");
     await expect(paymentSelect).toHaveValue("confirmed");
     await page.getByRole("button", { name: "Save update" }).click();
@@ -173,7 +186,7 @@ test.describe("Live purchase journey", () => {
     // The stock the order took comes back — that is the restock, proven on the
     // storefront rather than in the database.
     const shelf = await browser.newPage();
-    await shelf.goto("/product/ergonomic-chair");
+    await shelf.goto("/product/rock-360-phone-tablet-stand");
     await expect(shelf.getByText(journey.initialStock)).toBeVisible({ timeout: 20_000 });
     await shelf.close();
   });

@@ -55,7 +55,7 @@ export function AuthFrame({ title, lead, wide, children }: AuthFrameProps) {
               </li>
               <li>
                 <Wallet aria-hidden />
-                MoMo &amp; cash on delivery
+                Pay on pickup or delivery
               </li>
             </ul>
           </div>

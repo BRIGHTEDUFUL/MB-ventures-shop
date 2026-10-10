@@ -48,8 +48,8 @@ function Content() {
               equipment online or visit our shop.
             </p>
             <p>
-              Our team handles orders and manually verifies every Mobile Money payment. Choose
-              delivery across Ghana or collection at Abelenkpe.
+              Our team handles every order personally. Choose delivery across Ghana or collection at
+              Abelenkpe, and pay when you collect or when your order arrives.
             </p>
           </>
         )}
@@ -79,9 +79,9 @@ function Content() {
             </p>
             <h2 className="text-xl text-foreground">Abelenkpe in-store pickup</h2>
             <p>
-              Collection is free at {s?.address || "Abelenkpe taxi rank, Accra"}. Pickup orders
-              require Mobile Money, confirmed by staff. Wait until your order is ready before
-              visiting. Pickup is a fulfillment option, not a payment method.
+              Collection is free at {s?.address || "Abelenkpe taxi rank, Accra"}. Wait until your
+              order is marked ready before visiting, then collect it and pay at the counter in cash
+              or Mobile Money.
             </p>
           </>
         )}
@@ -102,11 +102,11 @@ function Content() {
           [
             {
               q: "How can I pay?",
-              a: "MTN MoMo, Telecel Cash or AirtelTigo Money with a transaction reference for manual staff confirmation. For delivery orders, cash can be paid when the courier arrives.",
+              a: "No payment is taken online. For delivery orders, pay the courier in cash when your order arrives. For pickup orders, pay at the Abelenkpe shop counter when you collect — cash or Mobile Money in person.",
             },
             {
               q: "Can I collect from Abelenkpe?",
-              a: "Yes. Pickup from the Abelenkpe taxi rank shop is free and requires Mobile Money. Wait for payment confirmation and ready status before collecting.",
+              a: "Yes. Pickup from the Abelenkpe taxi rank shop is free. Wait for the ready status before collecting, then pay at the counter.",
             },
             {
               q: "Do you offer nationwide delivery?",
@@ -114,7 +114,7 @@ function Content() {
             },
             {
               q: "Why are items marked sample?",
-              a: "Catalogue prices, inventory and recipient details must be verified by the store before ordering opens. Do not transfer funds while ordering is disabled.",
+              a: "Draft or unverified items are hidden from the catalogue until the shop confirms them. Live products can be ordered now.",
             },
             {
               q: "How do I check my order?",
@@ -154,15 +154,12 @@ function Content() {
         {page === "terms" && (
           <>
             <p>
-              Prices are in Ghana cedis. Sample catalogue prices and stock are not confirmed offers.
-              Ordering remains disabled until the shop verifies product information and payment
-              recipient details.
+              Prices are in Ghana cedis and are rechecked by the store when your order is placed.
             </p>
             <p>
-              Mobile Money orders require a transaction reference; staff must confirm the payment
-              before processing. Delivery customers may choose Cash on Delivery and pay the courier
-              on arrival. Pickup from the Abelenkpe taxi rank shop requires confirmed Mobile Money
-              payment.
+              No payment is taken online. Delivery orders pay the courier in cash when the order
+              arrives. Pickup orders pay at the Abelenkpe shop counter when collecting. An order may
+              be cancelled before it is dispatched; contact the shop with your order reference.
             </p>
             <p>
               Delivery timelines are estimates. Contact the shop for changes, cancellation, returns
@@ -174,14 +171,13 @@ function Content() {
         {page === "privacy" && (
           <>
             <p>
-              We collect your name, email, phone number, delivery address, cart items and Mobile
-              Money transaction reference to fulfill and track your order. Authorized store staff
-              can access order information.
+              We collect your name, email, phone number, delivery address and cart items to fulfill
+              and track your order. Authorized store staff can access order information.
             </p>
             <p>
               Your cart is saved in this browser. A receipt may be kept for the current browser
-              session. Account authentication uses secure managed services. Never provide your
-              Mobile Money PIN or OTP.
+              session. Account authentication uses secure managed services. The store never asks for
+              your Mobile Money PIN or OTP.
             </p>
             <p>
               Contact the store to request access to or correction of your customer information. A

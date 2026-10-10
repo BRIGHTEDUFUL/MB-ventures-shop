@@ -69,6 +69,100 @@ still open is listed under **Open**.
 
 ---
 
+## Checkout Resilience & Storefront Hardening (9 October 2026)
+
+**Status:** Complete — all gates green (tsc, lint, 179 unit tests, prettier,
+build, 32 Playwright checks, live purchase journey 4/4).
+
+### Done
+
+- **Checkout draft persistence** (`src/routes/checkout.tsx`) — root cause found
+  via trace analysis: right after sign-up, Convex Auth can resolve to "signed
+  out" for a beat, which bounced checkout through `/account?next=/checkout` and
+  back, remounting the component — a Continue click landing in that window was
+  swallowed and every typed field was lost. The draft (`mb-checkout-draft` in
+  sessionStorage) now stores **step + form fields**, so any remount restores the
+  shopper exactly where they were; it is cleared when an order is placed. The
+  sign-out redirect also gained a one-second grace, so a transient auth flip
+  never navigates at all (a genuine sign-out still bounces, just a beat later).
+- **Product pages no longer overflow phones** — the specs table's min-content
+  stretched the overview grid track past the viewport (575px document at a 320px
+  viewport on the standing-desk page). `min-width: 0` on `.section.grid > *`
+  lets the existing `overflow-x: auto` scroll container do its job; all 11 real
+  product pages now fit the 320/360/390/414 overflow matrix.
+- **Sitemap filters hidden drafts** — `/sitemap.xml` was advertising
+  `/product/ergonomic-chair` and the other hidden demo products, which 404 for
+  shoppers (violating the visibility invariant in AGENTS.md §4c). The route now
+  drops `visible: false` rows.
+- **e2e specs point at real products** — the og:image and heading-outline checks
+  use real visible products (the old demo chair is a hidden draft), and the live
+  journey orders `rock-360-phone-tablet-stand` in place of the hidden chair.
+- **First-tap reliability in specs** — the product grid becomes interactive just
+  after the hydration marker clears, so the specs now retry the first
+  interaction (checkout Continue, homepage add-to-cart) until the app reflects
+  it — the same race a very fast shopper can hit.
+- **Live journey trace off** (`e2e/purchase.spec.ts`) — the trace writer races
+  context close on this Windows setup (`ENOENT` under `test-results`), turning
+  green runs red; screenshots and the error-context snapshot still capture on
+  failure.
+- **`inventory_import:patchHomeCopy`** — idempotent internal mutation that swaps
+  the pre-pay-later homepage copy (`home_cta_body` and the trust-strip wallet
+  row) for the current defaults **only when it still matches the exact old
+  text**, so a deliberate staff edit is never clobbered. Dev already carries the
+  new copy; production still has the old one, so run it as part of the next
+  production deploy: `npx convex run inventory_import:patchHomeCopy --env-file
+.env.prod.local`
+
+---
+
+## Pay-later Checkout — In-App MoMo Flow Removed (9 October 2026)
+
+**Status:** Complete — all gates green (tsc, lint, 179 unit tests, prettier,
+build, 32 Playwright checks).
+
+### Done
+
+- **Checkout reduced to two steps** (`src/routes/checkout.tsx`) — details →
+  review & place. The Mobile Money step (provider picker + transaction
+  reference) is gone; nothing in the browser asks for payment details any more.
+- **Payment method derived server-side** — `orders.place` accepts only
+  customer, fulfilment, zone and items; it sets `payment_method:
+"pay_at_store"` for pickup and `"cod"` for delivery. `provider` /
+  `transaction_reference` are legacy-null on every new order and no longer
+  appear in the staff order search.
+- **MoMo recipient system removed** — `catalogue.saveMomoSettings`, internal
+  `catalogue:setMomo`, `applyMomoRecipient`, `validateMomoRecipient`,
+  `MOMO_PROVIDERS` and the `catalogue.momo` permission key are gone. The
+  ordering switch no longer depends on a saved wallet. Stale stored
+  `catalogue.momo` permission overrides are inert (stored overrides are
+  filtered against the current permission keys).
+- **Schema kept backwards-compatible** — `paymentMethod` union widened to
+  `"momo" | "cod" | "pay_at_store"`; `momo_number` / `momo_name` on
+  `store_settings` became optional legacy fields. Existing production MoMo
+  orders keep validating unchanged — no destructive schema change and no data
+  migration.
+- **Status rules simplified** — "Verify Mobile Money before processing" is
+  gone; the only payment gate left is "Confirm payment before completing the
+  order", so staff can work an order while the cash is still on its way.
+- **Staff UI updated** — orders list lead/search copy, order detail Payment
+  panel (friendly method labels; provider/reference rows only for legacy MoMo
+  orders), confirmation dialog now asks whether the cash has been received.
+  Customization lost its "Payments" tab and the ordering-pane MoMo warning.
+- **Emails updated** — customer confirmation says "pay at the counter"
+  (pickup) or "pay the courier in cash" (delivery); the admin alert leads on
+  fulfilment. Legacy MoMo payloads still render their provider/reference rows.
+  Samples now mirror the derived-method model.
+- **Copy swept** — footer, auth frame, about/delivery/FAQ/terms/privacy pages,
+  home defaults (`home_cta_body`, trust strip), staff team/hub copy: no more
+  "manual MoMo verification" language anywhere customer- or staff-facing.
+- **Tests** — MoMo-gate tests replaced with method-derivation and
+  pending-payment-advance coverage; the `saveMomoSettings` / `setMomo`
+  suites were deleted; email template tests gained a legacy-MoMo rendering
+  check. 179 tests total. `e2e/purchase.spec.ts` rewritten for the two-step
+  flow (search placeholder, confirm-payment dialog, staff flow).
+
+---
+
 ## Real Inventory Launch, Hero Image & Docs Overhaul (9 October 2026)
 
 **Status:** Live — ordering enabled, real products on the storefront.

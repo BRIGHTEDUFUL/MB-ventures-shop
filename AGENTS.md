@@ -27,7 +27,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Auth        | Convex Auth · email + password only · no OAuth · no email verify     |
 | Client data | TanStack Query via `@convex-dev/react-query`                         |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set              |
-| Tests       | Vitest (175 tests) + Playwright (32 e2e checks)                      |
+| Tests       | Vitest (179 tests) + Playwright (32 e2e checks)                      |
 | CI/CD       | GitHub Actions → Hostinger VPS (Node/PM2)                            |
 
 ---
@@ -44,7 +44,7 @@ convex/
     dto.ts                productDTO, categoryDTO, settingsDTO, orderDTO
     rules.ts              Pure business rules shared by mutations and UI
   orders.ts               orders.place, orders.staffUpdate, orders.track
-  catalogue.ts            catalogue.saveSettings, saveDeliverySettings, saveMomoSettings
+  catalogue.ts            catalogue.saveSettings, saveDeliverySettings
   users.ts                users.me, users.grantStaff
   seed.ts                 seed:seed, seed:syncLocation
 
@@ -53,7 +53,7 @@ src/
     index.tsx             Homepage — hero, hotspots, featured rail
     catalogue.tsx         Product listing with filters
     product.$slug.tsx     Product detail page
-    checkout.tsx          3-step checkout
+    checkout.tsx          2-step checkout (details → review & place)
     staff.tsx             Staff hub (orders, inventory, team, customization)
   lib/
     store-images.ts       Image key → URL mapping + intrinsic sizes
@@ -120,11 +120,11 @@ mutation. The browser shows estimates only.
 
 ### 4d. Auth roles
 
-| Role     | Access                                                    |
-| -------- | --------------------------------------------------------- |
-| customer | Browse, cart, checkout, account, order tracking           |
-| staff    | + orders, inventory, catalogue editing (no MoMo settings) |
-| admin    | + MoMo recipient settings, team management                |
+| Role     | Access                                          |
+| -------- | ----------------------------------------------- |
+| customer | Browse, cart, checkout, account, order tracking |
+| staff    | + orders, inventory, catalogue editing          |
+| admin    | + team management                               |
 
 Role rows live in `user_roles`. Guards: `lib/auth.requireStaff` / `requireAdmin`.
 All user-facing errors must throw `ConvexError({ message })`.
@@ -137,6 +137,15 @@ Images are referenced by a **string key**, not a URL. Key resolution is in
 1. Copy file to `public/images/` (or `public/images/products/`)
 2. Add `"key": "/images/path.ext"` to the `base` object
 3. Add `"key": [width, height]` to the `sizes` object
+
+### 4f. Payments happen offline
+
+There is no in-app payment step. `orders.place` derives `payment_method` from
+fulfilment — `pickup ⇒ "pay_at_store"`, `delivery ⇒ "cod"` — and never accepts
+provider or transaction-reference arguments. The `"momo"` literal stays in the
+schema only so pre-existing MoMo orders keep validating; `store_settings.momo_number` /
+`momo_name` are legacy optional fields that no UI or mutation touches. Staff record
+receipt in `/staff`; completing an order still requires `payment_status: "confirmed"`.
 
 ---
 
@@ -178,6 +187,13 @@ npx convex run inventory_import:apply --env-file .env.prod.local
 Hides demo products, upserts 11 real products, sets stock to 10 each,
 enables ordering, sets hero image + featured product IDs.
 
+Homepage copy refresh (pay-later wording; only replaces the exact old strings,
+so deliberate staff edits survive — run once on production with the deploy):
+
+```sh
+npx convex run inventory_import:patchHomeCopy --env-file .env.prod.local
+```
+
 ### Seeding
 
 ```sh
@@ -200,7 +216,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 175/175
+npm test                  # 179/179
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 32/32 Playwright checks
@@ -243,7 +259,9 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 - hero_image: "hero-workspace" (public/images/hero-workspace.webp — 1376x768)
 - hero_title: "Your workspace. Elevated."
 - Featured hotspots: electric-standing-desk-rgb-160, 360-rotating-laptop-stand, custom-macro-mechanical-keyboard
-- MoMo recipient: configured (admin-only at /staff Customization)
+- Payments: no in-app payment — pickup pays at the shop counter, delivery pays cash on
+  arrival; staff mark payment received in /staff (legacy MoMo recipient fields are kept
+  in the row for old orders but no UI or mutation touches them)
 
 ---
 
@@ -312,6 +330,8 @@ npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"si
 - Do NOT bypass applyStockChange — never patch products.stock directly
 - Do NOT delete demo products — they are preserved intentionally
 - Do NOT add OAuth, social login or email verification to signup
+- Do NOT reintroduce in-app payment inputs (MoMo references, provider pickers) — payment
+  is always collected offline and `payment_method` is derived from fulfilment in `orders.place`
 - Do NOT use Resend or SendGrid — email transport is Web3Forms only
 - Do NOT push CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY or JWKS to git
 - Do NOT invent product slugs or prices — use only convex/inventory_import.ts

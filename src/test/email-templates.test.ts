@@ -123,7 +123,30 @@ describe("order emails", () => {
     expect(delivery.text).toContain("GH₵ 3,699.00"); // subtotal
     expect(delivery.text).toContain("GH₵ 30.00"); // delivery fee
     expect(delivery.text).toContain("GH₵ 3,729.00"); // total
-    expect(delivery.text).toContain("1839201746");
+    // Pay-later copy: the method is derived from fulfilment, never typed in.
+    expect(delivery.text).toContain("Payment: Cash on delivery");
+    expect(delivery.text).toContain("Pay the courier in cash when your order arrives.");
+  });
+
+  it("still renders a legacy in-app MoMo order with its provider and reference", () => {
+    const legacy = {
+      ...sampleDataFor("order-received", ctx),
+      payment_method: "momo",
+      provider: "MTN MoMo",
+      transaction_reference: "1839201746",
+    };
+    const rendered = renderTemplate("order-received", legacy, ctx);
+    expect(rendered.text).toContain("Payment: Mobile Money");
+    expect(rendered.text).toContain("Reference: 1839201746");
+
+    const admin = renderTemplate(
+      "admin-new-order",
+      { ...sampleDataFor("admin-new-order", ctx), ...legacy },
+      ctx,
+    );
+    expect(admin.text).toContain("Payment: Mobile Money");
+    expect(admin.text).toContain("Provider: MTN MoMo");
+    expect(admin.text).toContain("Reference: 1839201746");
   });
 
   it("words delivery and pickup differently", () => {

@@ -29,7 +29,6 @@ const settings: FeeSettings = {
   greater_fee: 45,
   nationwide_fee: 70,
   free_threshold: 5000,
-  momo_number: "0241234567",
   ordering_enabled: true,
 };
 

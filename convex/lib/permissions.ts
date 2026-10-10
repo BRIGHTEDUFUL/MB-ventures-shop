@@ -58,11 +58,6 @@ export const PERMISSION_CATALOG: Record<PermissionKey, PermissionSpec> = {
     floor: "staff",
   },
   "catalogue.delivery": { label: "change delivery fees", group: "Catalogue", floor: "staff" },
-  "catalogue.momo": {
-    label: "change the Mobile Money recipient",
-    group: "Catalogue",
-    floor: "admin",
-  },
   "inventory.view": { label: "view stock and movements", group: "Inventory", floor: "staff" },
   "inventory.adjust": { label: "adjust stock", group: "Inventory", floor: "staff" },
   "inventory.stocktake": { label: "apply a stocktake", group: "Inventory", floor: "staff" },

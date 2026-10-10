@@ -6,7 +6,8 @@
 > storefront (browse, sign-up with phone, checkout prefill, ordering gate, staff
 > authorization, anonymous tracking). See AGENTS.md → _Deployments_ for the
 > commands. Remaining owner actions: register the real account and grant staff,
-> enter verified MoMo details + flip `ordering_enabled` from `/staff`, and set
+> flip `ordering_enabled` from `/staff` (payment is collected offline — no
+> recipient details needed), and set
 > `SITE_URL` to the real frontend domain if verification emails are ever added.
 
 Goal: move **all** data, business logic, authorization, file storage and identity from Supabase

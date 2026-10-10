@@ -36,14 +36,14 @@ staff default when set — no `.env*` file sets it today, so the default stands.
 
 Storefront: `https://mbventuresghana.com`.
 
-| Email                           | Role    | Password                         | Notes                                        |
-| ------------------------------- | ------- | -------------------------------- | -------------------------------------------- |
-| `manager@mbventuresghana.com`   | `admin` | `MBVentures2025!Manager#Admin`   | New Store Manager (Full admin rights)        |
-| `attendant@mbventuresghana.com` | `staff` | `MBVentures2025!Attendant#Staff` | New Shop Attendant (Orders & inventory)      |
-| `admin@mbventuresghana.com`     | `admin` | `MBVentures2025!Admin#Secure`    | Full store admin (MoMo settings, team, fees) |
-| `staff@mbventuresghana.com`     | `staff` | `MBVentures2025!Staff#Secure`    | Store staff (orders, products, inventory)    |
-| `e2e.staff@example.com`         | `admin` | `E2eStaff!2026`                  | E2E test admin account                       |
-| `smoke-prod@example.com`        | `admin` | unknown                          |                                              |
+| Email                           | Role    | Password                         | Notes                                     |
+| ------------------------------- | ------- | -------------------------------- | ----------------------------------------- |
+| `manager@mbventuresghana.com`   | `admin` | `MBVentures2025!Manager#Admin`   | New Store Manager (Full admin rights)     |
+| `attendant@mbventuresghana.com` | `staff` | `MBVentures2025!Attendant#Staff` | New Shop Attendant (Orders & inventory)   |
+| `admin@mbventuresghana.com`     | `admin` | `MBVentures2025!Admin#Secure`    | Full store admin (team, fees, settings)   |
+| `staff@mbventuresghana.com`     | `staff` | `MBVentures2025!Staff#Secure`    | Store staff (orders, products, inventory) |
+| `e2e.staff@example.com`         | `admin` | `E2eStaff!2026`                  | E2E test admin account                    |
+| `smoke-prod@example.com`        | `admin` | unknown                          |                                           |
 
 Sign in at `/account` (or `/login`, `/auth/signin`). When signed in with staff or admin privileges, the account page shows a direct **Store staff hub** button linking to `/staff` (and `/admin` automatically redirects to `/staff`).
 

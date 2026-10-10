@@ -69,9 +69,17 @@ test.describe("Touch and form ergonomics", () => {
     // The cart provider restores from localStorage after the shell hydrates;
     // a click before that lands on a button with no handler attached yet.
     await page.waitForFunction(() => localStorage.getItem("mb-cart") !== null);
-    await page.locator(".product-add").first().click();
-    // Wait until the add has actually been persisted, otherwise the immediate
-    // navigation can race the cart update and /cart renders its empty state.
+    // The product grid can still settle just after the hydration marker clears,
+    // so retry the tap until the cart reflects the add, then make sure it was
+    // persisted before navigating — otherwise /cart can render its empty state.
+    await expect(async () => {
+      await page.locator(".product-add").first().click();
+      await expect(page.locator('button[aria-label^="Open cart"]')).toHaveAttribute(
+        "aria-label",
+        /Open cart, [1-9]\d* items/,
+        { timeout: 1_000 },
+      );
+    }).toPass({ timeout: 15_000 });
     await page.waitForFunction(
       () => JSON.parse(localStorage.getItem("mb-cart") || "[]").length > 0,
     );

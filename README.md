@@ -17,12 +17,15 @@ Ghana cedis, and order for delivery across Ghana or collection from the Abelenkp
 
 ## Payments and fulfilment
 
-1. **Mobile Money** (MTN MoMo, Telecel Cash, AirtelTigo Money). The shopper submits a transaction
-   reference, which staff verify manually before the order advances.
-2. **Cash on Delivery** when the courier arrives.
+No payment is taken online — money always changes hands in person:
 
-**In-store pickup** at the Abelenkpe taxi rank shop is available alongside three delivery zones
-(Accra Central, Greater Accra, Nationwide).
+1. **Pay at the shop** — pickup orders from the Abelenkpe taxi rank shop are paid at the
+   counter (cash or Mobile Money in person) when the order is collected.
+2. **Cash on delivery** — delivery orders pay the courier in cash when the order arrives.
+
+The payment method is derived server-side from the fulfilment choice. Staff record receipt in
+`/staff`; completing an order requires the payment to be marked as received. Three delivery
+zones are available (Accra Central, Greater Accra, Nationwide) alongside in-store pickup.
 
 ## Stack
 
@@ -51,7 +54,7 @@ Other commands:
 npm run build    # production build
 npm start         # run the built server
 npm run lint      # eslint
-npm test          # vitest (175 tests)
+npm test          # vitest (179 tests)
 npm run format    # prettier
 npm run test:e2e  # Playwright — 32 checks (head, outline, mobile overflow matrix)
 ```
@@ -63,7 +66,8 @@ Environment variables are documented in `.env.example` — copy it to `.env.loca
 ## Architecture notes
 
 - **Server is authoritative.** Prices, stock, delivery fees and order totals are recomputed inside
-  Convex mutations; anything the browser shows is an estimate until the order is placed.
+  Convex mutations; anything the browser shows is an estimate until the order is placed. The
+  payment method (`pay_at_store` for pickup, `cod` for delivery) is derived the same way.
 - Business rules live in `convex/lib/rules.ts` as pure functions shared by the mutations and the UI,
   and are covered by `src/test/*.test.ts`.
 - **Browsing needs no account.** Placing an order does: signed-out shoppers are sent to

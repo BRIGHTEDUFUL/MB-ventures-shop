@@ -325,9 +325,9 @@ const sampleOrder = (fulfillment: "delivery" | "pickup") => ({
   subtotal: 100,
   delivery_fee: fulfillment === "pickup" ? 0 : 30,
   total: fulfillment === "pickup" ? 100 : 130,
-  payment_method: "momo",
-  provider: "MTN MoMo",
-  transaction_reference: "TEST-REF-001",
+  payment_method: fulfillment === "pickup" ? "pay_at_store" : "cod",
+  provider: "",
+  transaction_reference: "",
   address:
     fulfillment === "pickup"
       ? "Abelenkpe taxi rank, Accra, Ghana"

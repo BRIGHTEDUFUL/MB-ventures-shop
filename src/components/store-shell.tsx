@@ -452,7 +452,7 @@ export function StoreFooter() {
       </div>
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} MB Ventures GH · Ghana</span>
-        <span>MTN MoMo · Telecel Cash · AirtelTigo Money · Cash on delivery</span>
+        <span>Pickup at Abelenkpe · Cash on delivery</span>
         <span className="flex gap-4">
           <Link to="/$page" params={{ page: "terms" }}>
             Terms

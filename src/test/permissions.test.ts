@@ -66,9 +66,7 @@ describe("permissions — role defaults and per-person overrides", () => {
     const admin = await env.admin.query(api.users.myPermissions, {});
     expect(staff).toContain("inventory.adjust");
     expect(staff).not.toContain("team.manage");
-    expect(staff).not.toContain("catalogue.momo");
     expect(admin).toContain("team.manage");
-    expect(admin).toContain("catalogue.momo");
     expect(admin.length).toBeGreaterThan(staff.length);
   });
 

@@ -34,12 +34,11 @@ test.describe("Document head", () => {
   });
 
   test("product pages share their own photo", async ({ page }) => {
-    // A live catalogue product: hidden demo products 404 and legitimately fall
-    // back to the store default image.
-    await page.goto("/product/monitor-light-bar");
+    // A real, visible product — hidden drafts 404 and fall back to the default.
+    await page.goto("/product/electric-standing-desk-rgb-160");
     const image = await page.locator('meta[property="og:image"]').getAttribute("content");
     expect(image).toBeTruthy();
-    expect(image).not.toContain("/images/workspace");
+    expect(image).toContain("/images/products/electric-standing-desk-rgb-160.webp");
   });
 });
 
