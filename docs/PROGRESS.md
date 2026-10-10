@@ -47,11 +47,23 @@ still open is listed under **Open**.
   and the SSH deploy only runs when the secret exists. Note: the VPS also
   auto-deploys `main` via its own git-pull build loop, which is how the
   frontend reaches production within minutes of a push.
+- **Production account audit** — all four documented accounts verified
+  end-to-end in a real browser (sign-in, role badge, permission boundaries
+  both directions, sign-out, zero page errors): `manager@` / `admin@` see
+  the Team grant form, Mobile Money recipient panel and Emails console;
+  `attendant@` / `staff@` are correctly walled out of all three. The
+  undocumented `1234@rmao.com` (Jeffery Glassburn) admin grant left over
+  from 9 October provisioning was revoked via the live Team page — the
+  account remains as a plain customer. `user_roles` now matches
+  `docs/TEST-ACCOUNTS.md` exactly.
 
 ### Verified live
 
 - Sign-in as `manager@…` (admin) and `attendant@…` (staff) on
   mbventuresghana.com — role badges render, `/staff` subpages load.
+- Account audit (10 Oct): manager/admin see every admin surface, staff are
+  gated out of Team grant form, MoMo recipient panel and the Emails console;
+  the role table matches the docs after the `1234@rmao.com` revocation.
 - Homepage serves `hero-workspace.webp` (200), real `⌘`/`·` glyphs, and only
   the four populated category tiles.
 

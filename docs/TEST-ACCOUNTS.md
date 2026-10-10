@@ -6,7 +6,10 @@ and the contact address only, so **every account comes from signing up in the
 app** and gaining privileges from a `user_roles` row afterwards. A user with no
 role row is a plain customer.
 
-Verified against both deployments on **2026-10-09**.
+Verified against production on **2026-10-10** (all four documented accounts,
+end-to-end in a live browser) and development on **2026-10-09**. An
+undocumented admin grant (`1234@rmao.com`, left over from provisioning) was
+revoked on 2026-10-10 — the account now has no role row.
 
 ---
 
