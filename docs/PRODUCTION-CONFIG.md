@@ -209,8 +209,8 @@ Displayed in:
 
 7. **Enable ordering:**
    - Navigate to `/staff` → Customization → Ordering
-   - Verify MoMo recipient details are saved
-   - Toggle `ordering_enabled` to ON
+   - Toggle `ordering_enabled` to ON (no payment details are needed — orders are
+     paid at the shop counter or cash on delivery)
 
 ### Pre-Launch Verification
 
@@ -218,7 +218,7 @@ Displayed in:
 - [ ] SSL certificate active
 - [ ] `https://mbventuresghana.com` loads the storefront
 - [ ] Email system in live mode (not dry-run)
-- [ ] Test order end-to-end with real MoMo details
+- [ ] Test order end-to-end (paid at pickup or cash on delivery)
 - [ ] Staff can access `/staff` and `/admin`
 - [ ] Contact form sends to `info@mbventuresghana.com`
 - [ ] Password reset emails deliver correctly

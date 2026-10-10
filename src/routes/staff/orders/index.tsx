@@ -7,7 +7,7 @@ import { money, pageHead, type Order } from "@/lib/store";
 import { EmptyState, PaymentPill, QueryState, StatusPill } from "@/components/staff/bits";
 
 export const Route = createFileRoute("/staff/orders/")({
-  head: () => pageHead("Orders", "Verify payments, update order status and track every order."),
+  head: () => pageHead("Orders", "Update order status, record payments and track every order."),
   component: OrdersList,
 });
 
@@ -52,13 +52,14 @@ function OrdersList() {
     <div>
       <h2 className="page-title">Orders</h2>
       <p className="page-lead">
-        Verify Mobile Money against the provider's transaction record before confirming payment.
+        Payment is collected offline — cash at the shop counter or to the courier. Mark payment as
+        received once the money is in.
       </p>
 
       <div className="toolbar mt-6">
         <input
           aria-label="Search orders"
-          placeholder="Search reference, customer, phone or MoMo reference"
+          placeholder="Search reference, customer, phone or email"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

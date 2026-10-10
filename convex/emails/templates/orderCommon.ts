@@ -18,8 +18,10 @@ export type OrderEmailFields = {
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
+  // Legacy in-app Mobile Money orders (pre pay-later) still label correctly.
   momo: "Mobile Money",
   cod: "Cash on delivery",
+  pay_at_store: "Pay at the shop",
 };
 
 const ZONE_LABELS: Record<string, string> = {
@@ -44,7 +46,7 @@ export function readOrder(data: Record<string, unknown>): OrderEmailFields {
     .filter((line): line is OrderLine => line !== null);
 
   const fulfillment = str(data["fulfillment"], "delivery");
-  const paymentMethod = str(data["payment_method"], "momo");
+  const paymentMethod = str(data["payment_method"], "cod");
 
   return {
     reference: str(data["reference"], "MB-00000000"),

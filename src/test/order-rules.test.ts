@@ -14,13 +14,11 @@ const feeSettings: FeeSettings = {
   greater_fee: 50,
   nationwide_fee: 100,
   free_threshold: 5000,
-  momo_number: "0241234567",
   ordering_enabled: true,
 };
 
 const order = (overrides: Partial<OrderState> = {}): OrderState => ({
   fulfillment: "delivery",
-  payment_method: "momo",
   status: "received",
   payment_status: "pending",
   ...overrides,
@@ -33,9 +31,6 @@ const checkout = (overrides: Partial<CheckoutInput> = {}): CheckoutInput => ({
   address: "12 Abelenkpe Taxi Rank Road, Accra",
   fulfillment: "delivery",
   zone: "central",
-  payment_method: "momo",
-  provider: "MTN MoMo",
-  transaction_reference: "MP2610001234",
   items: [{ id: "ergonomic-chair", quantity: 1 }],
   ...overrides,
 });
@@ -74,33 +69,25 @@ describe("validateStatusChange — the staff hub's transition guard", () => {
   });
 
   it("keeps 'dispatched' exclusive to delivery orders", () => {
-    expect(
-      validateStatusChange(
-        order({ fulfillment: "pickup", payment_method: "momo" }),
-        "dispatched",
-        "confirmed",
-      ),
-    ).toBe("Status does not match fulfillment.");
+    expect(validateStatusChange(order({ fulfillment: "pickup" }), "dispatched", "confirmed")).toBe(
+      "Status does not match fulfillment.",
+    );
   });
 
-  it("blocks MoMo orders until payment is confirmed", () => {
+  it("lets an order advance to processing while payment is still pending", () => {
+    // Money changes hands offline, so no status short of completion is gated.
     expect(
-      validateStatusChange(
-        order({ payment_method: "momo", payment_status: "pending" }),
-        "processing",
-        "pending",
-      ),
-    ).toBe("Verify Mobile Money before processing.");
+      validateStatusChange(order({ payment_status: "pending" }), "processing", "pending"),
+    ).toBeNull();
   });
 
   it("blocks completion while payment is unconfirmed", () => {
-    // MoMo hits its earlier gate; cash-on-delivery reaches the completion rule.
-    expect(validateStatusChange(order({ payment_method: "cod" }), "completed", "pending")).toBe(
+    expect(validateStatusChange(order(), "completed", "pending")).toBe(
       "Confirm payment before completing the order.",
     );
   });
 
-  it("allows the normal verified MoMo happy path", () => {
+  it("allows the normal paid happy path", () => {
     expect(
       validateStatusChange(order({ payment_status: "confirmed" }), "processing", "confirmed"),
     ).toBeNull();
@@ -142,28 +129,13 @@ describe("validateCheckout — the server-side order gate", () => {
     );
   });
 
-  it("requires Mobile Money details for MoMo payment", () => {
-    expect(validateCheckout(checkout(), { ...feeSettings, momo_number: "" })).toBe(
-      "Mobile Money details or reference are missing.",
-    );
-  });
-
-  it("requires a known provider and reference", () => {
-    expect(validateCheckout(checkout({ provider: "FakePay" }), feeSettings)).toBe(
-      "Mobile Money details or reference are missing.",
-    );
-  });
-
   it("requires an address for delivery but not for pickup", () => {
     expect(validateCheckout(checkout({ address: "" }), feeSettings)).toBe(
       "Enter a delivery address.",
     );
-    expect(
-      validateCheckout(
-        checkout({ fulfillment: "pickup", address: "", payment_method: "momo" }),
-        feeSettings,
-      ),
-    ).toBeNull();
+    expect(validateCheckout(checkout({ fulfillment: "pickup", address: "" }), feeSettings)).toBe(
+      null,
+    );
   });
 
   it("accepts a valid order", () => {

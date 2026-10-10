@@ -4,21 +4,20 @@ import { useState } from "react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../convex/_generated/api";
 import { pageHead, storeQuery } from "@/lib/store";
-import { Panel } from "@/components/staff/bits";
 import { type StorefrontTab } from "@/lib/home-content";
-import { DeliverySettings, MomoSettings, StorefrontSettings } from "@/components/staff/home-editor";
+import { DeliverySettings, StorefrontSettings } from "@/components/staff/home-editor";
 
 export const Route = createFileRoute("/staff/customization")({
   head: () =>
     pageHead(
       "Customization",
-      "Homepage copy, featured products, announcement, WhatsApp, delivery fees and payments.",
+      "Homepage copy, featured products, announcement, WhatsApp, delivery fees and ordering.",
     ),
   component: CustomizationPage,
 });
 
-/** Panes that share `catalogue.saveSettings`, plus the two that own a mutation. */
-type TabId = StorefrontTab | "delivery" | "momo";
+/** Panes that share `catalogue.saveSettings`, plus the one that owns a mutation. */
+type TabId = StorefrontTab | "delivery";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "homepage", label: "Homepage" },
@@ -28,14 +27,13 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "contact", label: "Contact" },
   { id: "ordering", label: "Ordering" },
   { id: "delivery", label: "Delivery fees" },
-  { id: "momo", label: "Payments" },
 ];
 
 function CustomizationPage() {
   const store = useQuery(storeQuery);
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}) });
-  // One tab holds every pane that saves through `saveSettings`; the other two
-  // swap in a different mutation and guard. `StorefrontSettings` stays mounted
+  // One tab holds every pane that saves through `saveSettings`; the other
+  // swaps in the delivery-fee mutation. `StorefrontSettings` stays mounted
   // across the whole run so a half-filled form survives a tab change.
   const [tab, setTab] = useState<TabId>("homepage");
 
@@ -44,14 +42,13 @@ function CustomizationPage() {
   if (store.isError) return <p role="alert">Settings could not load. Reload the page.</p>;
 
   const { settings, products } = store.data;
-  const isAdmin = role.data === "admin";
 
   return (
     <div>
       <h2 className="page-title">Customization</h2>
       <p className="page-lead">
-        Everything customers see and pay — homepage copy, featured picks, the announcement bar,
-        contact details, delivery fees and the ordering switch.
+        Everything customers see — homepage copy, featured picks, the announcement bar, contact
+        details, delivery fees and the ordering switch.
       </p>
 
       <div
@@ -101,24 +98,12 @@ function CustomizationPage() {
         <StorefrontSettings tab={tab} settings={settings} products={products} />
 
         {tab === "delivery" && <DeliverySettings settings={settings} />}
-
-        {tab === "momo" &&
-          (isAdmin ? (
-            <MomoSettings settings={settings} />
-          ) : (
-            <Panel title="Mobile Money recipient" description="Admin access required.">
-              <p className="text-sm text-muted-foreground">
-                The Mobile Money number and recipient name decide where payments land, so an admin
-                manages them. Ask the store owner to update them.
-              </p>
-            </Panel>
-          ))}
       </div>
 
       {!role.isPending && (
         <p className="mt-8 text-xs text-muted-foreground">
-          Signed in as {isAdmin ? "an admin" : "staff"} — delivery fees and all storefront copy are
-          yours to edit; payments stay admin-only.
+          Signed in as {role.data === "admin" ? "an admin" : "staff"} — delivery fees and all
+          storefront copy are yours to edit.
         </p>
       )}
       {role.isError && (

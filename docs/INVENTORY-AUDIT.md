@@ -49,7 +49,6 @@ behaviour a user will hit, **medium** = degraded or fragile, **low** = polish.
 | `catalogue.deleteProduct`                         | `catalogue.ts:118`         | `requireStaff`       | deletes row                  |
 | `catalogue.bulkUpdate`                            | `catalogue.ts:145`         | `requireStaff`       | **yes — set** (`:220`)       |
 | `catalogue.saveSettings` / `saveDeliverySettings` | `catalogue.ts:266`, `:418` | `requireStaff`       | no (fees)                    |
-| `catalogue.saveMomoSettings`                      | `catalogue.ts:468`         | `requireAdmin`       | no                           |
 | `categories.save` / `remove`                      | `categories.ts:15`, `:72`  | `requireStaff`       | no                           |
 | `stats.overview`                                  | `stats.ts:35`              | `requireStaff`       | no                           |
 | `uploads.generateUploadUrl` / `savePhoto`         | `uploads.ts:9`, `:17`      | `requireStaff`       | no                           |

@@ -42,9 +42,6 @@ export type CheckoutForm = {
   address: string;
   fulfillment: "delivery" | "pickup";
   zone: "central" | "greater" | "nationwide";
-  payment_method: "momo" | "cod";
-  provider: string;
-  transaction_reference: string;
 };
 
 /**

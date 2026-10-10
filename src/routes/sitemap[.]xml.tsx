@@ -37,7 +37,11 @@ async function productPaths(): Promise<string[]> {
     const origin = import.meta.env["VITE_CONVEX_URL"];
     if (!origin) return [];
     const data = await new ConvexHttpClient(origin).query(api.store.get, {});
-    return data.products.map((p: { id: string }) => `/product/${p.id}`);
+    // Hidden drafts still come back from the query — the sitemap must never
+    // advertise a route that 404s for shoppers.
+    return data.products
+      .filter((p: { visible?: boolean }) => p.visible !== false)
+      .map((p: { id: string }) => `/product/${p.id}`);
   } catch {
     // A sitemap that is one entry short beats a 500 for the crawler.
     return [];

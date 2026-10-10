@@ -307,7 +307,6 @@
 
 ### Admin Functions (Admin Role Required)
 
-- `catalogue.saveMomoSettings` - Wallet recipient (catalogue.momo)
 - `users.grantStaff` - Grant staff privileges (admin only, CLI)
 
 ## 🔐 Security Checklist

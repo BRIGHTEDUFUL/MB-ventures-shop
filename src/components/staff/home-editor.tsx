@@ -84,7 +84,7 @@ const subheading = "mt-6 pb-2 text-sm font-semibold first:mt-0";
  *
  * The component stays mounted for every one of those panes and swaps only the
  * body, so a half-filled form survives tab changes; it renders nothing at all
- * while a different mutation's tab (delivery fees, Mobile Money) is open.
+ * while a different mutation's tab (delivery fees) is open.
  */
 export function StorefrontSettings({
   tab,
@@ -140,7 +140,7 @@ export function StorefrontSettings({
     }
   };
 
-  // Not one of our panes — the fee/MoMo form owns the screen right now. The
+  // Not one of our panes — the delivery-fee form owns the screen right now. The
   // component stays mounted so the draft above is not thrown away.
   if (!isStorefrontTab(tab)) return null;
   if (form === null) return <p className="text-sm text-muted-foreground">Loading settings…</p>;
@@ -152,7 +152,7 @@ export function StorefrontSettings({
       {tab === "trust" && <TrustPane form={form} set={set} />}
       {tab === "announcement" && <AnnouncementPane form={form} set={set} />}
       {tab === "contact" && <ContactPane form={form} set={set} />}
-      {tab === "ordering" && <OrderingPane form={form} set={set} settings={settings} />}
+      {tab === "ordering" && <OrderingPane form={form} set={set} />}
       <FormActions busy={busy}>
         <Button disabled={busy}>{busy ? "Working…" : "Save storefront settings"}</Button>
       </FormActions>
@@ -758,17 +758,12 @@ function ContactPane({
 function OrderingPane({
   form,
   set,
-  settings,
 }: {
   form: StoreForm;
   set: <K extends keyof StoreForm>(key: K, value: StoreForm[K]) => void;
-  settings: Settings;
 }) {
   return (
-    <Panel
-      title="Ordering switch"
-      description="Turn ordering off for holidays, stock-taking or while payments are unverified."
-    >
+    <Panel title="Ordering switch" description="Turn ordering off for holidays or stock-taking.">
       <label className="filter-line">
         <input
           type="checkbox"
@@ -777,14 +772,10 @@ function OrderingPane({
         />
         Accept orders on the storefront
       </label>
-      {form.ordering_enabled && (settings.momo_number === "" || settings.momo_name === "") && (
-        <p role="alert" className="mt-2 text-sm text-destructive">
-          No Mobile Money recipient saved yet — add it under <strong>Payments</strong> before orders
-          can be paid.
-        </p>
-      )}
       <p className="mt-3 text-xs text-muted-foreground">
-        While ordering is off, checkout reports “Ordering is not open yet” and no stock is reserved.
+        Customers pay when they collect at the shop or when the courier arrives — no online payment
+        is taken. While ordering is off, checkout reports “Ordering is not open yet” and no stock is
+        reserved.
       </p>
     </Panel>
   );
@@ -934,68 +925,6 @@ export function DeliverySettings({ settings }: { settings: Settings }) {
           Pickup and carts over {money(form.free_threshold)} always ship free. A saved fee of 0
           makes that zone free.
         </p>
-      </Panel>
-    </form>
-  );
-}
-
-/* ── Mobile Money recipient (admin) ────────────────────────────────────── */
-
-export function MomoSettings({ settings }: { settings: Settings }) {
-  // Seeded once, for the same reason as `DeliverySettings`.
-  const [form, setForm] = useState({
-    momo_number: settings.momo_number,
-    momo_name: settings.momo_name,
-  });
-  const [busy, setBusy] = useState(false);
-  const save = useConvexMutation(api.catalogue.saveMomoSettings);
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await save(form);
-      toast.success("Mobile Money recipient saved");
-    } catch (err) {
-      toast.error(errorMessage(err, "Mobile Money details could not be saved."));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit}>
-      <Panel
-        title="Mobile Money recipient"
-        description="Admin only — this decides whose wallet the money lands in."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label>
-            Mobile Money number
-            <input
-              type="tel"
-              inputMode="tel"
-              value={form.momo_number}
-              onChange={(e) => setForm((c) => ({ ...c, momo_number: e.target.value }))}
-              placeholder="e.g. 024 123 4567"
-            />
-          </label>
-          <label>
-            Recipient name
-            <input
-              value={form.momo_name}
-              onChange={(e) => setForm((c) => ({ ...c, momo_name: e.target.value }))}
-              placeholder="e.g. MB Ventures GH"
-            />
-          </label>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Checkout blocks MoMo payments until both are saved, and the ordering switch stays off
-          until then too.
-        </p>
-        <FormActions busy={busy}>
-          <Button disabled={busy}>{busy ? "Working…" : "Save recipient"}</Button>
-        </FormActions>
       </Panel>
     </form>
   );

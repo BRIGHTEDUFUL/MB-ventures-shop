@@ -34,15 +34,16 @@ test.describe("Document head", () => {
   });
 
   test("product pages share their own photo", async ({ page }) => {
-    await page.goto("/product/ergonomic-chair");
+    // A real, visible product — hidden drafts 404 and fall back to the default.
+    await page.goto("/product/electric-standing-desk-rgb-160");
     const image = await page.locator('meta[property="og:image"]').getAttribute("content");
     expect(image).toBeTruthy();
-    expect(image).not.toContain("/images/workspace.jpg");
+    expect(image).toContain("/images/products/electric-standing-desk-rgb-160.png");
   });
 });
 
 test.describe("Heading outline", () => {
-  for (const route of ["/", "/catalogue", "/product/ergonomic-chair", "/about", "/delivery"]) {
+  for (const route of ["/", "/catalogue", "/product/monitor-light-bar", "/about", "/delivery"]) {
     test(`${route} never skips a heading level`, async ({ page }) => {
       await page.goto(route);
       const levels = await page

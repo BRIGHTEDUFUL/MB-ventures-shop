@@ -37,13 +37,16 @@ export function render(data: unknown, ctx: RenderContext): RenderedEmail {
     {
       kind: "lead",
       text:
-        order.paymentMethod === "Mobile Money"
-          ? `Order ${order.reference} is waiting for Mobile Money verification.`
+        order.fulfillment === "pickup"
+          ? `Order ${order.reference} was placed for collection at the shop.`
           : `Order ${order.reference} was placed with cash on delivery.`,
     },
     { kind: "rows", rows },
     { kind: "items", items: order.items },
-    { kind: "note", text: "Open the order in the store hub to verify the payment or add a note." },
+    {
+      kind: "note",
+      text: "Open the order in the store hub to update the status or add a note.",
+    },
   ];
 
   return renderEmail({

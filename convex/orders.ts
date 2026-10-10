@@ -30,9 +30,6 @@ const checkoutArgs = {
   address: v.string(),
   fulfillment: validators.fulfillment,
   zone: validators.zone,
-  payment_method: validators.paymentMethod,
-  provider: v.optional(v.string()),
-  transaction_reference: v.optional(v.string()),
   items: v.array(v.object({ id: v.string(), quantity: v.number() })),
 };
 
@@ -82,9 +79,6 @@ export const place = mutation({
         address: args.address,
         fulfillment: args.fulfillment,
         zone: args.zone,
-        payment_method: args.payment_method,
-        provider: args.provider,
-        transaction_reference: args.transaction_reference,
         items: args.items,
       },
       settings,
@@ -140,13 +134,10 @@ export const place = mutation({
       address: args.address.trim(),
       fulfillment: args.fulfillment,
       zone: args.zone,
-      payment_method: args.payment_method,
-      ...(args.provider !== undefined && args.provider.trim() !== ""
-        ? { provider: args.provider.trim() }
-        : {}),
-      ...(args.transaction_reference !== undefined && args.transaction_reference.trim() !== ""
-        ? { transaction_reference: args.transaction_reference.trim() }
-        : {}),
+      // No money moves in the app: the method is simply where the cash
+      // changes hands. Pickup orders are paid at the shop counter, delivery
+      // orders are paid to the courier on arrival.
+      payment_method: args.fulfillment === "pickup" ? "pay_at_store" : "cod",
       payment_status: "pending",
       status: "received",
       subtotal,
@@ -161,7 +152,10 @@ export const place = mutation({
     await ctx.db.insert("order_history", {
       order_id: orderId,
       status: "received",
-      note: "Order received. Payment awaiting staff confirmation.",
+      note:
+        args.fulfillment === "pickup"
+          ? "Order received. Pay at the shop when you collect your order."
+          : "Order received. Pay cash when your order arrives.",
     });
 
     const order = await ctx.db.get(orderId);
@@ -240,8 +234,7 @@ export const staffList = query({
         if (args.status !== undefined && o.status !== args.status) return false;
         if (args.payment !== undefined && o.payment_status !== args.payment) return false;
         if (search !== "") {
-          const haystack =
-            `${o.reference} ${o.customer_name} ${o.phone} ${o.email} ${o.transaction_reference ?? ""}`.toLowerCase();
+          const haystack = `${o.reference} ${o.customer_name} ${o.phone} ${o.email}`.toLowerCase();
           if (!haystack.includes(search)) return false;
         }
         return true;
@@ -291,8 +284,9 @@ export const staffGet = query({
 
 /**
  * Staff status/payment transitions. Replaces `public.staff_update_order`,
- * including the MoMo verification gates, the closed-order rule, the
- * fulfillment/status match and restocking on cancellation.
+ * including the closed-order rule, the fulfillment/status match and
+ * restocking on cancellation. Payment is collected offline (at the counter or
+ * by the courier), so staff simply record it here — no in-app verification.
  */
 export const staffUpdate = mutation({
   args: {

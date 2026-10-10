@@ -26,10 +26,15 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
       </div>
       <p className="mb-6 text-sm">
         {o.payment_method === "momo"
-          ? o.payment_status === "confirmed"
+          ? // Legacy in-app MoMo order — keep describing what actually happened.
+            o.payment_status === "confirmed"
             ? "Your Mobile Money payment has been confirmed by staff."
             : "Your Mobile Money reference awaits manual staff confirmation."
-          : "Pay cash when the courier arrives."}
+          : o.payment_status === "confirmed"
+            ? "Payment received. Thank you."
+            : o.fulfillment === "pickup"
+              ? "Pay at the shop when you collect your order."
+              : "Pay cash when the courier arrives."}
         {o.fulfillment === "pickup"
           ? " Please wait until your order is ready before visiting the shop."
           : ""}

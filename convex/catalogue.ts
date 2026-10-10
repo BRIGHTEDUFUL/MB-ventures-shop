@@ -1,11 +1,11 @@
 import { ConvexError, v } from "convex/values";
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { logActivity } from "./lib/activity";
 import type { ProductMaster } from "./lib/dto";
 import { fail } from "./lib/errors";
 import { requirePermission } from "./lib/permissions";
 import { getSettings } from "./lib/settings";
-import { isValidEmail, round2, validateMomoRecipient, validateWhatsApp } from "./lib/rules";
+import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
 import { applyStockChange } from "./lib/stock";
 import { trustIcon } from "./schema";
 
@@ -481,7 +481,7 @@ const HOME_BRAND_LIMIT = 6;
  * Storefront settings any staff member may edit: hero copy + images,
  * announcement bar, contact details, WhatsApp, homepage section copy,
  * homepage featured picks and the ordering switch. Delivery fees live in
- * `saveDeliverySettings`; the Mobile Money recipient in `saveMomoSettings`.
+ * `saveDeliverySettings`.
  */
 export const saveSettings = mutation({
   args: {
@@ -584,11 +584,6 @@ export const saveSettings = mutation({
     }
 
     const settings = await getSettings(ctx);
-    if (args.ordering_enabled && (!settings.momo_number.trim() || !settings.momo_name.trim())) {
-      throw new ConvexError({
-        message: "Enter verified Mobile Money recipient details first (Admin → Money).",
-      });
-    }
 
     await ctx.db.patch(settings._id, {
       hero_title: args.hero_title.trim(),
@@ -631,9 +626,8 @@ export const saveSettings = mutation({
 /**
  * Delivery fees and the free-delivery threshold.
  *
- * Staff-editable: these change what a customer pays for *shipping*, but no
- * money is ever routed to the shop by them. The Mobile Money recipient — who
- * actually receives the money — stays admin-only in `saveMomoSettings`.
+ * Staff-editable: these change what a customer pays for *shipping*; the money
+ * itself is always collected offline (at the shop or by the courier).
  */
 export const saveDeliverySettings = mutation({
   args: {
@@ -680,73 +674,3 @@ export const saveDeliverySettings = mutation({
     return { ok: true };
   },
 });
-
-/**
- * The Mobile Money recipient. Admin-floored: this decides whose wallet the
- * money lands in, so it stays behind `catalogue.momo` even though fees moved
- * to staff (`catalogue.delivery`).
- *
- * Validation and the write live in `applyMomoRecipient` so the admin mutation
- * and its CLI twin below always behave the same. The recipient can be rewritten
- * at any time; only *clearing* it needs ordering to be closed first.
- */
-export const saveMomoSettings = mutation({
-  args: {
-    momo_number: v.string(),
-    momo_name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const actorId = await requirePermission(ctx, "catalogue.momo");
-
-    await applyMomoRecipient(ctx, args.momo_number, args.momo_name);
-
-    await logActivity(ctx, actorId, "settings.momo", "Updated the Mobile Money recipient.");
-    return { ok: true };
-  },
-});
-
-/**
- * Deployment-operator twin of `saveMomoSettings`, for `npx convex run` when no
- * admin session is available (bootstrap, CI, or simply setting the recipient
- * before anyone has signed in):
- *
- *   npx convex run catalogue:setMomo '{"momo_number":"0532767269","momo_name":"Abdul Ganiwu Fusein"}'
- *
- * `internalMutation` keeps it out of the browser completely, it applies the
- * exact same validation as the admin path, and it can be run again whenever the
- * wallet changes — nothing is locked in by having been set once. It writes no
- * activity line: a CLI call has no user to attribute.
- */
-export const setMomo = internalMutation({
-  args: {
-    momo_number: v.string(),
-    momo_name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const saved = await applyMomoRecipient(ctx, args.momo_number, args.momo_name);
-    return { ok: true, ...saved };
-  },
-});
-
-/** Trim, validate and store the recipient. Throws `ConvexError` on bad input. */
-async function applyMomoRecipient(
-  ctx: MutationCtx,
-  rawNumber: string,
-  rawName: string,
-): Promise<{ momo_number: string; momo_name: string }> {
-  const number = rawNumber.trim();
-  const name = rawName.trim();
-
-  const invalid = validateMomoRecipient(number, name);
-  if (invalid !== null) throw new ConvexError({ message: invalid });
-
-  const settings = await getSettings(ctx);
-  if (settings.ordering_enabled && (number === "" || name === "")) {
-    throw new ConvexError({
-      message: "Turn off ordering before clearing Mobile Money details.",
-    });
-  }
-
-  await ctx.db.patch(settings._id, { momo_number: number, momo_name: name });
-  return { momo_number: number, momo_name: name };
-}

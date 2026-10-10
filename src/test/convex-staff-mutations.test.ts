@@ -4,7 +4,6 @@ import type { FunctionArgs } from "convex/server";
 import { ConvexError } from "convex/values";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
-import type { Doc } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
 
 /**
@@ -30,9 +29,9 @@ afterEach(() => {
 });
 
 /**
- * Seeds the store with its default settings (ordering closed, no MoMo
- * recipient) and three accounts: a plain customer, a staff member and an
- * admin. The standing desk starts with 50 on hand so stock maths reads well.
+ * Seeds the store with its default settings (ordering closed) and three
+ * accounts: a plain customer, a staff member and an admin. The standing desk
+ * starts with 50 on hand so stock maths reads well.
  */
 async function setup() {
   const t = convexTest(schema, modules);
@@ -102,13 +101,6 @@ const readProduct = (env: Env, slug: string) =>
   });
 
 const readSettings = (env: Env) => env.t.run((ctx) => ctx.db.query("store_settings").unique());
-
-const patchSettings = (env: Env, patch: Partial<Doc<"store_settings">>) =>
-  env.t.run(async (ctx) => {
-    const settings = await ctx.db.query("store_settings").unique();
-    if (settings === null) throw new Error("store settings row is missing");
-    await ctx.db.patch(settings._id, patch);
-  });
 
 const movements = (env: Env) => env.t.run((ctx) => ctx.db.query("inventory_history").collect());
 
@@ -295,16 +287,17 @@ describe("catalogue.saveSettings — storefront copy and the ordering switch", (
     );
   });
 
-  it("refuses to open ordering before the MoMo recipient is on file", async () => {
+  it("lets ordering open with no payment details on file", async () => {
+    // Money changes hands offline, so no recipient has to exist before the
+    // ordering switch may be turned on.
     const env = await setup();
     const form = await settingsForm(env, { ordering_enabled: true });
 
-    await expectConvexError(
-      env.admin.mutation(api.catalogue.saveSettings, form),
-      /Enter verified Mobile Money recipient details first/,
-    );
-    expect((await readSettings(env))?.ordering_enabled).toBe(false);
-    expect(await activity(env)).toHaveLength(0);
+    await expect(env.admin.mutation(api.catalogue.saveSettings, form)).resolves.toEqual({
+      ok: true,
+    });
+    expect((await readSettings(env))?.ordering_enabled).toBe(true);
+    expect(await activity(env)).toHaveLength(1);
   });
 
   it("lets staff save the storefront while ordering stays closed", async () => {
@@ -402,112 +395,6 @@ describe("catalogue.saveDeliverySettings — shipping fees stay staff-editable",
     expect(saved?.greater_fee).toBe(50.5);
     expect(saved?.nationwide_fee).toBe(100);
     expect(saved?.free_threshold).toBe(5000);
-  });
-});
-
-describe("catalogue.saveMomoSettings — the money recipient is admin-only", () => {
-  it("refuses staff who are not admins", async () => {
-    const env = await setup();
-    await expectConvexError(
-      env.t.mutation(api.catalogue.saveMomoSettings, {
-        momo_number: "0551234567",
-        momo_name: "MB Ventures Ltd",
-      }),
-      /Please sign in to continue/,
-    );
-    await expectConvexError(
-      env.staff.mutation(api.catalogue.saveMomoSettings, {
-        momo_number: "0551234567",
-        momo_name: "MB Ventures Ltd",
-      }),
-      /Admin access required/,
-    );
-    expect((await readSettings(env))?.momo_number).toBe("");
-  });
-
-  it("rejects a malformed recipient number or a missing name", async () => {
-    const env = await setup();
-    await expectConvexError(
-      env.admin.mutation(api.catalogue.saveMomoSettings, {
-        momo_number: "12345",
-        momo_name: "MB Ventures Ltd",
-      }),
-      /valid Mobile Money number/,
-    );
-    await expectConvexError(
-      env.admin.mutation(api.catalogue.saveMomoSettings, {
-        momo_number: "0551234567",
-        momo_name: "   ",
-      }),
-      /recipient name/,
-    );
-    expect((await readSettings(env))?.momo_number).toBe("");
-  });
-
-  it("refuses to clear the recipient while ordering is open", async () => {
-    const env = await setup();
-    await patchSettings(env, { ordering_enabled: true, momo_number: "0551234567" });
-
-    await expectConvexError(
-      env.admin.mutation(api.catalogue.saveMomoSettings, { momo_number: "", momo_name: "" }),
-      /Turn off ordering before clearing/,
-    );
-    expect((await readSettings(env))?.momo_number).toBe("0551234567");
-  });
-
-  it("lets an admin update the recipient and logs who changed it", async () => {
-    const env = await setup();
-    await expect(
-      env.admin.mutation(api.catalogue.saveMomoSettings, {
-        momo_number: " 0551234567 ",
-        momo_name: " MB Ventures Ltd ",
-      }),
-    ).resolves.toEqual({ ok: true });
-
-    const saved = await readSettings(env);
-    expect(saved?.momo_number).toBe("0551234567");
-    expect(saved?.momo_name).toBe("MB Ventures Ltd");
-
-    const feed = await activity(env);
-    expect(feed).toHaveLength(1);
-    expect(feed[0]).toMatchObject({ action: "settings.momo", actor_name: "Akua Adjei" });
-  });
-});
-
-describe("catalogue.setMomo — the recipient stays editable from the CLI", () => {
-  it("runs with no session, can be repeated to change the wallet, and validates", async () => {
-    const env = await setup();
-
-    // No identity at all: this is the `npx convex run catalogue:setMomo` shape.
-    await expect(
-      env.t.mutation(internal.catalogue.setMomo, {
-        momo_number: "0532767269",
-        momo_name: "Abdul Ganiwu Fusein",
-      }),
-    ).resolves.toEqual({ ok: true, momo_number: "0532767269", momo_name: "Abdul Ganiwu Fusein" });
-    expect((await readSettings(env))?.momo_name).toBe("Abdul Ganiwu Fusein");
-
-    // Set once is not set forever: run it again and the wallet changes.
-    await env.t.mutation(internal.catalogue.setMomo, {
-      momo_number: "0244000123",
-      momo_name: "Someone Else Ltd",
-    });
-    expect((await readSettings(env))?.momo_number).toBe("0244000123");
-
-    // Exactly the validation the admin path applies.
-    await expectConvexError(
-      env.t.mutation(internal.catalogue.setMomo, { momo_number: "12345", momo_name: "X" }),
-      /valid Mobile Money number/,
-    );
-    await expectConvexError(
-      env.t.mutation(internal.catalogue.setMomo, { momo_number: "0551234567", momo_name: "   " }),
-      /recipient name/,
-    );
-    expect((await readSettings(env))?.momo_number).toBe("0244000123");
-  });
-
-  it("stays off the public API surface, so a browser cannot call it", () => {
-    expect(api.catalogue).not.toHaveProperty("setMomo");
   });
 });
 

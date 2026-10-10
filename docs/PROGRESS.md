@@ -5,6 +5,54 @@ still open is listed under **Open**.
 
 ---
 
+## Pay-later Checkout — In-App MoMo Flow Removed (9 October 2026)
+
+**Status:** Complete — all gates green (tsc, lint, 179 unit tests, prettier,
+build, 32 Playwright checks).
+
+### Done
+
+- **Checkout reduced to two steps** (`src/routes/checkout.tsx`) — details →
+  review & place. The Mobile Money step (provider picker + transaction
+  reference) is gone; nothing in the browser asks for payment details any more.
+- **Payment method derived server-side** — `orders.place` accepts only
+  customer, fulfilment, zone and items; it sets `payment_method:
+"pay_at_store"` for pickup and `"cod"` for delivery. `provider` /
+  `transaction_reference` are legacy-null on every new order and no longer
+  appear in the staff order search.
+- **MoMo recipient system removed** — `catalogue.saveMomoSettings`, internal
+  `catalogue:setMomo`, `applyMomoRecipient`, `validateMomoRecipient`,
+  `MOMO_PROVIDERS` and the `catalogue.momo` permission key are gone. The
+  ordering switch no longer depends on a saved wallet. Stale stored
+  `catalogue.momo` permission overrides are inert (stored overrides are
+  filtered against the current permission keys).
+- **Schema kept backwards-compatible** — `paymentMethod` union widened to
+  `"momo" | "cod" | "pay_at_store"`; `momo_number` / `momo_name` on
+  `store_settings` became optional legacy fields. Existing production MoMo
+  orders keep validating unchanged — no destructive schema change and no data
+  migration.
+- **Status rules simplified** — "Verify Mobile Money before processing" is
+  gone; the only payment gate left is "Confirm payment before completing the
+  order", so staff can work an order while the cash is still on its way.
+- **Staff UI updated** — orders list lead/search copy, order detail Payment
+  panel (friendly method labels; provider/reference rows only for legacy MoMo
+  orders), confirmation dialog now asks whether the cash has been received.
+  Customization lost its "Payments" tab and the ordering-pane MoMo warning.
+- **Emails updated** — customer confirmation says "pay at the counter"
+  (pickup) or "pay the courier in cash" (delivery); the admin alert leads on
+  fulfilment. Legacy MoMo payloads still render their provider/reference rows.
+  Samples now mirror the derived-method model.
+- **Copy swept** — footer, auth frame, about/delivery/FAQ/terms/privacy pages,
+  home defaults (`home_cta_body`, trust strip), staff team/hub copy: no more
+  "manual MoMo verification" language anywhere customer- or staff-facing.
+- **Tests** — MoMo-gate tests replaced with method-derivation and
+  pending-payment-advance coverage; the `saveMomoSettings` / `setMomo`
+  suites were deleted; email template tests gained a legacy-MoMo rendering
+  check. 179 tests total. `e2e/purchase.spec.ts` rewritten for the two-step
+  flow (search placeholder, confirm-payment dialog, staff flow).
+
+---
+
 ## Real Inventory Launch, Hero Image & Docs Overhaul (9 October 2026)
 
 **Status:** Live — ordering enabled, real products on the storefront.
@@ -16,7 +64,7 @@ still open is listed under **Open**.
   Each product has 10 units of stock, real pricing in GH₵, and verified product
   photos extracted from the inventory document.
 - **Demo products hidden** — 10 placeholder products set to `visible: false,
-  status: "draft"`. They remain in the database but are invisible on the
+status: "draft"`. They remain in the database but are invisible on the
   storefront, catalogue, search and sitemap.
 - **Product photos** — 12 PNG files (11 products + 1 gallery variant) extracted
   and committed to `public/images/products/`. Image keys registered in

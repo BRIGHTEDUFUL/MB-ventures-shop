@@ -34,9 +34,9 @@ export function render(data: unknown, ctx: RenderContext): RenderedEmail {
     {
       kind: "note",
       text:
-        order.paymentMethod === "Mobile Money"
-          ? "Our team confirms Mobile Money payments by hand. You will get a message as soon as your payment is verified."
-          : "You can pay the courier in cash when your order arrives.",
+        order.fulfillment === "pickup"
+          ? "No payment is needed now. Pay at the shop counter when you collect your order."
+          : "No payment is needed now. Pay the courier in cash when your order arrives.",
     },
     { kind: "p", text: `Track your order any time with reference ${order.reference}.` },
   ];

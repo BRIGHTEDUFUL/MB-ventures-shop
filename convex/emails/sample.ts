@@ -19,9 +19,10 @@ const orderFields = (fulfillment: "delivery" | "pickup") => ({
   subtotal: 3699,
   delivery_fee: fulfillment === "pickup" ? 0 : 30,
   total: fulfillment === "pickup" ? 3699 : 3729,
-  payment_method: "momo",
-  provider: "MTN MoMo",
-  transaction_reference: "1839201746",
+  // Mirrors `orders.place`: the method is derived from fulfilment, never typed.
+  payment_method: fulfillment === "pickup" ? "pay_at_store" : "cod",
+  provider: "",
+  transaction_reference: "",
   address:
     fulfillment === "pickup"
       ? "Abelenkpe taxi rank, Accra, Ghana"

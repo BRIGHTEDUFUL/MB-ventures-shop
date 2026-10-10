@@ -1,4 +1,6 @@
 import { internalMutation } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { HOME_CONTENT_DEFAULTS } from "./lib/dto";
 import { applyStockChange } from "./lib/stock";
 
 export const DEMO_SLUGS = [
@@ -405,5 +407,45 @@ export const patchHeroImage = internalMutation({
         "Premium desks, gaming gear and everyday tech — delivered across Ghana or collected from Abelenkpe, Accra.",
     });
     return { ok: true, hero_image: "hero-workspace" };
+  },
+});
+
+/** The pre pay-later homepage copy this mutation replaces when it finds it. */
+const OLD_CTA_BODY =
+  "Collect your order at Abelenkpe taxi rank, Accra, or have it delivered to your door. Our shop team handles your order and confirms every Mobile Money payment personally.";
+const OLD_TRUST_WALLET = "Mobile Money or cash on delivery";
+
+/**
+ * One-shot: swap the homepage payment copy that predates pay-later ordering
+ * for the current defaults — but only when it still matches the old text, so
+ * a deliberate staff edit in Customization is never clobbered.
+ * `npx convex run inventory_import:patchHomeCopy` (add `--prod` for production)
+ */
+export const patchHomeCopy = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db
+      .query("store_settings")
+      .withIndex("by_key", (q) => q.eq("key", "singleton"))
+      .first();
+    if (!settings) return { ok: false, reason: "no settings row" };
+
+    const patch: Partial<Doc<"store_settings">> = {};
+    if (settings.home_cta_body === OLD_CTA_BODY) {
+      patch.home_cta_body = HOME_CONTENT_DEFAULTS.home_cta_body;
+    }
+    const trust = settings.home_trust ?? [];
+    const walletDefault = HOME_CONTENT_DEFAULTS.home_trust.find((item) => item.icon === "wallet");
+    if (
+      walletDefault &&
+      trust.some((item) => item.icon === "wallet" && item.text === OLD_TRUST_WALLET)
+    ) {
+      patch.home_trust = trust.map((item) =>
+        item.icon === "wallet" ? { ...item, text: walletDefault.text } : item,
+      );
+    }
+
+    if (Object.keys(patch).length > 0) await ctx.db.patch(settings._id, patch);
+    return { ok: true, patched: Object.keys(patch) };
   },
 });

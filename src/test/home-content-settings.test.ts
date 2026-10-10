@@ -57,6 +57,11 @@ describe("settingsDTO home copy", () => {
     expect(settings.home_cta_heading).toBe("Your Abelenkpe shop. Now closer to your doorstep.");
     expect(settings.home_brands).toEqual(["Logitech", "IKEA", "elgato"]);
     expect(settings.home_trust).toHaveLength(4);
+
+    // A legacy row still carries the old MoMo recipient — the public DTO must
+    // not leak it (there is no in-app payment any more).
+    expect(settings).not.toHaveProperty("momo_number");
+    expect(settings).not.toHaveProperty("momo_name");
   });
 
   it("falls back to the default when a heading is blank", () => {

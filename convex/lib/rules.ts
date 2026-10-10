@@ -13,7 +13,13 @@
 
 export type Zone = "central" | "greater" | "nationwide";
 export type Fulfillment = "delivery" | "pickup";
-export type PaymentMethod = "momo" | "cod";
+/**
+ * How an order is paid. Money never moves inside the app: `orders.place`
+ * derives this from fulfilment (`pickup` → pay at the shop, `delivery` →
+ * cash on arrival). `momo` survives only for orders placed under the old
+ * in-app Mobile Money flow.
+ */
+export type PaymentMethod = "momo" | "cod" | "pay_at_store";
 export type PaymentStatus = "pending" | "confirmed" | "rejected";
 export type OrderStatus =
   "received" | "processing" | "ready" | "dispatched" | "completed" | "cancelled";
@@ -28,26 +34,6 @@ export const ORDER_STATUSES: OrderStatus[] = [
   "cancelled",
 ];
 export const PAYMENT_STATUSES: PaymentStatus[] = ["pending", "confirmed", "rejected"];
-export const MOMO_PROVIDERS = ["MTN MoMo", "Telecel Cash", "AirtelTigo Money"] as const;
-
-/**
- * The Mobile Money recipient has to be a complete pair before it can be
- * stored: a number with at least 9 digits and the name that wallet is
- * registered to. An empty number clears the recipient (allowed only while
- * ordering is closed — callers enforce that), so an empty pair is valid too.
- *
- * Returns the message to show, or null when the pair may be written. Shared by
- * the admin mutation and its CLI twin so the two can never drift apart.
- */
-export function validateMomoRecipient(number: string, name: string): string | null {
-  if (number !== "" && number.replace(/[^0-9]/g, "").length < 9) {
-    return "Enter a valid Mobile Money number.";
-  }
-  if (number !== "" && name.trim() === "") {
-    return "Enter the Mobile Money recipient name.";
-  }
-  return null;
-}
 
 /** The four numbers that decide what a customer pays for delivery. */
 export interface FeeBreakdown {
@@ -72,9 +58,8 @@ export const DEFAULT_FEES: FeeBreakdown = {
 /** Settings-driven copy shown in the header facts bar; empty means "hide it". */
 export const DEFAULT_ANNOUNCEMENT = "Abelenkpe, Accra · Pickup in store · Delivery across Ghana";
 
-/** Fees + MoMo recipient + ordering switch, whichever settings doc we pass in. */
+/** Fees + the ordering switch, whichever settings doc we pass in. */
 export interface FeeSettings extends FeeBreakdown {
-  momo_number: string;
   ordering_enabled: boolean;
 }
 
@@ -85,16 +70,12 @@ export interface CheckoutInput {
   address: string;
   fulfillment: Fulfillment;
   zone: Zone;
-  payment_method: PaymentMethod;
-  provider?: string | undefined;
-  transaction_reference?: string | undefined;
   items: { id: string; quantity: number }[];
 }
 
 /** Order snapshot the staff dashboard validates status changes against. */
 export interface OrderState {
   fulfillment: Fulfillment;
-  payment_method: PaymentMethod;
   status: OrderStatus;
   payment_status: PaymentStatus;
 }
@@ -212,19 +193,6 @@ export function validateCheckout(input: CheckoutInput, settings: FeeSettings): s
     }
   }
 
-  if (input.fulfillment === "pickup" && input.payment_method !== "momo") {
-    return "Pickup orders require Mobile Money.";
-  }
-
-  if (input.payment_method === "momo") {
-    const reference = (input.transaction_reference ?? "").trim();
-    const provider = input.provider ?? "";
-    const knownProvider = (MOMO_PROVIDERS as readonly string[]).includes(provider);
-    if (!settings.momo_number || reference.length < 5 || !knownProvider) {
-      return "Mobile Money details or reference are missing.";
-    }
-  }
-
   if (input.fulfillment === "delivery" && input.address.trim().length < 5) {
     return "Enter a delivery address.";
   }
@@ -255,10 +223,9 @@ export function validateStatusChange(
   if (newStatus === "dispatched" && order.fulfillment !== "delivery") {
     return "Status does not match fulfillment.";
   }
-  const advancing = ["processing", "ready", "dispatched", "completed"].includes(newStatus);
-  if (order.payment_method === "momo" && advancing && newPayment !== "confirmed") {
-    return "Verify Mobile Money before processing.";
-  }
+  // An order may advance to any open status while payment is still pending —
+  // money changes hands offline (at the counter or to the courier), so only
+  // *closing* it needs the payment confirmed.
   if (newStatus === "completed" && newPayment !== "confirmed") {
     return "Confirm payment before completing the order.";
   }

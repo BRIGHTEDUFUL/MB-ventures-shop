@@ -127,38 +127,28 @@ node scripts/verify-production-config.mjs
 
 ---
 
-### ✅ 3. MoMo Recipient Details
+### ✅ 3. Payments (collected offline)
 
-**Status:** Ready for configuration via admin panel
+**Status:** No configuration needed — payment happens outside the app
 
-**What was needed:**
+**How it works:**
 
-- Mobile Money recipient wallet details
-- Wallet name and number for payment verification
-
-**What is ready:**
-
-The system is fully prepared to accept MoMo recipient details:
-
-1. **Database schema** includes `momo_name` and `momo_number` fields in `store_settings`
-2. **Admin mutation** `catalogue.saveMomoSettings` is ready (admin-only, logged)
-3. **Staff UI** at `/staff` → Customization → Mobile Money panel ready to save details
-4. **Validation** prevents clearing MoMo details while `ordering_enabled` is on
-5. **Order flow** includes MoMo reference field and staff verification
+1. **No in-app payment step** — `orders.place` derives `payment_method` from fulfilment: pickup → `pay_at_store`, delivery → `cod`
+2. **Customers pay offline** — at the Abelenkpe shop counter (pickup) or cash to the courier (delivery)
+3. **Staff record receipt** in `/staff` → Orders → Payment status; completing an order still requires payment confirmed
+4. **Legacy fields kept** — `momo_name` / `momo_number` remain as optional schema fields for old orders; no UI or mutation touches them
 
 **To enable ordering:**
 
 1. Sign in as admin at `/staff`
-2. Navigate to Customization → Mobile Money
-3. Enter wallet name and number
-4. Save
-5. Toggle "Accept orders" to ON
+2. Navigate to Customization → Ordering
+3. Toggle "Accept orders" to ON
 
 **Security:**
 
-- Only users with `admin` role can set MoMo details
-- Only users with `catalogue.ordering` permission can toggle ordering
+- Only users with `catalogue.settings` permission can toggle ordering
 - Changes are logged in activity feed
+- The store never asks for a MoMo PIN or OTP
 
 ---
 

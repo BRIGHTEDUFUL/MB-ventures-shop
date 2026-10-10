@@ -8,7 +8,14 @@ const { users: _authUsers, ...authTablesExceptUsers } = authTables;
 
 const zone = v.union(v.literal("central"), v.literal("greater"), v.literal("nationwide"));
 const fulfillment = v.union(v.literal("delivery"), v.literal("pickup"));
-const paymentMethod = v.union(v.literal("momo"), v.literal("cod"));
+/**
+ * How an order is paid. There is no in-app payment: money changes hands
+ * offline, so the method is derived from fulfilment when the order is placed
+ * (`orders.place`) — pickup orders are paid at the shop counter, delivery
+ * orders are cash on arrival. The `momo` literal survives only so rows written
+ * before this model existed keep validating; no new order ever carries it.
+ */
+const paymentMethod = v.union(v.literal("momo"), v.literal("cod"), v.literal("pay_at_store"));
 const paymentStatus = v.union(v.literal("pending"), v.literal("confirmed"), v.literal("rejected"));
 const orderStatus = v.union(
   v.literal("received"),
@@ -94,7 +101,6 @@ export const PERMISSION_KEYS = [
   "catalogue.categories",
   "catalogue.settings", // storefront copy, featured picks, announcement
   "catalogue.delivery", // delivery fees
-  "catalogue.momo", // whose wallet the money lands in — admin only
   // Inventory
   "inventory.view",
   "inventory.adjust",
@@ -269,8 +275,11 @@ export default defineSchema({
     email: v.string(),
     address: v.string(),
     hours: v.string(),
-    momo_number: v.string(),
-    momo_name: v.string(),
+    // Legacy: the in-app Mobile Money recipient. No money moves in the app
+    // any more, so nothing writes or reads these — they stay in the schema
+    // only so existing rows keep validating without a backfill.
+    momo_number: v.optional(v.string()),
+    momo_name: v.optional(v.string()),
     central_fee: v.number(),
     greater_fee: v.number(),
     nationwide_fee: v.number(),
@@ -318,7 +327,11 @@ export default defineSchema({
     address: v.string(),
     fulfillment,
     zone,
+    // Derived from fulfilment at checkout — never chosen by the shopper.
     payment_method: paymentMethod,
+    // Legacy MoMo fields. Kept (optional) so pre-existing orders keep
+    // validating and staff can still read what a past order carried; no new
+    // order writes them.
     provider: v.optional(v.string()),
     transaction_reference: v.optional(v.string()),
     payment_status: paymentStatus,

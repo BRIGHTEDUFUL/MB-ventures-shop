@@ -56,8 +56,6 @@ async function setup() {
     if (settings === null) throw new Error("seed did not create settings");
     await ctx.db.patch(settings._id, {
       ordering_enabled: true,
-      momo_number: "0241234567",
-      momo_name: "MB Ventures GH",
     });
 
     const userId = await ctx.db.insert("users", {
@@ -88,9 +86,6 @@ async function placeOrder(
     address: "12 Abelenkpe Taxi Rank Road, Accra",
     fulfillment: "delivery",
     zone: "central",
-    payment_method: "momo",
-    provider: "MTN MoMo",
-    transaction_reference: "1839201746",
     items: [{ id: productSlug, quantity: 1 }],
     ...overrides,
   });

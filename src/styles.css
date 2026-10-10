@@ -1728,6 +1728,12 @@ h4 {
     overflow-x: auto;
     white-space: nowrap;
   }
+  /* Grid tracks size to min-content, and intrinsic sizing ignores the
+     table's overflow above — without this the specs table stretches the
+     whole section past the viewport instead of scrolling inside it. */
+  .section.grid > * {
+    min-width: 0;
+  }
 
   /* Filters and toolbars stop being a squeezed row. */
   .toolbar {

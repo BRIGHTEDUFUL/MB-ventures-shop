@@ -63,9 +63,9 @@ Tailwind's `sr-only` utility in `@layer utilities`.
 - [ ] **1.5** Cart drawer, search overlay and the ⌘K trigger — all are dialogs; confirm they fit,
       scroll internally, and close without trapping focus. _(Not covered — dialogs are not open by
       the automated sweep.)_
-- [ ] **1.6** Checkout (`src/routes/checkout.tsx`) — the 3-step flow, zone picker and MoMo
-      instructions. This is the money path; test it at 320px with a filled cart.
-      _(Overflow covered, and the whole 3-step flow is now driven for real in
+- [ ] **1.6** Checkout (`src/routes/checkout.tsx`) — the 2-step flow, zone picker and pay-later
+      copy. This is the money path; test it at 320px with a filled cart.
+      _(Overflow covered, and the whole 2-step flow is now driven for real in
       `e2e/purchase.spec.ts` — at desktop width though, not 320px.)_
 - [ ] **1.7** Account sign-in/sign-up and Track — plain forms, but verify keyboard behaviour.
       _(Overflow and 16px field sizes covered; keyboard behaviour is §3.2.)_
@@ -130,11 +130,10 @@ Tailwind's `sr-only` utility in `@layer utilities`.
 - [x] **4.1** Overflow probe passes on all 21 routes at 320/360/390/414.
       _(Done: `npm run test:e2e`, 4 widths × every static route and every product page.)_
 - [ ] **4.2** One complete purchase journey on a real phone: browse → add to cart → checkout →
-      MoMo reference submitted. (`ordering_enabled` is still off pending real MoMo details — flip
-      it in the dev deployment for this test, then flip it back.)
+      order placed. (No payment input — `ordering_enabled` is already on in dev and production;
+      payment happens at the counter or to the courier.)
       _(The journey itself now runs in CI form — `npm run test:e2e:live` places a real order in
-      dev, works it as staff and cancels it. What is left is doing it once on a physical phone;
-      dev has `ordering_enabled: true` with the test MoMo recipient, production stays off.)_
+      dev, works it as staff and cancels it. What is left is doing it once on a physical phone.)_
 - [ ] **4.3** Full checkout reachable with the on-screen keyboard open, no pinch-zoom needed.
       _(§3.2/§3.3 — device only.)_
 - [x] **4.4** Re-run the desktop route crawl (`npm test`, `npm run lint`) so the mobile fixes did

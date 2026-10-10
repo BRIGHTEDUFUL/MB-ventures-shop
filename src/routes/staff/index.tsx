@@ -43,7 +43,7 @@ function Dashboard() {
         <Stat
           label="Awaiting payment"
           value={orders.awaiting_payment}
-          sub="Verify in the MoMo provider record"
+          sub="Cash not yet recorded"
           tone={orders.awaiting_payment > 0 ? "offer" : "plain"}
         />
         <Stat

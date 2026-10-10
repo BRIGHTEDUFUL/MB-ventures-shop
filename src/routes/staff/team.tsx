@@ -34,8 +34,8 @@ function TeamPage() {
     <div>
       <h2 className="page-title">Team</h2>
       <p className="page-lead">
-        Staff manage the day-to-day; admins additionally control delivery fees, Mobile Money details
-        and this team list.
+        Staff manage the day-to-day; admins additionally manage this team list and the store's
+        settings.
       </p>
 
       <QueryState pending={team.isPending} error={team.isError} label="Team" />

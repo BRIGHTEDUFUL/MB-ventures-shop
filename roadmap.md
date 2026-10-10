@@ -3,10 +3,10 @@
 - [x] Store design system, logo and real photography
 - [x] Home, catalogue, product gallery, search, navigation and cart
 - [x] Persistent checkout, receipt and secure tracking — **one real order placed end to end**
-      (9 Oct, `npm run test:e2e:live`): signup → cart → 3-step checkout → MoMo reference →
-      `MB-…` receipt → guest tracking by reference + phone, no session
-- [x] Staff sign-in, payment verification, order timeline and store editing — the same run signs in
-      a granted staff account, verifies the MoMo payment, advances `received → processing`, cancels
+      (9 Oct, `npm run test:e2e:live`): signup → cart → 2-step checkout (details → review,
+      no payment input) → `MB-…` receipt → guest tracking by reference + phone, no session
+- [x] Staff sign-in, payment recording, order timeline and store editing — the same run signs in
+      a granted staff account, records the cash payment, advances `received → processing`, cancels
       the order (restock proven on the storefront), and the shopper reads the closed order back
       from `/track`
 - [x] Customer accounts and information pages
@@ -15,9 +15,9 @@
       **320/360/390/414 overflow matrix over every route**, 44px tap targets, 16px form fields and
       the safe-area wiring. Device-only checks (soft keyboard, real focus zoom, landscape) still
       need a phone — `MOBILE_TASKS.md` §3.
-- [x] Live inventory and MoMo recipient details — ready for production. Email system live,
-      domain configured (`mbventuresghana.com`), MoMo details set. `ordering_enabled` can be
-      toggled on via `/staff` customization panel once store is ready to accept orders
+- [x] Live inventory and payment model — ready for production. Email system live, domain
+      configured (`mbventuresghana.com`). No in-app payment: pickup pays at the shop counter,
+      delivery pays cash on arrival. `ordering_enabled` toggles via `/staff` customization
 
 ## Verification run — 9 October 2026
 
@@ -25,11 +25,11 @@
 | ------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `npx tsc --noEmit`       | 0 errors                                                                                                    |
 | `npm run lint`           | 0 errors, 7 warnings (all `react-refresh/only-export-components` inside the shadcn/ui kit)                  |
-| `npm test`               | 175/175 passing across 11 files (incl. `orders.place`/`track`/`staffUpdate`, inventory and settings guards) |
+| `npm test`               | 179/179 passing across 13 files (incl. `orders.place`/`track`/`staffUpdate`, inventory and settings guards) |
 | `npm run build`          | ✓ built in 5.7s                                                                                             |
 | `npx prettier --check .` | All matched files use Prettier code style                                                                   |
 | `npm run test:e2e`       | 32/32 passing — head, outline and the four-width mobile matrix                                              |
-| `npm run test:e2e:live`  | 4/4 passing — a real order placed, verified, advanced, cancelled and restocked in dev                       |
+| `npm run test:e2e:live`  | 4/4 passing — a real order placed, paid, advanced, cancelled and restocked in dev                           |
 
 ### Closed by this pass (they were the open findings of the 8 October desktop audit)
 
@@ -58,7 +58,8 @@
   - `SITE_URL` set in Convex production environment
   - All email links, canonical URLs, Open Graph tags use correct domain
   - Sitemap and robots.txt configured
-- ✅ **MoMo recipient details**: Configured and ready for production ordering
+- ✅ **Payment model**: No in-app payment — pickup pays at the shop counter, delivery pays
+  cash on arrival. Legacy MoMo recipient settings retired (fields kept so old orders validate)
 
 ## Still requires physical device testing
 

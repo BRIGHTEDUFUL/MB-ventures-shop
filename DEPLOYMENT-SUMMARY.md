@@ -214,7 +214,7 @@ As admin at /staff:
 - ✅ Shopping cart with persistence
 - ✅ User registration and authentication
 - ✅ Checkout with delivery zones
-- ✅ Mobile Money payment tracking
+- ✅ Offline payment recording (pay at shop / cash on delivery)
 - ✅ Order confirmation emails
 - ✅ Order status update emails
 - ✅ Guest order tracking (reference + phone)

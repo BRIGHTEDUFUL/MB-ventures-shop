@@ -12,7 +12,7 @@ import { images } from "@/lib/store-images";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/orders/$id")({
-  head: () => pageHead("Order", "Order details, payment verification and status timeline."),
+  head: () => pageHead("Order", "Order details, payment record and status timeline."),
   component: OrderDetail,
 });
 
@@ -90,11 +90,7 @@ function OrderView({
     if (
       payment === "confirmed" &&
       order.payment_status !== "confirmed" &&
-      !window.confirm(
-        order.payment_method === "momo"
-          ? "Have you verified the transaction and amount in the provider record?"
-          : "Has the courier confirmed cash collection?",
-      )
+      !window.confirm("Has the payment been received — cash at the counter or from the courier?")
     ) {
       return;
     }
@@ -261,7 +257,7 @@ function OrderView({
             description={
               closed
                 ? "This order is closed; its status can no longer change."
-                : "Payment must be confirmed before processing a MoMo order."
+                : "Mark payment received once the money is in. Only completing an order requires it."
             }
           >
             <div className="space-y-4">
@@ -321,14 +317,22 @@ function OrderView({
             title="Payment"
             description={
               order.payment_method === "momo"
-                ? "Check the provider record before confirming."
-                : "Cash on delivery — confirm after courier collection."
+                ? "Legacy in-app Mobile Money order."
+                : order.fulfillment === "pickup"
+                  ? "Cash collected at the shop counter on collection."
+                  : "Cash collected by the courier on delivery."
             }
           >
             <dl className="space-y-2 text-sm">
               <div className="summary-row">
                 <dt>Method</dt>
-                <dd className="capitalize">{order.payment_method}</dd>
+                <dd>
+                  {order.payment_method === "momo"
+                    ? "Mobile Money"
+                    : order.payment_method === "pay_at_store"
+                      ? "Pay at the shop"
+                      : "Cash on delivery"}
+                </dd>
               </div>
               {order.provider && (
                 <div className="summary-row">
@@ -336,10 +340,12 @@ function OrderView({
                   <dd>{order.provider}</dd>
                 </div>
               )}
-              <div className="summary-row">
-                <dt>Reference</dt>
-                <dd className="font-mono">{order.transaction_reference || "—"}</dd>
-              </div>
+              {order.transaction_reference && (
+                <div className="summary-row">
+                  <dt>Reference</dt>
+                  <dd className="font-mono">{order.transaction_reference}</dd>
+                </div>
+              )}
               <div className="summary-row">
                 <dt>Status</dt>
                 <dd>
