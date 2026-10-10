@@ -5,6 +5,58 @@ still open is listed under **Open**.
 
 ---
 
+## Auth Repair, UI/UX Audit & Performance Pass (10 October 2026)
+
+**Status:** Live on production — verified in a real browser (desktop + mobile).
+
+### Done
+
+- **Production auth fixed** — `convex/auth.config.ts` now derives the provider
+  domain from `CONVEX_SITE_URL` (the issuer `@convex-dev/auth` actually mints)
+  instead of `SITE_URL`. New admin/staff accounts on mbventuresghana.com can
+  sign in and reach `/staff` again; the "No auth provider found matching the
+  given token" error is gone. Backend deployed with `npx convex deploy`.
+- **UI audit (desktop 1440×900 + mobile 390×844)** — full screenshot sweep of
+  every storefront, account and staff/admin route via
+  `scripts/audit-screenshots.mjs`. Fixed what it found:
+  - **Mojibake copy** — `store-shell.tsx` / `catalogue.tsx` contained
+    corrupted UTF-8 (`âŒ˜ K`, `Â·`, `Â©`, `â€œ…â€`); restored `⌘ K`, `·`,
+    `©` and curly quotes.
+  - **Mobile staff dashboard** — order references no longer sit under the
+    status pills; rows stack ref → chips on phones.
+  - **Empty-cart checkout** — `/checkout` with an empty (restored) cart now
+    redirects to `/cart`'s empty state instead of the sign-in gate; the cart
+    provider exposes `ready` so the guard can't race the localStorage
+    restore.
+  - **Empty category tiles** — the homepage hides categories with zero
+    visible products ("Office chairs · 0 products" is gone).
+- **E2E hardening (32/32 green)** — the cart-stepper check waits for the cart
+  provider to hydrate before quick-adding (it previously failed ~50% of runs
+  because the click landed before handlers attached); the og:image checks use
+  a live product (`monitor-light-bar`) instead of the hidden `ergonomic-chair`
+  demo fixture, and the fallback assertion matches any extension.
+- **Performance: WebP everywhere** — every storefront photo re-encoded to
+  WebP at identical dimensions (hero 739 KB → 117 KB, carbon-fiber desk
+  847 KB → 91 KB; ~3.9 MB → ~1.2 MB total). Keys are extensionless so only
+  the base path map changed; `DEFAULT_SOCIAL_IMAGE` moved to
+  `workspace.webp` so the og:image fallback keeps working. Docs updated.
+- **Deploy workflow repaired** — `deploy-hostinger.yml` used
+  `if: ${{ secrets.HOSTINGER_HOST != '' }}` at job level, which GitHub
+  rejects outright (every run died at 0s with a workflow-file error). The
+  credential check now runs inside a step via `env`, so the workflow parses
+  and the SSH deploy only runs when the secret exists. Note: the VPS also
+  auto-deploys `main` via its own git-pull build loop, which is how the
+  frontend reaches production within minutes of a push.
+
+### Verified live
+
+- Sign-in as `manager@…` (admin) and `attendant@…` (staff) on
+  mbventuresghana.com — role badges render, `/staff` subpages load.
+- Homepage serves `hero-workspace.webp` (200), real `⌘`/`·` glyphs, and only
+  the four populated category tiles.
+
+---
+
 ## Real Inventory Launch, Hero Image & Docs Overhaul (9 October 2026)
 
 **Status:** Live — ordering enabled, real products on the storefront.
