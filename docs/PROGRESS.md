@@ -5,6 +5,41 @@ still open is listed under **Open**.
 
 ---
 
+## Production's old "Circle" address cleared (12 October 2026)
+
+**Status:** Complete — data fix only, no source change.
+
+Production `store_settings` was still carrying the pre-migration address in two
+fields: `address` read `Circle Commercial Area, Accra, Ghana` and `announcement`
+read `Circle, Accra · Pickup in store · Delivery across Ghana`. Both were
+customer-facing — the address is rendered in the footer, on `/contact`, `/track`
+and at checkout, and it also reaches order emails and printed receipts.
+
+The fix needed no code. `convex/seed.ts` already ships `seed:syncLocation`, an
+idempotent mutation that rewrites exactly the three location strings when they
+still mention "Circle" and leaves anything the shop edited itself alone. Run
+once against production:
+
+```sh
+npx convex run seed:syncLocation --env-file .env.prod.local
+```
+
+It reported `{"updated": ["address", "announcement"]}` — the third field,
+`hero_subtitle`, does not mention Circle and was correctly left untouched.
+
+Now live on `/`, `/contact`, `/track`, `/checkout` and `/catalogue`:
+`address` = "Abelenkpe taxi rank, Accra, Ghana" and `announcement` =
+"Abelenkpe, Accra · Pickup in store · Delivery across Ghana". Zero "Circle"
+strings remain in any customer-facing page.
+
+Worth remembering: `hero_subtitle`, `email` and the announcement are all
+`store_settings` data edited at `/staff` → Customization, so a fresh seed
+default and a live row can legitimately differ. When copy looks stale on
+production but the source already reads correctly, check the row before
+touching the source — the migration may simply never have been run.
+
+---
+
 ## Shop number unified on 0249564442 + a full mobile pass (10 October 2026)
 
 **Status:** Complete — all gates green (tsc, lint, 189 unit tests, prettier,
