@@ -79,8 +79,15 @@ function InventoryPage() {
       .sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name));
   }, [store.data, search, filter]);
 
-  const apply = async (slug: string, name: string) => {
-    const raw = document.getElementById(`delta-${slug}`) as HTMLInputElement | null;
+  /**
+   * Apply a change to a product, or to one of its options.
+   *
+   * The input and reason ids are keyed by the target so a product with options
+   * carries one box per option and they cannot read each other's numbers.
+   */
+  const apply = async (slug: string, name: string, variantKey?: string) => {
+    const target = variantKey === undefined ? slug : `${slug}:${variantKey}`;
+    const raw = document.getElementById(`delta-${target}`) as HTMLInputElement | null;
     const reasonEl = document.getElementById(`reason-${slug}`) as HTMLSelectElement | null;
     const value = Number(raw?.value);
     const reason = reasonEl?.value ?? "";
@@ -89,6 +96,7 @@ function InventoryPage() {
     // One key per tap: the client reuses it if Convex retries the same call,
     // so a flaky connection still produces exactly one movement (D6).
     const operation_key = crypto.randomUUID();
+    const onto = variantKey === undefined ? {} : { variant_key: variantKey };
 
     if (mode === "counted") {
       if (!Number.isInteger(value) || value < 0) {
@@ -101,6 +109,7 @@ function InventoryPage() {
           counted: value,
           reason,
           operation_key,
+          ...onto,
         });
         toast.success(
           result.changed
@@ -125,6 +134,7 @@ function InventoryPage() {
         reason,
         movement_type: type,
         operation_key,
+        ...onto,
       });
       toast.success(`${name}: stock is now ${result.stock}`);
       if (raw) raw.value = "";
@@ -214,33 +224,96 @@ function InventoryPage() {
                   {reasonFilter === p.id ? "All history" : "History"}
                 </Button>
               </div>
-              <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
-                <label className="w-32">
-                  {mode === "change" ? "Change by" : "Counted now"}
-                  <input
-                    id={`delta-${p.id}`}
-                    type="number"
-                    step="1"
-                    min={mode === "counted" ? 0 : undefined}
-                    placeholder={
-                      mode === "counted" ? String(p.stock) : p.stock === 0 ? "+12" : "12 / -3"
-                    }
-                  />
-                </label>
-                <label className="min-w-[14rem] flex-1">
-                  Reason
-                  <select id={`reason-${p.id}`} defaultValue={REASONS[0].label}>
-                    {REASONS.map((r) => (
-                      <option key={r.label} value={r.label}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Button size="sm" onClick={() => apply(p.id, p.name)}>
-                  {mode === "change" ? "Apply" : "Save count"}
-                </Button>
-              </div>
+              {p.variants && p.variants.length > 0 ? (
+                <>
+                  <div className="mt-3 border-t border-border pt-3">
+                    <p className="text-xs text-muted-foreground">
+                      This product sells in options, so stock is kept per option — the total above
+                      is added up for you.
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {p.variants.map((v) => (
+                        <li
+                          key={v.key}
+                          className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-2"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium">{v.name}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {v.stock} on hand
+                              {/* A hidden option still holds real units on the shelf, so it stays
+                                  adjustable — it just cannot be bought. */}
+                              {!v.visible && " · not on sale"}
+                            </span>
+                          </span>
+                          <label className="w-32">
+                            {mode === "change" ? "Change by" : "Counted now"}
+                            <input
+                              id={`delta-${p.id}:${v.key}`}
+                              type="number"
+                              step="1"
+                              min={mode === "counted" ? 0 : undefined}
+                              placeholder={
+                                mode === "counted"
+                                  ? String(v.stock)
+                                  : v.stock === 0
+                                    ? "+12"
+                                    : "12 / -3"
+                              }
+                            />
+                          </label>
+                          <Button
+                            size="sm"
+                            onClick={() => apply(p.id, `${p.name} — ${v.name}`, v.key)}
+                          >
+                            {mode === "change" ? "Apply" : "Save count"}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mt-3 border-t border-border pt-3">
+                    <label className="min-w-[14rem] flex-1">
+                      Reason — used by every option you adjust
+                      <select id={`reason-${p.id}`} defaultValue={REASONS[0].label}>
+                        {REASONS.map((r) => (
+                          <option key={r.label} value={r.label}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
+                  <label className="w-32">
+                    {mode === "change" ? "Change by" : "Counted now"}
+                    <input
+                      id={`delta-${p.id}`}
+                      type="number"
+                      step="1"
+                      min={mode === "counted" ? 0 : undefined}
+                      placeholder={
+                        mode === "counted" ? String(p.stock) : p.stock === 0 ? "+12" : "12 / -3"
+                      }
+                    />
+                  </label>
+                  <label className="min-w-[14rem] flex-1">
+                    Reason
+                    <select id={`reason-${p.id}`} defaultValue={REASONS[0].label}>
+                      {REASONS.map((r) => (
+                        <option key={r.label} value={r.label}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button size="sm" onClick={() => apply(p.id, p.name)}>
+                    {mode === "change" ? "Apply" : "Save count"}
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -279,6 +352,14 @@ function InventoryPage() {
                     <span className="min-w-0">
                       <span className="block truncate font-medium">
                         {entry.product_name}
+                        {/* A movement on one option says so — otherwise "Desk: 4 → 3" reads as
+                            the whole product losing units. */}
+                        {entry.variant_name && (
+                          <span className="font-normal text-muted-foreground">
+                            {" — "}
+                            {entry.variant_name}
+                          </span>
+                        )}
                         {entry.movement_type && (
                           <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold uppercase text-muted-foreground">
                             {entry.movement_type}

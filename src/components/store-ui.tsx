@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Minus, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
+import { lineKey } from "@/lib/cart";
 import { type Product, money, specs, storeQuery, displayFees } from "@/lib/store";
 import { images, imageSize } from "@/lib/store-images";
 import { remainingForFreeDelivery } from "../../convex/lib/rules";
@@ -10,6 +11,10 @@ export function ProductCard({ product: p }: { product: Product }) {
   const { add } = useCart();
   // Badge color carries the information: green in stock, ochre sale/low,
   // neutral for unverified samples so they never read as live inventory.
+  // The option count only ever replaces the plain "In stock" — it is the one
+  // thing a grid can say about a product you must open to choose from, and a
+  // card is not the place to ask for a colour.
+  const optionCount = p.variants?.length ?? 0;
   const badge: { text: string; tone?: "out" | "low" | "sale" | "stock" } = !p.verified
     ? { text: "Sample item" }
     : p.stock === 0
@@ -18,7 +23,9 @@ export function ProductCard({ product: p }: { product: Product }) {
         ? { text: `${p.stock} left`, tone: "low" }
         : p.original_price
           ? { text: "Sale", tone: "sale" }
-          : { text: "In stock", tone: "stock" };
+          : optionCount > 1
+            ? { text: `${optionCount} options` }
+            : { text: "In stock", tone: "stock" };
   return (
     <article className="product-card">
       <div className="product-image">
@@ -92,30 +99,43 @@ export function CartLines() {
   const { lines, change, remove } = useCart();
   return (
     <>
-      {lines.map(({ product: p, quantity }) => (
-        <div className="cart-line" key={p.id}>
-          <img {...imageSize(p.image_key)} src={images[p.image_key]} alt={p.name} />
-          <div className="min-w-0">
-            <Link to="/product/$slug" params={{ slug: p.id }} className="text-sm font-medium">
-              {p.name}
-            </Link>
-            <p className="mb-3 text-xs text-muted-foreground">{money(p.price, true)}</p>
-            <Quantity value={quantity} onChange={(q) => change(p.id, q)} />
+      {lines.map((line) => {
+        // Keyed by product *and* option, so two colours of one product stay
+        // two rows and the quantity stepper moves only the one it sits on.
+        const { product: p, variant, quantity } = line,
+          key = lineKey(line),
+          // The option's own price wins when it has one — the same rule the
+          // subtotal and the server use.
+          price = variant?.price ?? p.price,
+          imageKey = variant?.image_key ?? p.image_key;
+        return (
+          <div className="cart-line" key={key}>
+            <img {...imageSize(imageKey)} src={images[imageKey]} alt={p.name} />
+            <div className="min-w-0">
+              <Link to="/product/$slug" params={{ slug: p.id }} className="text-sm font-medium">
+                {p.name}
+              </Link>
+              {variant && (
+                <p className="mt-0.5 mb-3 text-xs text-muted-foreground">{variant.name}</p>
+              )}
+              <p className="mb-3 text-xs text-muted-foreground">{money(price, true)}</p>
+              <Quantity value={quantity} onChange={(q) => change(key, q)} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold">{money(price * quantity, true)}</p>
+              <Button
+                className="mt-3 icon-control"
+                variant="ghost"
+                title="Remove item"
+                aria-label={`Remove ${p.name}${variant ? `, ${variant.name}` : ""}`}
+                onClick={() => remove(key)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-semibold">{money(p.price * quantity, true)}</p>
-            <Button
-              className="mt-3 icon-control"
-              variant="ghost"
-              title="Remove item"
-              aria-label={`Remove ${p.name}`}
-              onClick={() => remove(p.id)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }

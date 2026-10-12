@@ -11,6 +11,7 @@ import {
 } from "@/lib/store";
 import { images } from "@/lib/store-images";
 import { useImageUpload } from "@/lib/upload-image";
+import { VariantEditor } from "@/components/staff/variant-editor";
 import { toast } from "sonner";
 
 type Draft = {
@@ -371,6 +372,23 @@ export function ProductForm({
           names the product already using it. Cost and supplier never appear on the storefront.
         </p>
       </div>
+
+      {/* Options are attached to an existing product — a brand-new one has no
+          slug to hang them from until it has been saved once. */}
+      {d.id !== "" ? (
+        <div>
+          <h3 className="mb-2 font-semibold">Options</h3>
+          <VariantEditor slug={d.id} basePrice={Number(d.price) || 0} />
+        </div>
+      ) : (
+        <div>
+          <h3 className="mb-2 font-semibold">Options</h3>
+          <p className="text-sm text-muted-foreground">
+            Save the product first, then come back to add options such as Colour or Size — each one
+            needs a slug to keep its stock against.
+          </p>
+        </div>
+      )}
 
       <div>
         <h3 className="mb-2 font-semibold">Photos</h3>

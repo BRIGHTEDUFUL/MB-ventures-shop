@@ -73,6 +73,17 @@ export type StockCommand =
 export type StockChange = {
   /** Slug of the product being moved (`products.slug`). */
   slug: string;
+  /**
+   * Set to move one variant of that product instead of the product itself.
+   *
+   * The command arithmetic then runs against the variant's counts, and the
+   * product's `stock` / `reserved` are **recomputed as the sum across its
+   * variants** in the same transaction — the aggregate is always derived,
+   * never hand-edited. One ledger row is written, naming the variant.
+   *
+   * Absent (the overwhelmingly common case) behaves exactly as before.
+   */
+  variant_key?: string | undefined;
   command: StockCommand;
   /** What happened, for filtering and for `reversal`. */
   movement_type: MovementType;
@@ -98,6 +109,19 @@ export type StockChange = {
    * step instead of two patches racing each other.
    */
   patch?: Partial<Omit<Doc<"products">, "_id" | "_creationTime" | "slug">> | undefined;
+  /**
+   * The same, for the variant row. Only meaningful alongside `variant_key`.
+   * Stock fields are excluded by the type so a caller cannot smuggle a second
+   * opinion about the counts past the arithmetic above.
+   */
+  variant_patch?:
+    | Partial<
+        Omit<
+          Doc<"product_variants">,
+          "_id" | "_creationTime" | "product_slug" | "key" | "stock" | "reserved" | "version"
+        >
+      >
+    | undefined;
 };
 
 export type StockChangeResult = {
@@ -124,6 +148,110 @@ const assertCount = (label: string, value: number): void => {
 };
 
 /**
+ * The command arithmetic, as a pure function of the counts it is given.
+ *
+ * Extracted so a product and a variant are moved by literally the same code —
+ * `reserve` means the same thing for "Black" as it does for a product with no
+ * options at all, and there is no second copy of the rules to drift.
+ */
+export function nextCounts(
+  command: StockCommand,
+  before: { stock: number; reserved: number },
+): { stock: number; reserved: number } {
+  const quantity = "quantity" in command ? command.quantity : 0;
+
+  switch (command.kind) {
+    case "adjust": {
+      const { delta } = command;
+      if (!Number.isInteger(delta) || delta === 0) {
+        fail("VALIDATION_FAILED", "Enter a whole number change that is not zero.");
+      }
+      if (before.stock + delta < 0) {
+        // Worded around what is physically on the shelf, because that is the
+        // number a staff member is comparing against.
+        fail("STOCK_INSUFFICIENT", `Stock cannot go below zero — only ${before.stock} on hand.`, {
+          available: before.stock,
+          requested: delta,
+        });
+      }
+      return { stock: before.stock + delta, reserved: before.reserved };
+    }
+    case "set_on_hand": {
+      const target = command.value;
+      assertCount("The stock count", target);
+      // The editor counts the shelf, so open orders keep their hold: only the
+      // units *above* a reservation become available.
+      const stock = target - before.reserved;
+      if (stock < 0) {
+        fail(
+          "VALIDATION_FAILED",
+          `There are only ${before.reserved} units free — ${before.reserved} of the ${target} counted are already promised to open orders.`,
+        );
+      }
+      return { stock, reserved: before.reserved };
+    }
+    case "reserve": {
+      assertCount("The quantity", quantity);
+      if (quantity === 0) fail("VALIDATION_FAILED", "The quantity cannot be zero.");
+      if (before.stock < quantity) {
+        fail(
+          "STOCK_INSUFFICIENT",
+          `Only ${before.stock} unit${before.stock === 1 ? " is" : "s are"} available.`,
+          { available: before.stock, requested: quantity },
+        );
+      }
+      return { stock: before.stock - quantity, reserved: before.reserved + quantity };
+    }
+    case "release": {
+      assertCount("The quantity", quantity);
+      if (before.reserved < quantity) {
+        fail("STATE_CONFLICT", "This order is no longer holding any stock.");
+      }
+      return { stock: before.stock + quantity, reserved: before.reserved - quantity };
+    }
+    case "commit": {
+      assertCount("The quantity", quantity);
+      if (before.reserved < quantity) {
+        fail("STATE_CONFLICT", "This order is no longer holding any stock.");
+      }
+      // Available is untouched: those units already left the available pool
+      // when the order was placed. Only the shelf count drops.
+      return { stock: before.stock, reserved: before.reserved - quantity };
+    }
+    case "restock": {
+      assertCount("The quantity", quantity);
+      if (quantity === 0) fail("VALIDATION_FAILED", "The quantity cannot be zero.");
+      return { stock: before.stock + quantity, reserved: before.reserved };
+    }
+  }
+}
+
+/**
+ * Sum every variant of a product into the aggregate the product row carries.
+ *
+ * Hidden variants are included on purpose: a variant the shop has stopped
+ * listing still holds physical units, and dropping it from the sum would make
+ * those units disappear from the shelf count.
+ */
+export async function variantAggregate(
+  ctx: MutationCtx,
+  product_slug: string,
+): Promise<{ stock: number; reserved: number }> {
+  const rows = await ctx.db
+    .query("product_variants")
+    .withIndex("by_product", (q) => q.eq("product_slug", product_slug))
+    .collect();
+
+  return rows.reduce(
+    (total, row) => ({
+      stock: total.stock + row.stock,
+      reserved: total.reserved + (row.reserved ?? 0),
+    }),
+    { stock: 0, reserved: 0 },
+  );
+}
+
+/**
  * Apply one stock movement.
  *
  * Runs inside the caller's transaction: the product read, the patch and the
@@ -141,6 +269,22 @@ export async function applyStockChange(
     .first();
   if (product === null) fail("NOT_FOUND", "Product not found.");
 
+  // A variant key, when present, makes this a variant movement. An empty or
+  // absent key keeps the pre-variants path byte-for-byte.
+  const wantedKey = change.variant_key?.trim() ?? "";
+  const variant =
+    wantedKey === ""
+      ? null
+      : await ctx.db
+          .query("product_variants")
+          .withIndex("by_product_key", (q) =>
+            q.eq("product_slug", change.slug).eq("key", wantedKey),
+          )
+          .unique();
+  if (wantedKey !== "" && variant === null) {
+    fail("NOT_FOUND", "That option is no longer available.");
+  }
+
   // Idempotency: a repeat of an already-applied operation key is a no-op.
   if (change.operation_key !== undefined && change.operation_key !== "") {
     const seen = await ctx.db
@@ -148,103 +292,59 @@ export async function applyStockChange(
       .withIndex("by_operation", (q) => q.eq("operation_key", change.operation_key as string))
       .first();
     if (seen !== null) {
+      const current =
+        variant === null
+          ? { stock: product.stock, reserved: product.reserved ?? 0 }
+          : { stock: variant.stock, reserved: variant.reserved ?? 0 };
       return {
-        stock: product.stock,
-        reserved: product.reserved ?? 0,
-        on_hand: onHand(product),
+        ...current,
+        on_hand: current.stock + current.reserved,
         skipped: true,
         movement_id: seen._id,
       };
     }
   }
 
-  const before = { stock: product.stock, reserved: product.reserved ?? 0 };
+  const before =
+    variant === null
+      ? { stock: product.stock, reserved: product.reserved ?? 0 }
+      : { stock: variant.stock, reserved: variant.reserved ?? 0 };
   const beforeHand = before.stock + before.reserved;
-  const quantity = "quantity" in change.command ? change.command.quantity : 0;
 
-  let next: { stock: number; reserved: number };
-  switch (change.command.kind) {
-    case "adjust": {
-      const { delta } = change.command;
-      if (!Number.isInteger(delta) || delta === 0) {
-        fail("VALIDATION_FAILED", "Enter a whole number change that is not zero.");
-      }
-      if (before.stock + delta < 0) {
-        // Worded around what is physically on the shelf, because that is the
-        // number a staff member is comparing against.
-        fail("STOCK_INSUFFICIENT", `Stock cannot go below zero — only ${before.stock} on hand.`, {
-          available: before.stock,
-          requested: delta,
-        });
-      }
-      next = { stock: before.stock + delta, reserved: before.reserved };
-      break;
-    }
-    case "set_on_hand": {
-      const target = change.command.value;
-      assertCount("The stock count", target);
-      // The editor counts the shelf, so open orders keep their hold: only the
-      // units *above* a reservation become available.
-      const stock = target - before.reserved;
-      if (stock < 0) {
-        fail(
-          "VALIDATION_FAILED",
-          `There are only ${before.reserved} units free — ${before.reserved} of the ${target} counted are already promised to open orders.`,
-        );
-      }
-      next = { stock, reserved: before.reserved };
-      break;
-    }
-    case "reserve": {
-      assertCount("The quantity", quantity);
-      if (quantity === 0) fail("VALIDATION_FAILED", "The quantity cannot be zero.");
-      if (before.stock < quantity) {
-        fail(
-          "STOCK_INSUFFICIENT",
-          `Only ${before.stock} unit${before.stock === 1 ? " is" : "s are"} available.`,
-          { available: before.stock, requested: quantity },
-        );
-      }
-      next = { stock: before.stock - quantity, reserved: before.reserved + quantity };
-      break;
-    }
-    case "release": {
-      assertCount("The quantity", quantity);
-      if (before.reserved < quantity) {
-        fail("STATE_CONFLICT", "This order is no longer holding any stock.");
-      }
-      next = { stock: before.stock + quantity, reserved: before.reserved - quantity };
-      break;
-    }
-    case "commit": {
-      assertCount("The quantity", quantity);
-      if (before.reserved < quantity) {
-        fail("STATE_CONFLICT", "This order is no longer holding any stock.");
-      }
-      // Available is untouched: those units already left the available pool
-      // when the order was placed. Only the shelf count drops.
-      next = { stock: before.stock, reserved: before.reserved - quantity };
-      break;
-    }
-    case "restock": {
-      assertCount("The quantity", quantity);
-      if (quantity === 0) fail("VALIDATION_FAILED", "The quantity cannot be zero.");
-      next = { stock: before.stock + quantity, reserved: before.reserved };
-      break;
-    }
-  }
+  const next = nextCounts(change.command, before);
 
   assertCount("The available count", next.stock);
   assertCount("The reserved count", next.reserved);
 
   const afterHand = next.stock + next.reserved;
-  const patch: Partial<Omit<Doc<"products">, "_id" | "_creationTime">> = {
-    ...change.patch,
-    stock: next.stock,
-    reserved: next.reserved,
-    version: (product.version ?? 0) + 1,
-  };
-  await ctx.db.patch(product._id, patch);
+
+  if (variant !== null) {
+    // The variant is what physically moved…
+    await ctx.db.patch(variant._id, {
+      ...change.variant_patch,
+      stock: next.stock,
+      reserved: next.reserved,
+      version: (variant.version ?? 0) + 1,
+    });
+    // …and the product carries the derived sum, written in the same
+    // transaction so the two can never disagree. Re-read *after* the patch so
+    // the sum includes the movement just made.
+    const aggregate = await variantAggregate(ctx, change.slug);
+    await ctx.db.patch(product._id, {
+      ...change.patch,
+      stock: aggregate.stock,
+      reserved: aggregate.reserved,
+      version: (product.version ?? 0) + 1,
+    });
+  } else {
+    const patch: Partial<Omit<Doc<"products">, "_id" | "_creationTime">> = {
+      ...change.patch,
+      stock: next.stock,
+      reserved: next.reserved,
+      version: (product.version ?? 0) + 1,
+    };
+    await ctx.db.patch(product._id, patch);
+  }
 
   // No movement means no number changed — a product save that leaves stock
   // alone still writes its copy and version through `patch`, but must not
@@ -255,6 +355,10 @@ export async function applyStockChange(
     movement_id = await ctx.db.insert("inventory_history", {
       product_slug: product.slug,
       product_name: product.name,
+      // The counts on this row describe the variant when there is one; the
+      // product aggregate is left out so the log reads as one honest move
+      // rather than two numbers that only add up when you sum them.
+      ...(variant !== null ? { variant_key: variant.key, variant_name: variant.name } : {}),
       previous_stock: before.stock,
       new_stock: next.stock,
       reason: change.reason,

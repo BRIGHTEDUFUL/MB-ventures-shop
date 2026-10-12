@@ -34,6 +34,8 @@ export const adjust = mutation({
     ),
     operation_key: v.optional(v.string()),
     note: v.optional(v.string()),
+    /** Set to adjust one option of the product rather than the product itself. */
+    variant_key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const actorId = await requirePermission(ctx, "inventory.adjust");
@@ -49,10 +51,26 @@ export const adjust = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", args.product_id))
       .first();
     if (product === null) throw new ConvexError({ message: "Product not found." });
-    const before = product.stock;
+
+    const heldKey = args.variant_key?.trim() ?? "";
+    const variant =
+      heldKey === ""
+        ? null
+        : await ctx.db
+            .query("product_variants")
+            .withIndex("by_product_key", (q) =>
+              q.eq("product_slug", args.product_id).eq("key", heldKey),
+            )
+            .unique();
+    if (heldKey !== "" && variant === null) {
+      throw new ConvexError({ message: "That option no longer exists." });
+    }
+    const before = variant === null ? product.stock : variant.stock;
+    const who = variant === null ? product.name : `${product.name} — ${variant.name}`;
 
     const result = await applyStockChange(ctx, {
       slug: args.product_id,
+      ...(variant === null ? {} : { variant_key: variant.key }),
       command: { kind: "adjust", delta: args.delta },
       movement_type,
       source,
@@ -69,7 +87,7 @@ export const adjust = mutation({
         ctx,
         actorId,
         "inventory.adjust",
-        `${product.name}: stock ${before} → ${result.stock}.`,
+        `${who}: stock ${before} → ${result.stock}.`,
       );
     }
     return { ok: true, stock: result.stock };
@@ -89,6 +107,8 @@ export const count = mutation({
     counted: v.number(),
     reason: v.optional(v.string()),
     operation_key: v.optional(v.string()),
+    /** Set to count one option rather than the product as a whole. */
+    variant_key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const actorId = await requirePermission(ctx, "inventory.stocktake");
@@ -105,10 +125,26 @@ export const count = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", args.product_id))
       .first();
     if (product === null) throw new ConvexError({ message: "Product not found." });
-    const before = product.stock;
+
+    const heldKey = args.variant_key?.trim() ?? "";
+    const variant =
+      heldKey === ""
+        ? null
+        : await ctx.db
+            .query("product_variants")
+            .withIndex("by_product_key", (q) =>
+              q.eq("product_slug", args.product_id).eq("key", heldKey),
+            )
+            .unique();
+    if (heldKey !== "" && variant === null) {
+      throw new ConvexError({ message: "That option no longer exists." });
+    }
+    const before = variant === null ? product.stock : variant.stock;
+    const who = variant === null ? product.name : `${product.name} — ${variant.name}`;
 
     const result = await applyStockChange(ctx, {
       slug: args.product_id,
+      ...(variant === null ? {} : { variant_key: variant.key }),
       command: { kind: "set_on_hand", value: args.counted },
       movement_type: "stocktake",
       source: "attendant",
@@ -124,7 +160,7 @@ export const count = mutation({
         ctx,
         actorId,
         "inventory.count",
-        `${product.name}: counted ${args.counted}, system said ${before}.`,
+        `${who}: counted ${args.counted}, system said ${before}.`,
       );
     }
     return { ok: true, stock: result.stock, changed: result.stock !== before };
@@ -181,6 +217,10 @@ export const reverse = mutation({
 
     const result = await applyStockChange(ctx, {
       slug: original.product_slug,
+      // A movement that touched an option is undone on that same option —
+      // the row records which one, so the reversal cannot drift to the
+      // product as a whole (or to a different colour).
+      ...(original.variant_key ? { variant_key: original.variant_key } : {}),
       command: { kind: "adjust", delta },
       movement_type: "reversal",
       source: "attendant",
@@ -201,7 +241,9 @@ export const reverse = mutation({
       ctx,
       actorId,
       "inventory.reverse",
-      `Reversed a movement on ${product.name} (${original.previous_stock} → ${original.new_stock}).`,
+      `Reversed a movement on ${product.name}${
+        original.variant_name ? ` — ${original.variant_name}` : ""
+      } (${original.previous_stock} → ${original.new_stock}).`,
     );
     return { ok: true, stock: result.stock };
   },
@@ -211,6 +253,9 @@ export type InventoryEntry = {
   id: string;
   product_slug: string;
   product_name: string;
+  /** Option this movement touched, when the product sells in versions. */
+  variant_key: string | null;
+  variant_name: string | null;
   previous_stock: number;
   new_stock: number;
   reason: string;
@@ -230,6 +275,8 @@ function entryDTO(row: Doc<"inventory_history">, actor_name: string): InventoryE
     id: row._id,
     product_slug: row.product_slug,
     product_name: row.product_name,
+    variant_key: row.variant_key ?? null,
+    variant_name: row.variant_name ?? null,
     previous_stock: row.previous_stock,
     new_stock: row.new_stock,
     reason: row.reason,

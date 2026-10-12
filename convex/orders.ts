@@ -30,7 +30,15 @@ const checkoutArgs = {
   address: v.string(),
   fulfillment: validators.fulfillment,
   zone: validators.zone,
-  items: v.array(v.object({ id: v.string(), quantity: v.number() })),
+  items: v.array(
+    v.object({
+      id: v.string(),
+      quantity: v.number(),
+      // Which option of `id` was bought. Absent = the product sells as a
+      // single thing, which is every product that has no variants.
+      variant_key: v.optional(v.string()),
+    }),
+  ),
 };
 
 /** `MB-` + 8 random bytes hex, retried until unique (Postgres had a UNIQUE constraint). */
@@ -94,16 +102,45 @@ export const place = mutation({
         .query("products")
         .withIndex("by_slug", (q) => q.eq("slug", line.id))
         .unique();
-      if (product === null || !product.verified || product.stock < line.quantity) {
+      if (product === null || !product.verified) {
         throw new ConvexError({ message: "An item is not available. Please check your cart." });
       }
-      subtotal += product.price * line.quantity;
+
+      // Resolve the option, if the line named one. The browser sends only an
+      // identity — the price, the stock check and the label are all decided
+      // here, so a tampered cart cannot buy a Black desk at White's price.
+      const wantedKey = line.variant_key?.trim() ?? "";
+      const variant =
+        wantedKey === ""
+          ? null
+          : await ctx.db
+              .query("product_variants")
+              .withIndex("by_product_key", (q) =>
+                q.eq("product_slug", product.slug).eq("key", wantedKey),
+              )
+              .unique();
+      if (wantedKey !== "" && (variant === null || !variant.visible)) {
+        throw new ConvexError({
+          message: "An item is no longer available. Please check your cart.",
+        });
+      }
+
+      const price = variant?.price ?? product.price;
+      const available = variant === null ? product.stock : variant.stock;
+      if (available < line.quantity) {
+        throw new ConvexError({ message: "An item is not available. Please check your cart." });
+      }
+
+      subtotal += price * line.quantity;
       lines.push({
         id: product.slug,
-        name: product.name,
-        price: product.price,
+        // The option becomes part of the name so staff, receipts and the
+        // top-sellers report all read the colour back without a join.
+        name: variant === null ? product.name : `${product.name} — ${variant.name}`,
+        price,
         quantity: line.quantity,
-        image_key: product.image_key,
+        image_key: variant?.image_key ?? product.image_key,
+        ...(variant === null ? {} : { variant_key: variant.key, variant_name: variant.name }),
       });
       // The units are *held*, not gone: `stock` (available) drops so nobody
       // else can buy them, `reserved` grows by the same amount, and on-hand
@@ -112,13 +149,17 @@ export const place = mutation({
       // without guessing what to restore.
       await applyStockChange(ctx, {
         slug: product.slug,
+        ...(variant === null ? {} : { variant_key: variant.key }),
         command: { kind: "reserve", quantity: line.quantity },
         movement_type: "reserve",
         source: "checkout",
         reason: `Sold on order ${reference}`,
         reference,
-        // One intent, one movement: a retried client cannot double-hold.
-        operation_key: `place:${reference}:${product.slug}`,
+        // One intent, one movement: a retried client cannot double-hold. The
+        // option is part of the key so two colours of one order are two holds.
+        operation_key: `place:${reference}:${product.slug}${
+          variant === null ? "" : `:${variant.key}`
+        }`,
       });
     }
 
@@ -322,30 +363,37 @@ export const staffUpdate = mutation({
           .withIndex("by_slug", (q) => q.eq("slug", line.id))
           .first();
         if (product === null) continue; // listing removed after the order closed
+        // The units go back to the *option* they left from — cancelling must
+        // not hand Black's stock to White.
+        const heldKey = line.variant_key?.trim() ?? "";
+        const onto = heldKey === "" ? {} : { variant_key: heldKey };
+        const suffix = heldKey === "" ? "" : `:${heldKey}`;
         if (heldState === "reserved") {
           // The goods never left: hand the same units back to the shelf.
           await applyStockChange(ctx, {
             slug: product.slug,
+            ...onto,
             command: { kind: "release", quantity: line.quantity },
             movement_type: "release",
             source: "order",
             reason: `Restock: order ${order.reference} cancelled`,
             actor_id: actorId,
             reference: order.reference,
-            operation_key: `cancel:${order.reference}:${product.slug}`,
+            operation_key: `cancel:${order.reference}:${product.slug}${suffix}`,
           });
         } else if (heldState === "committed") {
           // Already out of the shop — this is goods coming *back*, which is a
           // different story in the ledger than a hold being dropped.
           await applyStockChange(ctx, {
             slug: product.slug,
+            ...onto,
             command: { kind: "restock", quantity: line.quantity },
             movement_type: "restock",
             source: "order",
             reason: `Restock: order ${order.reference} cancelled after dispatch`,
             actor_id: actorId,
             reference: order.reference,
-            operation_key: `cancel:${order.reference}:${product.slug}`,
+            operation_key: `cancel:${order.reference}:${product.slug}${suffix}`,
           });
         }
         // `released` / `restocked` already gave the units back — cancelling
@@ -366,15 +414,19 @@ export const staffUpdate = mutation({
           .withIndex("by_slug", (q) => q.eq("slug", line.id))
           .first();
         if (product === null) continue;
+        const heldKey = line.variant_key?.trim() ?? "";
         await applyStockChange(ctx, {
           slug: product.slug,
+          ...(heldKey === "" ? {} : { variant_key: heldKey }),
           command: { kind: "commit", quantity: line.quantity },
           movement_type: "commit",
           source: "order",
           reason: `Order ${order.reference} ${args.status === "dispatched" ? "dispatched" : "completed"} — stock leaves the shelf`,
           actor_id: actorId,
           reference: order.reference,
-          operation_key: `commit:${order.reference}:${product.slug}`,
+          operation_key: `commit:${order.reference}:${product.slug}${
+            heldKey === "" ? "" : `:${heldKey}`
+          }`,
         });
       }
       nextStockState = "committed";

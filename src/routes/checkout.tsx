@@ -5,6 +5,7 @@ import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/store-provider";
+import { lineKey } from "@/lib/cart";
 import {
   storeQuery,
   pageHead,
@@ -108,7 +109,11 @@ function Checkout() {
     total = cart.subtotal + fee;
   const unavailable = cart.lines.some((l) => {
     const p = data.products.find((p) => p.id === l.product.id);
-    return !p?.verified || p.stock < l.quantity;
+    if (!p?.verified) return true;
+    // A line that carries an option is filled from that option's shelf, so the
+    // option's stock — not the product's aggregate — decides this line.
+    const stock = l.variant ? l.variant.stock : p.stock;
+    return stock < l.quantity;
   });
   const canOrder = data.settings.ordering_enabled && !unavailable;
   const place = async () => {
@@ -117,7 +122,13 @@ function Checkout() {
     try {
       const order = await placeOrder({
         ...form,
-        items: cart.lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
+        // The browser sends identities only — product, option, quantity. The
+        // price, the stock check and the label are all recomputed server-side.
+        items: cart.lines.map((l) => ({
+          id: l.product.id,
+          quantity: l.quantity,
+          ...(l.variant ? { variant_key: l.variant.key } : {}),
+        })),
       });
       sessionStorage.setItem("mb-receipt", JSON.stringify(order));
       sessionStorage.removeItem(DRAFT_KEY);
@@ -322,17 +333,22 @@ function Checkout() {
             <aside className="solid-panel h-fit">
               <h2 className="mb-5 text-xl">Your order</h2>
               {cart.lines.map((l) => (
-                <div key={l.product.id} className="mb-4 flex items-center gap-3">
+                // The line key, not the product id: Black and White are two
+                // rows, and React would collapse them onto one otherwise.
+                <div key={lineKey(l)} className="mb-4 flex items-center gap-3">
                   <img
-                    src={images[l.product.image_key]}
+                    src={images[l.variant?.image_key ?? l.product.image_key]}
                     alt={l.product.name}
                     className="size-12 object-contain"
                   />
                   <div className="flex-1 text-xs">
                     {l.product.name}
+                    {l.variant && <p className="text-muted-foreground">{l.variant.name}</p>}
                     <p className="text-muted-foreground">Qty {l.quantity}</p>
                   </div>
-                  <span className="text-xs">{money(l.product.price * l.quantity, true)}</span>
+                  <span className="text-xs">
+                    {money((l.variant?.price ?? l.product.price) * l.quantity, true)}
+                  </span>
                 </div>
               ))}
               <div className="summary-row">

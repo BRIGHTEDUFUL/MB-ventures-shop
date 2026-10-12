@@ -12,8 +12,10 @@ import {
   ProductCard,
   SectionHeading,
 } from "@/components/store-ui";
+import { VariantPicker } from "@/components/variant-picker";
 import { images } from "@/lib/store-images";
 import { storeQuery, pageHead, money, specs, delivery, zones, whatsappHref } from "@/lib/store";
+import { variantKey } from "../../convex/lib/variants";
 import { toast } from "sonner";
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ context, params }) => {
@@ -45,8 +47,39 @@ function ProductPage() {
     [quantity, setQuantity] = useState(1),
     [zone, setZone] = useState("central"),
     [gallery, setGallery] = useState(0),
-    [zoom, setZoom] = useState(false);
+    [zoom, setZoom] = useState(false),
+    // Axis name → chosen value. Empty until the product's options seed it.
+    [chosen, setChosen] = useState<Record<string, string>>({});
   if (!p) return <PageNotFound />;
+  const axes = p.axes ?? [],
+    variants = p.variants ?? [],
+    // The route component is reused when the slug changes, so a selection made
+    // on another product can arrive here. Whenever it does not describe this
+    // product's axes we fall back to its first buyable option, which is what
+    // makes the page usable the moment it opens.
+    selectedOptions =
+      axes.length > 0 && axes.every((axis) => axis.values.includes(chosen[axis.name] ?? ""))
+        ? chosen
+        : (variants.find((v) => v.visible)?.options ?? variants[0]?.options ?? {}),
+    selectedVariant = variants.find(
+      (v) =>
+        v.key ===
+        variantKey(
+          selectedOptions,
+          axes.map((axis) => axis.name),
+        ),
+    );
+  // With options on offer the *option* decides price, stock and SKU. A product
+  // without them keeps exactly the numbers this page has always shown.
+  const price = selectedVariant?.price ?? p.price,
+    stock = selectedVariant ? selectedVariant.stock : p.stock,
+    sku = selectedVariant?.sku ?? `MB-${p.id.toUpperCase()}`,
+    // Fail closed: options are on offer but nothing buyable sits behind the
+    // current choice, so the shopper must not be able to put it in the cart.
+    unavailable = selectedVariant
+      ? !selectedVariant.visible || selectedVariant.stock === 0
+      : variants.length > 0 || p.stock === 0,
+    soldOut = p.verified && unavailable;
   const galleryImages = [images[p.image_key], ...(p.gallery ?? []).map((g) => images[g])];
   // Prefers the staff-entered WhatsApp number, then the shop phone, and returns
   // null when neither is dialable — in which case we drop the link entirely
@@ -108,9 +141,7 @@ function ProductPage() {
         <div>
           <p className="eyebrow text-muted-foreground">{p.brand}</p>
           <h1 className="mt-3 font-display text-4xl font-semibold">{p.name}</h1>
-          <p className="mt-4 font-mono text-xs text-muted-foreground">
-            SKU: MB-{p.id.toUpperCase()}
-          </p>
+          <p className="mt-4 font-mono text-xs text-muted-foreground">SKU: {sku}</p>
           <div className="mt-5 flex flex-wrap gap-2">
             {specs(p.specs)
               .slice(0, 3)
@@ -121,7 +152,7 @@ function ProductPage() {
               ))}
           </div>
           <p className="mt-7 text-3xl font-semibold">
-            <span className={p.original_price ? "sale-price" : undefined}>{money(p.price)}</span>{" "}
+            <span className={p.original_price ? "sale-price" : undefined}>{money(price)}</span>{" "}
             {p.original_price && (
               <del className="text-lg font-normal text-muted-foreground">
                 {money(p.original_price)}
@@ -131,35 +162,44 @@ function ProductPage() {
           <p
             className={
               "mt-3 text-sm " +
-              (p.verified && p.stock > 0 ? "text-success-ink" : "text-muted-foreground")
+              (p.verified && stock > 0 ? "text-success-ink" : "text-muted-foreground")
             }
           >
+            {/* The option joins the sentence so two lines of the same shelf
+                read as the colour and the count, not one number for both. */}
             {!p.verified
               ? "Sample item · price and availability unconfirmed"
-              : p.stock > 0
-                ? `In stock · ${p.stock} available`
-                : "Out of stock"}
+              : stock > 0
+                ? `In stock · ${stock} available${selectedVariant ? ` · ${selectedVariant.name}` : ""}`
+                : `Out of stock${selectedVariant ? ` · ${selectedVariant.name}` : ""}`}
           </p>
           <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             <MapPin className="size-4" />
             Pickup at Abelenkpe, Accra
           </p>
+          <VariantPicker
+            product={p}
+            selected={selectedOptions}
+            // Merge onto the resolved options rather than the raw state, so an
+            // axis that was never touched stays answered after a click.
+            onSelect={(axis, value) => setChosen({ ...selectedOptions, [axis]: value })}
+          />
           <div className="mt-7 flex gap-4">
             <Quantity value={quantity} onChange={setQuantity} />
             <Button
               className="flex-1"
-              disabled={p.verified && p.stock === 0}
-              onClick={() => cart.add(p, quantity)}
+              disabled={soldOut}
+              onClick={() => cart.add(p, quantity, selectedVariant)}
             >
-              Add to cart <Plus />
+              Add to cart{selectedVariant ? ` · ${selectedVariant.name}` : ""} <Plus />
             </Button>
           </div>
           <Button
             variant="outline"
             className="mt-3 w-full"
-            disabled={p.verified && p.stock === 0}
+            disabled={soldOut}
             onClick={() => {
-              cart.add(p, quantity);
+              cart.add(p, quantity, selectedVariant);
               navigate({ to: "/checkout" });
             }}
           >
@@ -188,7 +228,7 @@ function ProductPage() {
               ))}
             </select>
             <p className="mt-3 text-sm">
-              {money(delivery(settings, zone, p.price * quantity))} ·{" "}
+              {money(delivery(settings, zone, price * quantity))} ·{" "}
               {zones.find((z) => z.id === zone)?.time}
             </p>
             <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">

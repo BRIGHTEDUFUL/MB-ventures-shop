@@ -383,5 +383,6 @@ npx convex run users:grantStaff '{"email":"x@y.com"}' --env-file .env.prod.local
 | docs/EMAIL.md              | Email system full guide                        |
 | docs/PRODUCTION-CONFIG.md  | Deployment configuration reference             |
 | docs/INVENTORY-AUDIT.md    | Full product specs and original inventory doc  |
+| docs/PRODUCT-VARIANTS.md   | Options (colour/size/type): data model, stock, UI |
 | roadmap.md                 | Feature completion status                      |
 | convex/inventory_import.ts | Canonical source of all real product data      |

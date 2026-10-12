@@ -49,6 +49,7 @@ import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_rules from "../lib/rules.js";
 import type * as lib_settings from "../lib/settings.js";
 import type * as lib_stock from "../lib/stock.js";
+import type * as lib_variants from "../lib/variants.js";
 import type * as migrations from "../migrations.js";
 import type * as orders from "../orders.js";
 import type * as seed from "../seed.js";
@@ -105,6 +106,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rules": typeof lib_rules;
   "lib/settings": typeof lib_settings;
   "lib/stock": typeof lib_stock;
+  "lib/variants": typeof lib_variants;
   migrations: typeof migrations;
   orders: typeof orders;
   seed: typeof seed;

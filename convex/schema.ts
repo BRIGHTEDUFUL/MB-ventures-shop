@@ -256,6 +256,53 @@ export default defineSchema({
     .index("by_sku", ["sku"])
     .index("by_barcode", ["barcode"]),
 
+  // One buyable version of a product — "Black", "White", "Black / Large".
+  //
+  // A product with no rows here behaves exactly as it did before this table
+  // existed: `products.stock` is authoritative and the storefront shows one
+  // price. A product *with* rows sells by variant, and the product's own
+  // `stock` / `reserved` become a **derived aggregate** across its variants so
+  // every existing reader (catalogue badge, low-stock panel, data health, the
+  // staff list) keeps working untouched.
+  //
+  // `stock` / `reserved` / `version` are deliberately named like the product
+  // fields: `applyStockChange` handles both shapes in one path, and the
+  // single-writer source scan keeps policing them — no file outside
+  // `convex/lib/stock.ts` may patch them.
+  product_variants: defineTable({
+    // Parent product (`products.slug`, not an Id — the catalogue is keyed by
+    // slug everywhere, including the stock ledger and order lines).
+    product_slug: v.string(),
+    // Canonical identity of the combination, e.g. "black" or "black--l".
+    // Stable forever: order lines and ledger rows point at it.
+    key: v.string(),
+    // Shopper-facing label, e.g. "Black" or "Black / Large".
+    name: v.string(),
+    // The combination itself, e.g. { Colour: "Black", Size: "Large" }. Axes are
+    // derived from these records rather than stored, so an axis can never name
+    // a value no variant carries.
+    options: v.record(v.string(), v.string()),
+    // Absent or null = inherit `products.price`. Present = this variant costs
+    // this. Nullable rather than purely optional so clearing a variant's price
+    // writes an explicit "inherit" instead of leaving the old number behind.
+    price: v.optional(v.union(v.number(), v.null())),
+    sku: v.optional(v.union(v.string(), v.null())),
+    barcode: v.optional(v.union(v.string(), v.null())),
+    // Absent = use the parent's photo.
+    image_key: v.optional(v.union(v.string(), v.null())),
+    stock: v.number(),
+    reserved: v.optional(v.number()),
+    version: v.optional(v.number()),
+    cost_price: v.optional(v.union(v.number(), v.null())),
+    // Order staff arranged the rows in; also the order axes are derived in.
+    sort_order: v.number(),
+    // A hidden variant keeps its stock on the shelf but cannot be bought.
+    visible: v.boolean(),
+  })
+    .index("by_product", ["product_slug"])
+    .index("by_product_key", ["product_slug", "key"])
+    .index("by_sku", ["sku"]),
+
   // Replaces `public.categories`.
   categories: defineTable({
     slug: v.string(),
@@ -346,6 +393,11 @@ export default defineSchema({
         price: v.number(),
         quantity: v.number(),
         image_key: v.string(),
+        // Which variant of `id` this line bought, when the product has
+        // variants. Optional so every order written before variants existed
+        // keeps validating unchanged.
+        variant_key: v.optional(v.string()),
+        variant_name: v.optional(v.string()),
       }),
     ),
     // Set when a message we sent to the customer was reported as undeliverable
@@ -393,6 +445,10 @@ export default defineSchema({
   inventory_history: defineTable({
     product_slug: v.string(),
     product_name: v.string(),
+    // Which variant moved, when the product has variants. The counts on this
+    // row describe the *variant*, not the product aggregate.
+    variant_key: v.optional(v.string()),
+    variant_name: v.optional(v.string()),
     previous_stock: v.number(),
     new_stock: v.number(),
     reason: v.string(),

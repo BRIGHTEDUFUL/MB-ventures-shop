@@ -69,10 +69,11 @@ const finding = (
  * cron can call the exact same code.
  */
 export async function scanHealth(ctx: QueryCtx): Promise<HealthReport> {
-  const [products, categories, orders] = await Promise.all([
+  const [products, categories, orders, variants] = await Promise.all([
     ctx.db.query("products").collect(),
     ctx.db.query("categories").collect(),
     ctx.db.query("orders").order("desc").take(ORDER_SAMPLE),
+    ctx.db.query("product_variants").collect(),
   ]);
 
   const findings: HealthFinding[] = [];
@@ -108,6 +109,14 @@ export async function scanHealth(ctx: QueryCtx): Promise<HealthReport> {
       const value = p[field];
       if (value === undefined || value === null || value === "") continue;
       byCode.set(value, [...(byCode.get(value) ?? []), p.name]);
+    }
+    // A product's options share its label printer, so their codes live in the
+    // same namespace: a variant SKU colliding with a product SKU is just as
+    // ambiguous as two products sharing one.
+    for (const row of variants) {
+      const value = row[field];
+      if (value === undefined || value === null || value === "") continue;
+      byCode.set(value, [...(byCode.get(value) ?? []), `${row.product_slug} — ${row.name}`]);
     }
     const dupes = [...byCode.entries()].filter(([, names]) => names.length > 1);
     if (dupes.length > 0) {

@@ -7,6 +7,7 @@ import { requirePermission } from "./lib/permissions";
 import { getSettings } from "./lib/settings";
 import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
 import { applyStockChange } from "./lib/stock";
+import { VARIANT_LIMITS, deriveAxes, variantLabel } from "./lib/variants";
 import { trustIcon } from "./schema";
 
 /**
@@ -162,6 +163,23 @@ export const saveProduct = mutation({
           product: dupe.slug,
         });
       }
+
+      // A product's code must not collide with one of its options either —
+      // they share the same label printer and the same health check. Only the
+      // SKU is tracked per variant; barcodes stay a product-level field.
+      if (field === "sku") {
+        const dupeVariant = await ctx.db
+          .query("product_variants")
+          .withIndex("by_sku", (q) => q.eq("sku", value))
+          .first();
+        if (dupeVariant !== null && dupeVariant.product_slug !== slug) {
+          fail("DUPLICATE_SKU", `${label} “${value}” is already used by “${dupeVariant.name}”.`, {
+            field,
+            value,
+            product: dupeVariant.product_slug,
+          });
+        }
+      }
     };
     await codeConflict("sku", sku, "SKU");
     await codeConflict("barcode", barcode, "Barcode");
@@ -296,6 +314,15 @@ export const deleteProduct = mutation({
           )}). Cancel those orders first, or mark the product as a sample instead — cancelling an order whose product is gone cannot return its stock.`,
       );
     }
+
+    // The product goes, and so do its options — the movement ledger keeps the
+    // history of every count either of them ever had. The open-order guard
+    // above already proved nothing is still holding them.
+    const variants = await ctx.db
+      .query("product_variants")
+      .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
+      .collect();
+    for (const variant of variants) await ctx.db.delete(variant._id);
 
     await ctx.db.delete(product._id);
 
@@ -672,5 +699,282 @@ export const saveDeliverySettings = mutation({
       `Updated delivery fees (Central GH₵ ${args.central_fee}, Greater GH₵ ${args.greater_fee}, Nationwide GH₵ ${args.nationwide_fee}) and free threshold GH₵ ${args.free_threshold}.`,
     );
     return { ok: true };
+  },
+});
+
+/**
+ * One option row as the editor submits it.
+ *
+ * `stock` is an intended **on-hand count**, not a delta: staff look at the
+ * shelf and correct the number to what is really there, exactly as on the
+ * product form. It is applied through `applyStockChange` — the single-writer
+ * invariant covers variants as firmly as it covers products.
+ */
+const variantArg = v.object({
+  key: v.string(),
+  name: v.string(),
+  options: v.record(v.string(), v.string()),
+  price: v.optional(v.union(v.number(), v.null())),
+  sku: v.optional(v.union(v.string(), v.null())),
+  barcode: v.optional(v.union(v.string(), v.null())),
+  image_key: v.optional(v.union(v.string(), v.null())),
+  cost_price: v.optional(v.union(v.number(), v.null())),
+  stock: v.number(),
+  visible: v.boolean(),
+});
+
+/**
+ * Replace a product's option rows.
+ *
+ * Sent as the complete desired list rather than incremental add/edit/remove:
+ * the editor holds the whole set, and a full replace cannot leave a half-built
+ * combination behind when two people are editing.
+ *
+ * Stock always moves through the single writer, so every count that changes —
+ * including the ones implied by adding or removing an option — lands in the
+ * movement ledger with a sentence explaining it.
+ */
+export const saveVariants = mutation({
+  args: {
+    slug: v.string(),
+    expected_version: v.optional(v.number()),
+    variants: v.array(variantArg),
+  },
+  handler: async (ctx, args) => {
+    const actorId = await requirePermission(ctx, "catalogue.edit");
+
+    const slug = args.slug.trim().toLowerCase();
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (product === null) fail("NOT_FOUND", "Product not found.");
+
+    if (args.expected_version !== undefined && (product.version ?? 0) !== args.expected_version) {
+      fail(
+        "VERSION_CONFLICT",
+        "Someone else saved this product first. Reload to see their changes.",
+      );
+    }
+
+    // ---- validation -----------------------------------------------------
+    if (args.variants.length > VARIANT_LIMITS.combinations) {
+      fail(
+        "VALIDATION_FAILED",
+        `That is ${args.variants.length} combinations — the limit is ${VARIANT_LIMITS.combinations}. Remove an option or a value.`,
+      );
+    }
+
+    const axes = deriveAxes(args.variants.map((row) => ({ options: row.options })));
+    if (axes.length > VARIANT_LIMITS.axes) {
+      fail(
+        "VALIDATION_FAILED",
+        `That is ${axes.length} kinds of option — the limit is ${VARIANT_LIMITS.axes}.`,
+      );
+    }
+
+    const submittedKeys = new Set<string>();
+    const submittedSkus = new Map<string, string>();
+    for (const row of args.variants) {
+      const key = row.key.trim().toLowerCase();
+      const label = row.name.trim() === "" ? key : row.name.trim();
+      if (key === "") fail("VALIDATION_FAILED", "Every option needs a name — e.g. “Black”.");
+      if (submittedKeys.has(key)) {
+        fail("VALIDATION_FAILED", `“${label}” is listed twice — each combination appears once.`);
+      }
+      submittedKeys.add(key);
+
+      if (!Number.isInteger(row.stock) || row.stock < 0) {
+        fail("VALIDATION_FAILED", `Stock for “${label}” must be a whole number of 0 or more.`);
+      }
+      if (row.price !== undefined && row.price !== null && !(row.price > 0)) {
+        fail("VALIDATION_FAILED", `The price for “${label}” must be above zero.`);
+      }
+      if (row.cost_price !== undefined && row.cost_price !== null && !(row.cost_price >= 0)) {
+        fail("VALIDATION_FAILED", `The cost for “${label}” must be 0 or more.`);
+      }
+
+      const sku = (row.sku ?? "").trim().toUpperCase();
+      if (sku.length > LIMITS.code) {
+        fail("VALIDATION_FAILED", `The SKU for “${label}” is too long (max ${LIMITS.code}).`);
+      }
+      if (sku !== "") {
+        if (submittedSkus.has(sku)) {
+          fail(
+            "DUPLICATE_SKU",
+            `SKU “${sku}” is used by both “${submittedSkus.get(sku)}” and “${label}”.`,
+          );
+        }
+        submittedSkus.set(sku, label);
+
+        // A variant's code must be as unique as a product's — the same label
+        // printer and the same health check read both.
+        const dupeProduct = await ctx.db
+          .query("products")
+          .withIndex("by_sku", (q) => q.eq("sku", sku))
+          .first();
+        if (dupeProduct !== null) {
+          fail("DUPLICATE_SKU", `SKU “${sku}” is already used by “${dupeProduct.name}”.`);
+        }
+        const dupeVariant = await ctx.db
+          .query("product_variants")
+          .withIndex("by_sku", (q) => q.eq("sku", sku))
+          .first();
+        if (dupeVariant !== null && dupeVariant.product_slug !== slug) {
+          fail("DUPLICATE_SKU", `SKU “${sku}” is already used by “${dupeVariant.name}”.`);
+        }
+      }
+    }
+
+    // ---- diff -----------------------------------------------------------
+    const existing = await ctx.db
+      .query("product_variants")
+      .withIndex("by_product", (q) => q.eq("product_slug", slug))
+      .collect();
+    const existingByKey = new Map(existing.map((row) => [row.key, row]));
+
+    const removingAll = existing.length > 0 && args.variants.length === 0;
+    const addingFirst = existing.length === 0 && args.variants.length > 0;
+
+    // A product that is *becoming* variable is holding units in its own name.
+    // Those units have to be explicitly written off into the options, or the
+    // first variant's opening count would silently replace them.
+    if (addingFirst && (product.reserved ?? 0) > 0) {
+      fail(
+        "STATE_CONFLICT",
+        "Open orders are still holding stock for this product. Wait until they are closed or cancelled before splitting it into options.",
+      );
+    }
+    if (addingFirst && product.stock > 0) {
+      await applyStockChange(ctx, {
+        slug,
+        command: { kind: "set_on_hand", value: 0 },
+        movement_type: "adjustment",
+        source: "product",
+        reason: "Stock re-expressed as options",
+        actor_id: actorId,
+      });
+    }
+
+    // Options that are going away: their units leave the shelf with a movement
+    // that says so, so the aggregate's drop is explained rather than mysterious.
+    let handedBack = 0;
+    for (const row of existing) {
+      if (submittedKeys.has(row.key)) continue;
+      if (removingAll) handedBack += row.stock + (row.reserved ?? 0);
+      await applyStockChange(ctx, {
+        slug,
+        variant_key: row.key,
+        command: { kind: "set_on_hand", value: 0 },
+        movement_type: "adjustment",
+        source: "product",
+        reason: `Option “${row.name}” removed`,
+        actor_id: actorId,
+      });
+      await ctx.db.delete(row._id);
+    }
+
+    // Returning to a single-thing product: the units do not evaporate, they
+    // come back onto the product itself.
+    if (removingAll && handedBack > 0) {
+      await applyStockChange(ctx, {
+        slug,
+        command: { kind: "restock", quantity: handedBack },
+        movement_type: "restock",
+        source: "product",
+        reason: "Options removed — stock returned to the product",
+        actor_id: actorId,
+      });
+    }
+
+    // ---- write ----------------------------------------------------------
+    for (const [index, input] of args.variants.entries()) {
+      const key = input.key.trim().toLowerCase();
+      const name =
+        input.name.trim() ||
+        variantLabel(
+          input.options,
+          axes.map((a) => a.name),
+        );
+      const sku = (input.sku ?? "").trim().toUpperCase();
+      const patch = {
+        name,
+        options: input.options,
+        // Null price = inherit the product's. Explicitly null (rather than
+        // omitted) so clearing a variant's price really does hand it back to
+        // the product's own price.
+        price: input.price ?? null,
+        sku: sku === "" ? null : sku,
+        barcode: (input.barcode ?? "").trim() || null,
+        image_key: (input.image_key ?? "").trim() || null,
+        cost_price: input.cost_price ?? null,
+        sort_order: index,
+        visible: input.visible,
+      };
+
+      const row = existingByKey.get(key);
+      if (row === undefined) {
+        // Insert at zero, then move — so the opening quantity is a real,
+        // auditable movement like every other count. Mirrors `saveProduct`.
+        await ctx.db.insert("product_variants", {
+          product_slug: slug,
+          key,
+          ...patch,
+          stock: 0,
+          reserved: 0,
+          version: 0,
+        });
+        if (input.stock > 0) {
+          await applyStockChange(ctx, {
+            slug,
+            variant_key: key,
+            command: { kind: "set_on_hand", value: input.stock },
+            movement_type: "opening",
+            source: "product",
+            reason: `Opening stock for “${name}”`,
+            actor_id: actorId,
+          });
+        }
+      } else {
+        await applyStockChange(ctx, {
+          slug,
+          variant_key: key,
+          command: { kind: "set_on_hand", value: input.stock },
+          movement_type: "adjustment",
+          source: "product",
+          reason:
+            row.stock === input.stock
+              ? `Option “${name}” confirmed on the product form`
+              : `Option “${name}” stock edited on the product form`,
+          actor_id: actorId,
+          variant_patch: patch,
+        });
+      }
+    }
+
+    await logActivity(
+      ctx,
+      actorId,
+      "catalogue.variants",
+      `Saved ${args.variants.length} option${args.variants.length === 1 ? "" : "s"} for “${product.name}”.`,
+    );
+    return { ok: true, count: args.variants.length };
+  },
+});
+
+/**
+ * A product's options, for the staff editor.
+ *
+ * Includes the staff-only fields (cost, version) that never leave `store.get`,
+ * which is why it is a separate query rather than part of the public bundle.
+ */
+export const variantList = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "catalogue.view");
+    return await ctx.db
+      .query("product_variants")
+      .withIndex("by_product", (q) => q.eq("product_slug", args.slug.trim().toLowerCase()))
+      .collect();
   },
 });

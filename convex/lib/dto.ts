@@ -1,4 +1,5 @@
 import type { Doc } from "../_generated/dataModel";
+import { deriveAxes, isColourAxis, swatchFor } from "./variants";
 
 /**
  * Icon key on a homepage trust-strip row, derived from the generated doc type
@@ -14,6 +15,39 @@ export type TrustIcon = NonNullable<Doc<"store_settings">["home_trust"]>[number]
  * existing route components keep working unchanged.
  */
 
+/**
+ * One buyable version of a product — "Black", "White", "Black / Large".
+ *
+ * Absent from a product means the product sells as a single thing, exactly as
+ * it did before variants existed.
+ *
+ * `price` is `null` when the variant inherits the product's price, and
+ * `swatch` is the hex for a known colour name (see `lib/variants.ts`) or
+ * `null` when the picker should render plain text rather than guess a colour.
+ *
+ * `cost_price`, `version` and `reserved` are deliberately **not** here: this
+ * travels to anyone who visits the shop.
+ */
+export type Variant = {
+  key: string;
+  name: string;
+  options: Record<string, string>;
+  price: number | null;
+  sku: string | null;
+  image_key: string | null;
+  stock: number;
+  visible: boolean;
+  swatch: string | null;
+};
+
+/** One option axis (Colour, Size…) with the values its variants actually use. */
+export type OptionAxis = {
+  name: string;
+  values: string[];
+  /** True for the colour axis, which the picker renders as swatches. */
+  colour: boolean;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -28,6 +62,10 @@ export type Product = {
   gallery: string[];
   verified: boolean;
   visible?: boolean;
+  /** Only present when the product sells in more than one version. */
+  variants?: Variant[];
+  /** Derived from `variants` — never stored, so the two cannot disagree. */
+  axes?: OptionAxis[];
 };
 
 export type Category = {
@@ -147,7 +185,36 @@ export type ProductMaster = {
   status: "draft" | "active" | "archived";
 };
 
-export const productDTO = (product: Doc<"products">): Product => ({
+/**
+ * A variant as the storefront may see it.
+ *
+ * The colour hex is computed here rather than in the client so the swatch map
+ * lives in exactly one place — adding a new colour name to `lib/variants.ts`
+ * is enough for every surface to render it.
+ */
+export const variantDTO = (variant: Doc<"product_variants">): Variant => ({
+  key: variant.key,
+  name: variant.name,
+  options: variant.options,
+  price: variant.price ?? null,
+  sku: variant.sku ?? null,
+  image_key: variant.image_key ?? null,
+  stock: variant.stock,
+  visible: variant.visible,
+  swatch: swatchFor(variant.options[findColourAxis(variant.options)]),
+});
+
+/** The colour axis name carried by this variant's options, if any. */
+function findColourAxis(options: Record<string, string>): string {
+  return Object.keys(options).find((axis) => isColourAxis(axis)) ?? "";
+}
+
+/**
+ * `variants` is optional so every existing call site keeps working; when a
+ * product has them, the axes are derived here from the same rows, which is why
+ * an axis can never name a value no variant carries.
+ */
+export const productDTO = (product: Doc<"products">, variants: Variant[] = []): Product => ({
   id: product.slug,
   name: product.name,
   brand: product.brand,
@@ -161,6 +228,12 @@ export const productDTO = (product: Doc<"products">): Product => ({
   gallery: product.gallery,
   verified: product.verified,
   visible: product.visible ?? (product.status ? product.status === "active" : product.verified),
+  ...(variants.length > 0
+    ? {
+        variants,
+        axes: deriveAxes(variants.map((v) => ({ options: v.options }))),
+      }
+    : {}),
 });
 
 export const categoryDTO = (category: Doc<"categories">): Category => ({
