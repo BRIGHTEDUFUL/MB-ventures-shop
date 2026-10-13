@@ -239,16 +239,22 @@ served locally):
 
 ## 11. Coordination notes for other agents
 
-- **Branch state:** `main` (this worktree). A second worktree
-  (`Temp/opencode/mbv-deploy`, branch `fix/auth-and-ui`, commit `2b49c7a`) is
-  in flight — likely the deploy-side work. It predates this migration, so a
-  merge will conflict on `AGENTS.md`, `docs/*` and the env files: re-run the
-  swap rules (§2) on any conflicted file rather than taking either side blind.
+- **Consolidated (13 Oct 2026): `main` is the single source of truth.** Both
+  lines of work live here — the domain migration (`3292504`, `dddbe46`) and the
+  other agent's fixes (`9f4185f` staff hub, `ae9c9a1` phone/mobile, `2b49c7a`
+  hero hotspot, `b9d2cc2` 320px overflow fix). Every quality gate passes on the
+  combined tree (§10).
+- The second worktree (`Temp/opencode/mbv-deploy`, branch `fix/auth-and-ui` at
+  `2b49c7a`) was audited and holds **no unique work**: its branch is a strict
+  ancestor of `main`, and its uncommitted files are a stale 10-Oct snapshot of
+  `main` (pre-variants `stock.ts`/`orders.ts`, the old placeholder phone, the
+  179/186 test counts, old-domain text). Nothing needed porting. It was left
+  untouched; it can be removed safely with
+  `git worktree remove --force <path>` and `git branch -D fix/auth-and-ui`
+  (the remote branch `origin/fix/auth-and-ui` is likewise fully merged).
 - **Do not push to `main`** until §5–§6 are done or a deploy to the old server
   is intended — pushes auto-deploy.
 - **Do not** "fix" `info@mbventuresghana.com` back to the new domain: it is the
   live Web3Forms inbox and deliberately stays.
 - **Do not** change `convex/auth.config.ts` to the new domain — the JWT issuer
   must remain `CONVEX_SITE_URL`.
-- Untracked scratch files (`_overflow-probe.mjs`, `test-results/`) belong to
-  other in-flight work and were left untouched.

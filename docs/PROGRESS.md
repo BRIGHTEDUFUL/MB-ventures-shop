@@ -45,6 +45,16 @@ the four new-domain accounts — is documented step-by-step in
 to `main` would deploy the new domain strings to the **old** server, so main
 must not be pushed before cutover.
 
+**Consolidation (13 October).** `main` is now the single source of truth: the
+second worktree at `Temp/opencode/mbv-deploy` (branch `fix/auth-and-ui`) was
+audited file-by-file against `main` and contains **no unique work** — its
+branch is a strict ancestor of `main` and its uncommitted tree is a stale
+10-October snapshot of `main` (pre-variants `stock.ts`/`orders.ts`, the old
+placeholder phone, 179/186 test counts, old-domain text). Nothing needed
+porting; it was left untouched and can be removed safely. All quality gates
+pass on the combined tree: tsc, lint, 216/216 vitest, prettier, build and
+32/32 Playwright e2e.
+
 ---
 
 **Status:** Complete — data fix only, no source change.
