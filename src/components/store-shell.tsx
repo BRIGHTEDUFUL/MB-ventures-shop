@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -37,13 +37,18 @@ export function StoreHeader() {
   return (
     <>
       {announcement !== "" && (
-        <div className="facts-bar flex items-center justify-between gap-3 bg-primary px-8 py-2 text-[11px] text-primary-foreground">
-          <span className="flex min-w-0 items-center gap-2">
+        <div className="facts-bar flex items-center justify-between gap-2 bg-primary px-3 py-1.5 text-[11px] text-primary-foreground sm:px-8 sm:py-2">
+          <span className="flex min-w-0 items-center gap-1.5">
             <MapPin className="size-3 shrink-0" aria-hidden />
-            <span className="truncate">{announcement}</span>
+            <span className="truncate sm:hidden">Abelenkpe, Accra · Ghana delivery</span>
+            <span className="hidden truncate sm:inline">{announcement}</span>
           </span>
-          <Link to="/track" className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-            Track your order <ArrowRight className="size-3" aria-hidden />
+          <Link
+            to="/track"
+            className="flex shrink-0 items-center gap-1 whitespace-nowrap font-medium hover:underline"
+          >
+            <span>Track order</span>
+            <ArrowRight className="size-3" aria-hidden />
           </Link>
         </div>
       )}
@@ -106,10 +111,10 @@ export function StoreHeader() {
             <Button
               variant="ghost"
               className="icon-control md:hidden"
-              aria-label="Open categories menu"
-              onClick={() => setMega(!mega)}
+              aria-label={cart.menuOpen ? "Close menu" : "Open menu"}
+              onClick={() => cart.setMenuOpen(!cart.menuOpen)}
             >
-              <Menu />
+              {cart.menuOpen ? <X /> : <Menu />}
             </Button>
           </div>
         </div>
@@ -130,16 +135,16 @@ export function StoreHeader() {
         </nav>
         {mega && (
           <div
-            className="border-t border-border bg-card p-6"
+            className="hidden md:block border-t border-border bg-card p-6"
             style={{ borderRadius: "0 0 18px 18px" }}
           >
             <div className="grid gap-6 sm:grid-cols-[1fr_220px]">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h3 className="mb-3 text-lg">Shop your workspace</h3>
+                  <h3 className="mb-3 text-lg font-semibold">Shop your workspace</h3>
                   {categories.map((c) => (
                     <Link
-                      className="my-2 block text-sm"
+                      className="my-2 block text-sm hover:text-link transition-colors"
                       key={c.id}
                       to="/catalogue"
                       search={{ category: c.id, q: "" }}
@@ -149,17 +154,32 @@ export function StoreHeader() {
                   ))}
                 </div>
                 <div>
-                  <h3 className="mb-3 text-lg">From our Abelenkpe shop</h3>
-                  <Link className="my-2 block text-sm" to="/$page" params={{ page: "delivery" }}>
+                  <h3 className="mb-3 text-lg font-semibold">From our Abelenkpe shop</h3>
+                  <Link
+                    className="my-2 block text-sm hover:text-link transition-colors"
+                    to="/$page"
+                    params={{ page: "delivery" }}
+                  >
                     Delivery & pickup
                   </Link>
-                  <Link className="my-2 block text-sm" to="/$page" params={{ page: "warranty" }}>
+                  <Link
+                    className="my-2 block text-sm hover:text-link transition-colors"
+                    to="/$page"
+                    params={{ page: "warranty" }}
+                  >
                     Warranty
                   </Link>
-                  <Link className="my-2 block text-sm" to="/$page" params={{ page: "contact" }}>
+                  <Link
+                    className="my-2 block text-sm hover:text-link transition-colors"
+                    to="/$page"
+                    params={{ page: "contact" }}
+                  >
                     Contact the shop
                   </Link>
-                  <Link className="my-2 block text-sm" to="/track">
+                  <Link
+                    className="my-2 block text-sm hover:text-link transition-colors"
+                    to="/track"
+                  >
                     Track an order
                   </Link>
                 </div>
@@ -185,10 +205,14 @@ export function StoreOverlays() {
   const { setSearchOpen } = cart;
   const { data } = useQuery(storeQuery);
   const categories = (data?.categories ?? []).filter((c) => c.visible);
+  const s = data?.settings;
+  const whatsapp = s ? whatsappHref(s) : null;
   const router = useRouter();
   const results = (data?.products || [])
     .filter((p) => `${p.name} ${p.brand}`.toLowerCase().includes(query.toLowerCase()))
     .slice(0, 6);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { setMenuOpen } = cart;
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -199,6 +223,9 @@ export function StoreOverlays() {
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [setSearchOpen]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname, setMenuOpen]);
   return (
     <>
       <Dialog.Root open={cart.cartOpen} onOpenChange={cart.setCartOpen}>
@@ -338,6 +365,159 @@ export function StoreOverlays() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <Dialog.Root open={cart.menuOpen} onOpenChange={cart.setMenuOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="scrim" />
+          <Dialog.Content
+            className="drawer-content mobile-menu-drawer"
+            aria-describedby={undefined}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <Link to="/" onClick={() => cart.setMenuOpen(false)} className="header-logo">
+                <img
+                  {...imageSize("logo")}
+                  src={images["logo"]}
+                  alt="MB Ventures GH logo"
+                  className="h-9 w-10 rounded-md object-cover"
+                />
+                <span className="brand-text text-sm">
+                  MB VENTURES<span className="text-link"> GH</span>
+                  <small className="text-[9px]">YOUR WORKSPACE STORE</small>
+                </span>
+              </Link>
+              <Dialog.Close asChild>
+                <Button variant="ghost" className="icon-control" aria-label="Close menu">
+                  <X />
+                </Button>
+              </Dialog.Close>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                cart.setMenuOpen(false);
+                cart.setSearchOpen(true);
+              }}
+              className="mt-4 flex w-full items-center justify-between rounded-xl border border-border bg-secondary/50 px-3.5 py-2.5 text-xs text-muted-foreground hover:bg-secondary transition-colors"
+            >
+              <span className="flex items-center gap-2.5">
+                <Search className="size-3.5" />
+                Search desks, chairs, mounts...
+              </span>
+              <kbd className="font-mono text-[10px] bg-background px-1.5 py-0.5 rounded border border-border">
+                ⌘ K
+              </kbd>
+            </button>
+
+            <div className="mt-5">
+              <p className="eyebrow text-muted-foreground mb-2 text-[11px] font-semibold tracking-wider uppercase">
+                Shop Categories
+              </p>
+              <div className="space-y-1">
+                {categories.map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/catalogue"
+                    search={{ category: c.id, q: "" }}
+                    onClick={() => cart.setMenuOpen(false)}
+                    className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-medium hover:bg-secondary/70 transition-colors"
+                  >
+                    <span>{c.name}</span>
+                    <ArrowRight className="size-3.5 text-muted-foreground shrink-0 ml-2" />
+                  </Link>
+                ))}
+                <Link
+                  to="/catalogue"
+                  search={{ category: "", q: "" }}
+                  onClick={() => cart.setMenuOpen(false)}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-semibold text-link hover:bg-secondary/70 transition-colors"
+                >
+                  <span>View all products</span>
+                  <ArrowRight className="size-3.5 shrink-0 ml-2" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-border">
+              <p className="eyebrow text-muted-foreground mb-2.5 text-[11px] font-semibold tracking-wider uppercase">
+                Store & Customer Care
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <Link
+                  to="/$page"
+                  params={{ page: "delivery" }}
+                  onClick={() => cart.setMenuOpen(false)}
+                  className="p-3 rounded-lg border border-border/70 hover:bg-secondary/50 transition-colors block"
+                >
+                  <div className="font-medium text-foreground">Delivery & Pickup</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Accra & Ghana wide</div>
+                </Link>
+                <Link
+                  to="/track"
+                  onClick={() => cart.setMenuOpen(false)}
+                  className="p-3 rounded-lg border border-border/70 hover:bg-secondary/50 transition-colors block"
+                >
+                  <div className="font-medium text-foreground">Track Order</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Live order status</div>
+                </Link>
+                <Link
+                  to="/$page"
+                  params={{ page: "warranty" }}
+                  onClick={() => cart.setMenuOpen(false)}
+                  className="p-3 rounded-lg border border-border/70 hover:bg-secondary/50 transition-colors block"
+                >
+                  <div className="font-medium text-foreground">Warranty</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Tested & supported</div>
+                </Link>
+                <Link
+                  to="/$page"
+                  params={{ page: "contact" }}
+                  onClick={() => cart.setMenuOpen(false)}
+                  className="p-3 rounded-lg border border-border/70 hover:bg-secondary/50 transition-colors block"
+                >
+                  <div className="font-medium text-foreground">Contact Shop</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Reach the team</div>
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-border">
+              <div className="rounded-xl bg-secondary/40 p-4 border border-border">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="size-4 shrink-0 text-link mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-semibold text-foreground">Abelenkpe Taxi Rank, Accra</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {data?.settings?.hours || "Mon – Sat: 8:00 AM – 6:00 PM"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3.5 flex gap-2">
+                  {whatsapp && (
+                    <a
+                      href={whatsapp}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-colors"
+                    >
+                      <MessageCircle className="size-3.5" />
+                      WhatsApp
+                    </a>
+                  )}
+                  <a
+                    href={`tel:${data?.settings?.phone || "0249564442"}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-border bg-card hover:bg-secondary font-medium text-xs transition-colors"
+                  >
+                    <Phone className="size-3.5" />
+                    Call shop
+                  </a>
+                </div>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }
@@ -356,7 +536,7 @@ export function MobileNavigation() {
         data-status={pathname === "/" ? "active" : undefined}
       >
         <Home />
-        Home
+        <span>Home</span>
       </Link>
       <Link
         to="/catalogue"
@@ -364,19 +544,26 @@ export function MobileNavigation() {
         data-status={pathname.startsWith("/catalogue") ? "active" : undefined}
       >
         <Grid2X2 />
-        Shop
+        <span>Shop</span>
       </Link>
-      <Button onClick={() => cart.setSearchOpen(true)}>
+      <button type="button" onClick={() => cart.setSearchOpen(true)}>
         <Search />
-        Search
-      </Button>
-      <Button onClick={() => cart.setCartOpen(true)}>
-        <ShoppingBag />
-        Cart {cart.count || ""}
-      </Button>
+        <span>Search</span>
+      </button>
+      <button type="button" onClick={() => cart.setCartOpen(true)}>
+        <div className="relative">
+          <ShoppingBag />
+          {cart.count > 0 && (
+            <span className="absolute -top-1.5 -right-2 flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+              {cart.count}
+            </span>
+          )}
+        </div>
+        <span>Cart</span>
+      </button>
       <Link to="/account" data-status={pathname.startsWith("/account") ? "active" : undefined}>
         <User />
-        Account
+        <span>Account</span>
       </Link>
     </nav>
   );

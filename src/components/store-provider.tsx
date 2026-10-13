@@ -17,6 +17,8 @@ type Cart = {
   setCartOpen: (v: boolean) => void;
   searchOpen: boolean;
   setSearchOpen: (v: boolean) => void;
+  menuOpen: boolean;
+  setMenuOpen: (v: boolean) => void;
   count: number;
   subtotal: number;
 };
@@ -25,7 +27,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<Line[]>([]),
     [ready, setReady] = useState(false),
     [cartOpen, setCartOpen] = useState(false),
-    [searchOpen, setSearchOpen] = useState(false);
+    [searchOpen, setSearchOpen] = useState(false),
+    [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("mb-cart") || "[]");
@@ -91,6 +94,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setCartOpen,
         searchOpen,
         setSearchOpen,
+        menuOpen,
+        setMenuOpen,
         count: lines.reduce((s, l) => s + l.quantity, 0),
         // The effective price: an option that prices itself wins over the
         // product, which is the same rule the server applies when it

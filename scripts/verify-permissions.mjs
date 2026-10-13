@@ -21,11 +21,9 @@ async function testPermissions() {
     waitUntil: "networkidle",
     timeout: 30000,
   });
+  await page.waitForSelector("text=admin@mbventuresgh.com", { timeout: 15000 });
   const teamText = await page.textContent("body");
-  console.log(
-    "✅ Team roster loaded:",
-    teamText.includes("admin@mbventuresgh.com") || teamText.includes("Team access"),
-  );
+  console.log("✅ Team roster loaded:", teamText.includes("admin@mbventuresgh.com"));
 
   console.log("Checking /staff/settings...");
   await page.goto("https://mbventuresgh.com/staff/settings", {
@@ -45,6 +43,18 @@ async function testPermissions() {
   });
   const invText = await page.textContent("body");
   console.log("✅ Inventory loaded:", !invText.includes("access required"));
+
+  console.log("Checking /staff/messages...");
+  await page.goto("https://mbventuresgh.com/staff/messages", {
+    waitUntil: "networkidle",
+    timeout: 30000,
+  });
+  await page.waitForSelector("text=Customer Inquiries", { timeout: 15000 });
+  const msgText = await page.textContent("body");
+  console.log(
+    "✅ Messages loaded:",
+    !msgText.includes("access required") && msgText.includes("Kofi Mensah"),
+  );
 
   await browser.close();
   console.log("🎉 All permission checks passed!");

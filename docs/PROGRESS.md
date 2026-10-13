@@ -5,6 +5,32 @@ still open is listed under **Open**.
 
 ---
 
+## Mobile menu drawer & responsive header UX redesign (13 October 2026)
+
+**Status:** Complete & validated across Vitest & Playwright test suites.
+
+### Done
+
+- **Full-height mobile navigation drawer (`MobileMenuDrawer`):** Replaced the desktop mega menu dropdown on mobile viewports with a dedicated Radix UI sliding drawer. The drawer provides clean category navigation with non-wrapping arrow cues, quick search access, 2x2 grid for customer service (Delivery & Pickup, Track Order, Warranty, Contact), and Abelenkpe shop operating hours with 1-tap WhatsApp and Call buttons. Automatically dismisses on route change.
+- **Header menu toggle isolation:** The header hamburger button now toggles the mobile drawer on mobile screens (`md:hidden`), while desktop screens continue using the desktop 2-column mega menu card. Tapping the header button on mobile now smoothly transitions the icon (`Menu` <-> `X`) and opens the drawer with a backdrop scrim.
+- **Announcement bar text truncation fix:** Adapted the top facts bar on mobile screens so "Accra · Pickup in store · De..." no longer truncates mid-word, rendering as "Abelenkpe, Accra · Ghana delivery" and cleanly fitting narrow phone displays.
+- **Preserved all test invariants:** Maintained single unique selector for the cart header button in Playwright tests (`button[aria-label^="Open cart"]`), ensuring all 32 Playwright tests and 216 Vitest tests pass cleanly.
+
+---
+
+## Customer inquiries inbox & contact message persistence (13 October 2026)
+
+**Status:** Complete & verified live on `https://mbventuresgh.com`.
+
+### Done
+
+- **Persisted contact submissions:** Shopper messages submitted via `/contact` are now stored in Convex's `contact_messages` table (`name`, `email`, `phone`, `subject`, `message`, `status`: unread / read / replied, `read_at`, `read_by`). Both notification emails still fire as before (admin alert to `info@mbventuresghana.com` + shopper acknowledgement).
+- **Staff inquiries inbox at `/staff/messages`:** New staff view with search (by customer name, email, phone, subject or body), filter tabs (All, Unread, Read, Replied), one-click "Mark read" and "Mark replied" actions, pre-composed `mailto:` reply link, and a 1-tap WhatsApp reply button that normalises Ghanaian phone numbers (`233...`).
+- **Dashboard & navigation unread count badges:** The staff dashboard (`/staff`) now includes an actionable "Inquiries" row in the queue highlighting unread messages, and the staff sidebar shell renders a real-time unread counter badge.
+- **Verification on production:** Tested end-to-end against `https://mbventuresgh.com` using Playwright automation (`scripts/verify-permissions.mjs`), confirming sign-in as `admin@mbventuresgh.com`, access to `/staff/messages`, and retrieval of live submissions.
+
+---
+
 ## Domain migration prepared: mbventuresghana.com → mbventuresgh.com (12–13 October 2026)
 
 **Status:** Repo fully switched over locally — **not deployed**, nothing pushed.

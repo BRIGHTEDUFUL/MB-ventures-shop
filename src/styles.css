@@ -755,12 +755,34 @@ label textarea {
   z-index: 60;
   box-shadow: var(--glass-shadow);
 }
+.drawer-content[data-state="open"] {
+  animation: drawerSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
 .scrim {
   position: fixed;
   inset: 0;
   background: oklch(0.207 0.016 259 / 50%);
   backdrop-filter: blur(4px);
   z-index: 50;
+}
+.scrim[data-state="open"] {
+  animation: scrimFadeIn 0.2s ease-out;
+}
+@keyframes scrimFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .overlay-close {
   position: absolute;

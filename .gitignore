@@ -24,6 +24,10 @@ dist-ssr
 test-results/
 playwright-report/
 
+# Archives and deploy packages
+*.zip
+deploy.zip
+
 # Convex data snapshots (exported before every inventory migration)
 backups/
 
