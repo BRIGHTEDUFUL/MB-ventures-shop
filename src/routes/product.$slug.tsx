@@ -79,7 +79,11 @@ function ProductPage() {
     unavailable = selectedVariant
       ? !selectedVariant.visible || selectedVariant.stock === 0
       : variants.length > 0 || p.stock === 0,
-    soldOut = p.verified && unavailable;
+    soldOut = p.verified && unavailable,
+    // A struck-through price only says "discount" when it is actually above
+    // what is being charged. With options pricing themselves this used to
+    // render GH₵ 250 with GH₵ 250 crossed out — a sale of nothing.
+    compareAt = p.original_price !== null && p.original_price > price ? p.original_price : null;
   const galleryImages = [images[p.image_key], ...(p.gallery ?? []).map((g) => images[g])];
   // Prefers the staff-entered WhatsApp number, then the shop phone, and returns
   // null when neither is dialable — in which case we drop the link entirely
@@ -152,11 +156,9 @@ function ProductPage() {
               ))}
           </div>
           <p className="mt-7 text-3xl font-semibold">
-            <span className={p.original_price ? "sale-price" : undefined}>{money(price)}</span>{" "}
-            {p.original_price && (
-              <del className="text-lg font-normal text-muted-foreground">
-                {money(p.original_price)}
-              </del>
+            <span className={compareAt !== null ? "sale-price" : undefined}>{money(price)}</span>{" "}
+            {compareAt !== null && (
+              <del className="text-lg font-normal text-muted-foreground">{money(compareAt)}</del>
             )}
           </p>
           <p
@@ -186,12 +188,20 @@ function ProductPage() {
           />
           <div className="mt-7 flex gap-4">
             <Quantity value={quantity} onChange={setQuantity} />
+            {/*
+              The button says only "Add to cart". Naming the chosen option here
+              too looked helpful, but `whitespace-nowrap` makes the button's
+              min-content unshrinkable, so an auto-generated label like
+              "Black / Standard" stretched the whole grid column — 396px of
+              content in a 320px viewport. The stock line above already names it.
+              `min-w-0` keeps the button able to shrink regardless of label.
+            */}
             <Button
-              className="flex-1"
+              className="min-w-0 flex-1"
               disabled={soldOut}
               onClick={() => cart.add(p, quantity, selectedVariant)}
             >
-              Add to cart{selectedVariant ? ` · ${selectedVariant.name}` : ""} <Plus />
+              Add to cart <Plus />
             </Button>
           </div>
           <Button
