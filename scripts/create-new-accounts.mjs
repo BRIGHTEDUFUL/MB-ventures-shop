@@ -1,5 +1,13 @@
 import { spawnSync } from "child_process";
 
+/**
+ * Provisions the four @mbventuresgh.com staff/admin logins on the production
+ * Convex deployment (see docs/DOMAIN-MIGRATION.md §6). Each account is signed
+ * up through the same public auth action the signup form uses, granted its
+ * role, then verified with a real sign-in. Safe to re-run: an already-registered
+ * email skips signup and just re-grants + re-verifies.
+ */
+
 function runConvex(func, args) {
   const argStr = JSON.stringify(args);
   const escaped = argStr.replace(/"/g, '\\"');
@@ -65,6 +73,14 @@ async function main() {
   );
 
   await createAccount(
+    "admin@mbventuresgh.com",
+    "MBVentures2025!Admin#Secure",
+    "MB Ventures Admin",
+    "0240000001",
+    "admin",
+  );
+
+  await createAccount(
     "attendant@mbventuresgh.com",
     "MBVentures2025!Attendant#Staff",
     "Shop Attendant",
@@ -72,7 +88,15 @@ async function main() {
     "staff",
   );
 
-  console.log("\n🎉 Both accounts successfully created and verified on production!");
+  await createAccount(
+    "staff@mbventuresgh.com",
+    "MBVentures2025!Staff#Secure",
+    "MB Ventures Staff",
+    "0240000002",
+    "staff",
+  );
+
+  console.log("\n🎉 All four accounts created and verified on production!");
 }
 
 main().catch(console.error);

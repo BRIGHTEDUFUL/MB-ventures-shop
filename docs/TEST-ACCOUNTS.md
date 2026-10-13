@@ -36,13 +36,13 @@ staff default when set — no `.env*` file sets it today, so the default stands.
 
 Storefront: `https://mbventuresgh.com`.
 
-> **Domain cutover — PENDING (prepared 12 Oct 2026).** The four `@mbventuresgh.com`
-> accounts below are the **target** logins, registered on the new domain at
-> cutover (`docs/DOMAIN-MIGRATION.md` §6). Until the cutover runs, the live
-> production logins are the same four addresses on `@mbventuresghana.com` with
-> the same passwords. Both sets live in the same Convex backend
-> (`prod:necessary-newt-861`), so the old accounts keep working after cutover
-> until their `user_roles` rows are revoked.
+> **Domain cutover — accounts provisioned (13 Oct 2026), site cutover pending.**
+> The four `@mbventuresgh.com` logins below now **exist on production**
+> (`prod:necessary-newt-861`) — created via `node scripts/create-new-accounts.mjs`
+> and verified end-to-end (signup → role grant → sign-in). The legacy
+> `@mbventuresghana.com` accounts are still active and keep the old domain
+> working until the cutover revokes their `user_roles` rows
+> (`docs/DOMAIN-MIGRATION.md` §6).
 
 | Email                        | Role    | Password                         | Notes                                     |
 | ---------------------------- | ------- | -------------------------------- | ----------------------------------------- |

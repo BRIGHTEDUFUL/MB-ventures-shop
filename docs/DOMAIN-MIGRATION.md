@@ -1,12 +1,13 @@
 # Domain migration — mbventuresghana.com → mbventuresgh.com
 
-**Status:** 🔶 Prepared locally — **NOT deployed** (12 Oct 2026)
+**Status:** 🔶 Repo ready + staff accounts provisioned — **NOT deployed** (12–13 Oct 2026)
 **Target:** `https://mbventuresgh.com` on a **new Hostinger account**
 **Backend:** unchanged — Convex `prod:necessary-newt-861` / `dev:stoic-elephant-714`
 
 This runbook is the single source of truth for the domain move. The repository
-now targets the new domain end-to-end; everything that has to happen **on real
-infrastructure** is listed in §5–§9 and has deliberately not been executed.
+targets the new domain end-to-end and the four `@mbventuresgh.com` staff/admin
+accounts are already live on the backend (§6); the remaining infrastructure
+steps (§5, §6 pending item, §7–§8) happen at cutover time.
 
 ---
 
@@ -157,25 +158,37 @@ pm2 save && pm2 startup
 Then push to `main` (or `workflow_dispatch` the Deploy workflow) so GitHub
 Actions takes over. Verify with §8.
 
-## 6. Convex-side cutover (same backend — two commands)
+## 6. Convex-side cutover (same backend)
+
+### ✅ DONE — staff accounts provisioned (13 Oct 2026)
+
+The four `@mbventuresgh.com` logins are **live on production**:
+
+| Email                        | Role    | Verified                                    |
+| ---------------------------- | ------- | ------------------------------------------- |
+| `manager@mbventuresgh.com`   | `admin` | signup → `users:grantStaff` → `auth:signIn` |
+| `admin@mbventuresgh.com`     | `admin` | signup → `users:grantStaff` → `auth:signIn` |
+| `attendant@mbventuresgh.com` | `staff` | signup → `users:grantStaff` → `auth:signIn` |
+| `staff@mbventuresgh.com`     | `staff` | signup → `users:grantStaff` → `auth:signIn` |
+
+Provisioned with `node scripts/create-new-accounts.mjs` (safe to re-run). The
+legacy `@mbventuresghana.com` accounts still work — revoke their `user_roles`
+rows from `/staff` → Team once the new logins are confirmed on the new domain.
+
+### ⏳ PENDING at cutover — email/link origin (one command)
 
 ```powershell
-# 1. Email/link origin follows the new domain (auth keeps using CONVEX_SITE_URL)
 npx convex env set SITE_URL https://mbventuresgh.com --env-file .env.prod.local
-
-# 2. Register the four new-domain logins (each signs up at /account FIRST),
-#    then grant roles:
-npx convex run users:grantStaff '{\"email\":\"manager@mbventuresgh.com\",\"role\":\"admin\"}' --env-file .env.prod.local
-npx convex run users:grantStaff '{\"email\":\"admin@mbventuresgh.com\",\"role\":\"admin\"}' --env-file .env.prod.local
-npx convex run users:grantStaff '{\"email\":\"attendant@mbventuresgh.com\",\"role\":\"staff\"}' --env-file .env.prod.local
-npx convex run users:grantStaff '{\"email\":\"staff@mbventuresgh.com\",\"role\":\"staff\"}' --env-file .env.prod.local
 ```
 
-Verify each with `auth:signIn` (AGENTS.md §10), then — once the new logins are
-confirmed — revoke the old-domain role rows from `/staff` → Team (or delete the
-`user_roles` rows). `WEB3FORMS_ACCESS_KEY`, `EMAIL_REPLY_TO`,
-`ADMIN_ALERT_EMAIL` are **not** touched: mail still lands in the
-`info@mbventuresghana.com` inbox.
+Deliberately **not** run yet: `SITE_URL` builds the links inside live emails
+(order confirmations, password resets), and the old domain still serves the
+store — flipping it early would ship links to a site that does not exist yet.
+
+Everything else on the backend is already correct and needs no change:
+`EMAIL_REPLY_TO` / `ADMIN_ALERT_EMAIL` stay `info@mbventuresghana.com`,
+`EMAIL_DAILY_LIMIT=250`, `WEB3FORMS_ACCESS_KEY` set, `JWT_PRIVATE_KEY`/`JWKS`
+present. Auth keeps using `CONVEX_SITE_URL` as its JWT issuer — never changed.
 
 ## 7. Old-domain sunset
 

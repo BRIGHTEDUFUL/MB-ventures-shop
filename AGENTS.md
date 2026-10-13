@@ -298,10 +298,11 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 | attendant@mbventuresgh.com | staff | Orders and inventory             |
 | staff@mbventuresgh.com     | staff | Orders and products              |
 
-> These four accounts are **provisioned at domain cutover** (sign up fresh on
-> the new domain, then `users:grantStaff`). Until the cutover runs, the live
-> production accounts are the same four on `@mbventuresghana.com` — see
-> `docs/DOMAIN-MIGRATION.md` §6 and `docs/TEST-ACCOUNTS.md`.
+> These four accounts are **live on production** (provisioned 13 Oct 2026 via
+> `node scripts/create-new-accounts.mjs`, each verified signup → grant →
+> sign-in). The legacy `@mbventuresghana.com` accounts remain active until the
+> domain cutover revokes them — see `docs/DOMAIN-MIGRATION.md` §6 and
+> `docs/TEST-ACCOUNTS.md`.
 
 Full credentials and recovery steps: `docs/TEST-ACCOUNTS.md`.
 Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.

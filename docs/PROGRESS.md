@@ -55,6 +55,18 @@ porting; it was left untouched and can be removed safely. All quality gates
 pass on the combined tree: tsc, lint, 216/216 vitest, prettier, build and
 32/32 Playwright e2e.
 
+**Staff accounts provisioned early (13 October).** The four `@mbventuresgh.com`
+logins (manager, admin — admins; attendant, staff — staff) now exist on
+`prod:necessary-newt-861`, each verified signup → role grant → sign-in via
+`node scripts/create-new-accounts.mjs` (extended from two to all four
+accounts). The legacy `@mbventuresghana.com` accounts remain active until the
+cutover revokes their `user_roles` rows. The only backend env still to flip at
+cutover is `SITE_URL=https://mbventuresgh.com` — deliberately left on the old
+domain so live email links keep working until the new site serves traffic.
+All local env files (`.env*`) and CI workflow envs verified complete for a
+full-stack deploy; the sole remaining deploy-time inputs are the GitHub
+`HOSTINGER_*` secrets for the new VPS (runbook §5.4).
+
 ---
 
 **Status:** Complete — data fix only, no source change.
