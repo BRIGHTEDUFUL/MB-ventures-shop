@@ -12,7 +12,7 @@ VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 # DOMAIN CONFIGURATION
 # =============================================================================
 # This MUST match your actual domain
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 
 # =============================================================================
 # APPLICATION SETTINGS
@@ -28,4 +28,4 @@ HOST=0.0.0.0
 # 2. Do NOT commit .env.local to git (it's in .gitignore)
 # 3. Backend environment variables (email, etc.) are configured in Convex
 # 4. To view Convex variables: npx convex env list --prod
-# 5. After updating, rebuild: npm run build && pm2 restart mbventuresghana
+# 5. After updating, rebuild: npm run build && pm2 restart mbventuresgh

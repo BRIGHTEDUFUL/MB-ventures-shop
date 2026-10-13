@@ -16,7 +16,7 @@
    - **Username**: Usually `root` or `u123456789`
    - **Password**: Your SSH password (or use SSH key)
    - **Port**: Usually `22`
-   - **Path**: Where your project lives (e.g., `/var/www/mbventuresghana`)
+   - **Path**: Where your project lives (e.g., `/var/www/mbventuresgh`)
 
 ---
 
@@ -36,10 +36,10 @@
 
 **Optional Secrets:**
 
-| Secret Name      | Value        | Default                    | Notes             |
-| ---------------- | ------------ | -------------------------- | ----------------- |
-| `HOSTINGER_PORT` | SSH port     | `22`                       | Only if different |
-| `HOSTINGER_PATH` | Project path | `/var/www/mbventuresghana` | Only if different |
+| Secret Name      | Value        | Default                 | Notes             |
+| ---------------- | ------------ | ----------------------- | ----------------- |
+| `HOSTINGER_PORT` | SSH port     | `22`                    | Only if different |
+| `HOSTINGER_PATH` | Project path | `/var/www/mbventuresgh` | Only if different |
 
 **How to add each secret:**
 
@@ -65,8 +65,8 @@ ssh root@YOUR_SERVER_IP
 
 ```bash
 # Create project directory
-sudo mkdir -p /var/www/mbventuresghana
-cd /var/www/mbventuresghana
+sudo mkdir -p /var/www/mbventuresgh
+cd /var/www/mbventuresgh
 
 # Clone repository
 git clone https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git .
@@ -163,7 +163,7 @@ git push origin main
 **Via hPanel Web Terminal:**
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 pm2 status
 pm2 logs mb-ventures-gh --lines 50
 ```
@@ -172,7 +172,7 @@ pm2 logs mb-ventures-gh --lines 50
 
 ```bash
 curl http://localhost:3000
-# Or visit: https://mbventuresghana.com
+# Or visit: https://mbventuresgh.com
 ```
 
 ---
@@ -214,7 +214,7 @@ curl http://localhost:3000
 
 - ✅ Use `sudo` if needed
 - ✅ Check directory ownership: `ls -la /var/www/`
-- ✅ Fix permissions: `sudo chown -R $USER:$USER /var/www/mbventuresghana`
+- ✅ Fix permissions: `sudo chown -R $USER:$USER /var/www/mbventuresgh`
 
 ---
 
@@ -236,7 +236,7 @@ curl http://localhost:3000
 1. Make code changes
 2. Commit and push to main
 3. GitHub automatically deploys!
-4. Check site: https://mbventuresghana.com
+4. Check site: https://mbventuresgh.com
 
 ### When Issues Occur:
 
@@ -307,7 +307,7 @@ After setup, verify:
 
 - [ ] GitHub secrets added correctly
 - [ ] Can SSH into Hostinger server
-- [ ] Project cloned to `/var/www/mbventuresghana`
+- [ ] Project cloned to `/var/www/mbventuresgh`
 - [ ] `.env.local` created with production values
 - [ ] PM2 running: `pm2 status` shows `online`
 - [ ] Site loads: `curl http://localhost:3000` returns HTML
@@ -325,7 +325,7 @@ After setup, verify:
 1. Check GitHub Actions logs
 2. SSH into server and check:
    ```bash
-   cd /var/www/mbventuresghana
+   cd /var/www/mbventuresgh
    git status
    pm2 logs mb-ventures-gh --err
    ```

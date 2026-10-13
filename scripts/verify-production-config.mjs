@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Verify production configuration for mbventuresghana.com
+ * Verify production configuration for mbventuresgh.com
  * Run: node scripts/verify-production-config.mjs
  */
 
 import { execSync } from "child_process";
 
 console.log("🏭 Production Configuration Verification\n");
-console.log("Domain: https://mbventuresghana.com");
+console.log("Domain: https://mbventuresgh.com");
 console.log("Email: info@mbventuresghana.com");
 console.log("Deployment: prod:necessary-newt-861\n");
 console.log("=".repeat(60));
@@ -57,8 +57,8 @@ console.log("\n" + "=".repeat(60));
 const checks = [
   {
     name: "Production domain",
-    condition: results.SITE_URL === "https://mbventuresghana.com",
-    expected: "https://mbventuresghana.com",
+    condition: results.SITE_URL === "https://mbventuresgh.com",
+    expected: "https://mbventuresgh.com",
     actual: results.SITE_URL,
   },
   {
@@ -109,10 +109,10 @@ try {
   const envProd = fs.readFileSync(".env.production", "utf8");
 
   const hasConvexUrl = envProd.includes("VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud");
-  const hasSiteUrl = envProd.includes("VITE_SITE_URL=https://mbventuresghana.com");
+  const hasSiteUrl = envProd.includes("VITE_SITE_URL=https://mbventuresgh.com");
 
   console.log(hasConvexUrl ? "✅" : "❌", "VITE_CONVEX_URL points to production");
-  console.log(hasSiteUrl ? "✅" : "❌", "VITE_SITE_URL set to mbventuresghana.com");
+  console.log(hasSiteUrl ? "✅" : "❌", "VITE_SITE_URL set to mbventuresgh.com");
 } catch (error) {
   console.log("❌ Could not read .env.production");
 }
@@ -123,7 +123,7 @@ console.log("\n" + "=".repeat(60));
 if (allSet && allChecksPassed) {
   console.log("\n🎉 Production Configuration: COMPLETE\n");
   console.log("✅ All environment variables set correctly");
-  console.log("✅ Domain configured: https://mbventuresghana.com");
+  console.log("✅ Domain configured: https://mbventuresgh.com");
   console.log("✅ Email configured: info@mbventuresghana.com");
   console.log("✅ Web3Forms key set for email delivery");
   console.log("✅ Email system ready for live operation\n");
@@ -133,7 +133,7 @@ if (allSet && allChecksPassed) {
   console.log("2. Build frontend: npm run build");
   console.log("3. Deploy frontend to hosting");
   console.log("4. Point DNS to hosting");
-  console.log("5. Test: https://mbventuresghana.com\n");
+  console.log("5. Test: https://mbventuresgh.com\n");
 
   process.exit(0);
 } else {

@@ -21,8 +21,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_DIR="/var/www/mbventuresghana"
-APP_NAME="mbventuresghana"
+PROJECT_DIR="/var/www/mbventuresgh"
+APP_NAME="mbventuresgh"
 BACKUP_DIR="/root/backups"
 DATE=$(date +%Y-%m-%d-%H%M)
 
@@ -133,6 +133,6 @@ echo -e "  Monitor:       ${YELLOW}pm2 monit${NC}"
 echo -e "  Restart:       ${YELLOW}pm2 restart $APP_NAME${NC}"
 echo -e "  Stop:          ${YELLOW}pm2 stop $APP_NAME${NC}"
 echo -e "  View status:   ${YELLOW}pm2 status${NC}"
-echo -e "\n${GREEN}🎉 Your application is now live at: https://mbventuresghana.com${NC}\n"
+echo -e "\n${GREEN}🎉 Your application is now live at: https://mbventuresgh.com${NC}\n"
 
 exit 0

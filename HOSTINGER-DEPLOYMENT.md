@@ -1,7 +1,7 @@
 # Hostinger Production Deployment Guide
 
 **Project:** MB Ventures GH - Circle Shop Express  
-**Domain:** mbventuresghana.com  
+**Domain:** mbventuresgh.com  
 **Target:** Hostinger VPS/Cloud Hosting  
 **Date:** October 9, 2026
 
@@ -36,13 +36,13 @@ Before deploying to Hostinger:
 1. **Add domain to Hostinger:**
    - Go to Hostinger control panel
    - Domains → Add Domain
-   - Enter: `mbventuresghana.com`
+   - Enter: `mbventuresgh.com`
 
 2. **DNS Configuration:**
 
    ```
    Type: A Record
-   Name: @ (or mbventuresghana.com)
+   Name: @ (or mbventuresgh.com)
    Points to: [Your VPS IP]
    TTL: 3600
 
@@ -98,8 +98,8 @@ git --version
 
 ```bash
 # Create application directory
-mkdir -p /var/www/mbventuresghana
-cd /var/www/mbventuresghana
+mkdir -p /var/www/mbventuresgh
+cd /var/www/mbventuresgh
 
 # Clone repository
 git clone https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git .
@@ -116,7 +116,7 @@ npm install
 
 ```bash
 # Navigate to project directory
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Create .env.local for production
 nano .env.local
@@ -131,7 +131,7 @@ VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 
 # Domain (must match actual domain)
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 ```
 
 Save and exit (Ctrl+X, Y, Enter)
@@ -141,7 +141,7 @@ Save and exit (Ctrl+X, Y, Enter)
 ## 🏗️ Build Application
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Install dependencies (if not done)
 npm install
@@ -170,7 +170,7 @@ nano ecosystem.config.js
 module.exports = {
   apps: [
     {
-      name: "mbventuresghana",
+      name: "mbventuresgh",
       script: ".output/server/index.mjs",
       instances: "max",
       exec_mode: "cluster",
@@ -207,7 +207,7 @@ pm2 startup
 
 # Check status
 pm2 status
-pm2 logs mbventuresghana
+pm2 logs mbventuresgh
 
 # View application
 curl http://localhost:3000
@@ -226,7 +226,7 @@ apt install -y nginx
 ### Configure Nginx
 
 ```bash
-nano /etc/nginx/sites-available/mbventuresghana
+nano /etc/nginx/sites-available/mbventuresgh
 ```
 
 **Content:**
@@ -236,20 +236,20 @@ nano /etc/nginx/sites-available/mbventuresghana
 server {
     listen 80;
     listen [::]:80;
-    server_name mbventuresghana.com www.mbventuresghana.com;
+    server_name mbventuresgh.com www.mbventuresgh.com;
 
-    return 301 https://mbventuresghana.com$request_uri;
+    return 301 https://mbventuresgh.com$request_uri;
 }
 
 # HTTPS Configuration
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name mbventuresghana.com www.mbventuresghana.com;
+    server_name mbventuresgh.com www.mbventuresgh.com;
 
     # SSL Configuration (Let's Encrypt - Hostinger auto-manages)
-    ssl_certificate /etc/letsencrypt/live/mbventuresghana.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/mbventuresghana.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/mbventuresgh.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mbventuresgh.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -293,8 +293,8 @@ server {
     }
 
     # Logs
-    access_log /var/log/nginx/mbventuresghana-access.log;
-    error_log /var/log/nginx/mbventuresghana-error.log;
+    access_log /var/log/nginx/mbventuresgh-access.log;
+    error_log /var/log/nginx/mbventuresgh-error.log;
 }
 ```
 
@@ -302,7 +302,7 @@ server {
 
 ```bash
 # Create symbolic link
-ln -s /etc/nginx/sites-available/mbventuresghana /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/mbventuresgh /etc/nginx/sites-enabled/
 
 # Remove default site
 rm /etc/nginx/sites-enabled/default
@@ -351,7 +351,7 @@ If Hostinger doesn't auto-provision SSL:
 apt install -y certbot python3-certbot-nginx
 
 # Get certificate
-certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
+certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 
 # Follow prompts:
 # - Enter email: info@mbventuresghana.com
@@ -384,7 +384,7 @@ Should show:
 
 ```
 WEB3FORMS_ACCESS_KEY: c8395fed-...
-SITE_URL: https://mbventuresghana.com
+SITE_URL: https://mbventuresgh.com
 EMAIL_REPLY_TO: info@mbventuresghana.com
 ADMIN_ALERT_EMAIL: info@mbventuresghana.com
 EMAIL_DAILY_LIMIT: 250
@@ -399,10 +399,10 @@ EMAIL_DAILY_LIMIT: 250
 ```bash
 # On server:
 pm2 status
-pm2 logs mbventuresghana --lines 50
+pm2 logs mbventuresgh --lines 50
 
 # Should show:
-# ● mbventuresghana | online | pid 1234 | 0 restarts
+# ● mbventuresgh | online | pid 1234 | 0 restarts
 ```
 
 ### 2. Test Local Access
@@ -416,11 +416,11 @@ curl http://localhost:3000
 
 ```bash
 # From your local machine:
-curl https://mbventuresghana.com
+curl https://mbventuresgh.com
 # Should return HTML with SSL
 
 # Check SSL
-curl -I https://mbventuresghana.com
+curl -I https://mbventuresgh.com
 # Should show: HTTP/2 200
 ```
 
@@ -428,13 +428,13 @@ curl -I https://mbventuresghana.com
 
 Open in browser:
 
-- ✅ https://mbventuresghana.com
-- ✅ https://www.mbventuresghana.com (redirects to non-www)
-- ✅ http://mbventuresghana.com (redirects to HTTPS)
+- ✅ https://mbventuresgh.com
+- ✅ https://www.mbventuresgh.com (redirects to non-www)
+- ✅ http://mbventuresgh.com (redirects to HTTPS)
 
 ### 5. Verify Email System
 
-1. Navigate to: https://mbventuresghana.com/admin/emails
+1. Navigate to: https://mbventuresgh.com/admin/emails
 2. Sign in as admin
 3. Check banner shows "Live mode" (green)
 4. Send test email
@@ -463,7 +463,7 @@ Open in browser:
 ssh root@your-vps-ip
 
 # Navigate to project
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Pull latest changes
 git pull origin main
@@ -475,10 +475,10 @@ npm install
 npm run build
 
 # Restart PM2
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 
 # Check logs
-pm2 logs mbventuresghana --lines 50
+pm2 logs mbventuresgh --lines 50
 ```
 
 ### Automated Deployment Script
@@ -492,7 +492,7 @@ set -e
 echo "🚀 Starting deployment..."
 
 # Navigate to project directory
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Pull latest code
 echo "📥 Pulling latest changes..."
@@ -508,7 +508,7 @@ npm run build
 
 # Restart PM2
 echo "🔄 Restarting application..."
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 
 # Wait for startup
 sleep 5
@@ -516,7 +516,7 @@ sleep 5
 # Check status
 echo "✅ Deployment complete!"
 pm2 status
-pm2 logs mbventuresghana --lines 20
+pm2 logs mbventuresgh --lines 20
 ```
 
 Make executable and use:
@@ -534,19 +534,19 @@ chmod +x deploy.sh
 
 ```bash
 # View logs
-pm2 logs mbventuresghana
+pm2 logs mbventuresgh
 
 # Monitor in real-time
 pm2 monit
 
 # View metrics
-pm2 show mbventuresghana
+pm2 show mbventuresgh
 
 # Restart if needed
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 
 # Reload (zero-downtime)
-pm2 reload mbventuresghana
+pm2 reload mbventuresgh
 ```
 
 ### Server Monitoring
@@ -562,8 +562,8 @@ free -h
 htop
 
 # Check Nginx logs
-tail -f /var/log/nginx/mbventuresghana-access.log
-tail -f /var/log/nginx/mbventuresghana-error.log
+tail -f /var/log/nginx/mbventuresgh-access.log
+tail -f /var/log/nginx/mbventuresgh-error.log
 ```
 
 ### Automated Backups
@@ -571,7 +571,7 @@ tail -f /var/log/nginx/mbventuresghana-error.log
 Create backup script:
 
 ```bash
-nano /root/backup-mbventuresghana.sh
+nano /root/backup-mbventuresgh.sh
 ```
 
 ```bash
@@ -582,7 +582,7 @@ DATE=$(date +%Y-%m-%d-%H%M)
 mkdir -p $BACKUP_DIR
 
 # Backup application
-tar -czf $BACKUP_DIR/app-$DATE.tar.gz /var/www/mbventuresghana
+tar -czf $BACKUP_DIR/app-$DATE.tar.gz /var/www/mbventuresgh
 
 # Keep only last 7 days
 find $BACKUP_DIR -name "app-*.tar.gz" -mtime +7 -delete
@@ -591,11 +591,11 @@ echo "Backup completed: $BACKUP_DIR/app-$DATE.tar.gz"
 ```
 
 ```bash
-chmod +x /root/backup-mbventuresghana.sh
+chmod +x /root/backup-mbventuresgh.sh
 
 # Add to crontab (daily at 2 AM)
 crontab -e
-# Add: 0 2 * * * /root/backup-mbventuresghana.sh
+# Add: 0 2 * * * /root/backup-mbventuresgh.sh
 ```
 
 ### Convex Database Backups
@@ -615,15 +615,15 @@ npx convex export --path backups/prod-$(date +%Y-%m-%d).zip --prod
 
 ```bash
 # Check PM2 logs
-pm2 logs mbventuresghana --lines 100
+pm2 logs mbventuresgh --lines 100
 
 # Check Node.js version
 node --version  # Must be 20.x or higher
 
 # Rebuild
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 npm run build
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 ```
 
 ### 502 Bad Gateway
@@ -636,10 +636,10 @@ pm2 status
 nginx -t
 
 # Check Nginx logs
-tail -f /var/log/nginx/mbventuresghana-error.log
+tail -f /var/log/nginx/mbventuresgh-error.log
 
 # Restart services
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 systemctl restart nginx
 ```
 
@@ -663,11 +663,11 @@ certbot certificates
 free -h
 
 # Restart application
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 
 # Reduce PM2 instances if needed
 # Edit ecosystem.config.js: instances: 2
-pm2 restart mbventuresghana
+pm2 restart mbventuresgh
 ```
 
 ### Slow Performance
@@ -792,7 +792,7 @@ Once checklist complete:
 4. **Customer announcement** - Share domain and contact info
 5. **Social media** - Update with new website
 
-**Your storefront is now live at:** https://mbventuresghana.com 🚀
+**Your storefront is now live at:** https://mbventuresgh.com 🚀
 
 ---
 

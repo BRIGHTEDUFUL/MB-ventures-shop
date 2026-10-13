@@ -40,7 +40,12 @@ jobs:
         env:
           NODE_ENV: production
           VITE_CONVEX_URL: https://necessary-newt-861.convex.cloud
-          VITE_SITE_URL: https://mbventuresghana.com
+          # NOTE (domain cutover, docs/DOMAIN-MIGRATION.md): the site URL now
+          # targets the NEW Hostinger account's domain. The HOSTINGER_* secrets
+          # below must be repointed at the new VPS before the first deploy of
+          # mbventuresgh.com — until then this workflow still deploys to the
+          # old server/domain.
+          VITE_SITE_URL: https://mbventuresgh.com
 
       - name: Deploy Convex Backend
         if: env.CONVEX_DEPLOY_KEY != ''
@@ -82,7 +87,7 @@ jobs:
             set -e
             echo "🚀 Starting deployment on Hostinger server..."
 
-            TARGET_DIR="${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresghana' }}"
+            TARGET_DIR="${{ secrets.HOSTINGER_PATH || '/var/www/mbventuresgh' }}"
             if [ ! -d "$TARGET_DIR" ]; then
               echo "Directory $TARGET_DIR not found, checking current directory..."
               TARGET_DIR="$(pwd)"
@@ -103,7 +108,7 @@ jobs:
 
             echo "⚡ Reloading PM2 process..."
             pm2 reload ecosystem.config.js --env production || \
-            pm2 restart mbventuresghana || \
+            pm2 restart mbventuresgh || \
             pm2 restart mb-ventures-gh || \
             pm2 start ecosystem.config.js
 

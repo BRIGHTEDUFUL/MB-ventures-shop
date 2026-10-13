@@ -91,7 +91,7 @@ Production (`prod:necessary-newt-861`) is already deployed. To re-apply:
 1. **Set the production site URL:**
 
    ```powershell
-   npx convex env set SITE_URL https://mbventuresghana.com --prod
+   npx convex env set SITE_URL https://mbventuresgh.com --prod
    ```
 
 2. **Set the Web3Forms key for production:**
@@ -154,7 +154,7 @@ Remaining items from `docs/EMAIL.md` §7:
 - [ ] Verify live mode banner on `/admin/emails`
 - [ ] Send test message and confirm delivery
 - [ ] Verify no `EMAIL_DRY_RUN_LOG_CODES` in production
-- [ ] Update production `SITE_URL` to `https://mbventuresghana.com` when domain is ready
+- [ ] Update production `SITE_URL` to `https://mbventuresgh.com` when domain is ready
 
 ## Documentation
 

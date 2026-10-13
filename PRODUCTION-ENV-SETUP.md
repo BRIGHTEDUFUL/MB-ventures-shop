@@ -12,13 +12,13 @@
 # MB Ventures GH - Production Environment
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 EMAIL_REPLY_TO=info@mbventuresghana.com
 ADMIN_ALERT_EMAIL=info@mbventuresghana.com
 EMAIL_DAILY_LIMIT=250
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 ```
 
 ---
@@ -39,7 +39,7 @@ EMAIL_DAILY_LIMIT=250
 EMAIL_REPLY_TO=info@mbventuresghana.com
 JWKS={"keys":[{"use":"sig","kty":"RSA","n":"7GRdtbc95L3RX0PJDWe4Ggn51duri6PVobRDlcLU_l5nWmD2lro8MVwjQVp7giK9nuRR0selzAj7Rw_dIYIlG9rxDIZEXtKadi7yqwJ-B7T0g4TPRjUt9brUs8xxddogYFIvxnlG4hp26BuDHyYGKvypJ6HCvsVWtIyWZMGmTtjN0aL1jWTcu1EDezyI8OYpq4Y8fee2GviHkZtMvRxiX5HAbYAQz67FtKrSvErt86mns-d2raqB3zHmPNvdGwjoCCnSIvDDB-dfXHqtOQdMe5ioDv9fezQ8NLz7QF8K8KRwwsY3-miwCdrPISd5AGZlu2Zhz1couXY7p5qoNGaS7Q","e":"AQAB"}]}
 JWT_PRIVATE_KEY=-----BEGIN PRIVATE KEY----- [REDACTED] -----END PRIVATE KEY-----
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 ```
 
@@ -55,13 +55,13 @@ WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 
 ### Required Secrets:
 
-| Secret Name          | Value                      |
-| -------------------- | -------------------------- |
-| `HOSTINGER_HOST`     | [YOUR_SERVER_IP]           |
-| `HOSTINGER_USERNAME` | [YOUR_SSH_USERNAME]        |
-| `HOSTINGER_PASSWORD` | [YOUR_SSH_PASSWORD]        |
-| `HOSTINGER_PATH`     | `/var/www/mbventuresghana` |
-| `HOSTINGER_PORT`     | `22`                       |
+| Secret Name          | Value                   |
+| -------------------- | ----------------------- |
+| `HOSTINGER_HOST`     | [YOUR_SERVER_IP]        |
+| `HOSTINGER_USERNAME` | [YOUR_SSH_USERNAME]     |
+| `HOSTINGER_PASSWORD` | [YOUR_SSH_PASSWORD]     |
+| `HOSTINGER_PATH`     | `/var/www/mbventuresgh` |
+| `HOSTINGER_PORT`     | `22`                    |
 
 ---
 
@@ -72,18 +72,18 @@ WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 ### Option 1: Create .env.local manually
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 cat > .env.local << 'EOF'
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 EMAIL_REPLY_TO=info@mbventuresghana.com
 ADMIN_ALERT_EMAIL=info@mbventuresghana.com
 EMAIL_DAILY_LIMIT=250
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 EOF
 
 # Verify it was created
@@ -93,7 +93,7 @@ cat .env.local
 ### Option 2: Use setup script (automatic)
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 bash scripts/setup-production-env.sh
 ```
 
@@ -105,7 +105,7 @@ bash scripts/setup-production-env.sh
 
 ```bash
 # 1. Navigate to project
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # 2. Pull latest code
 git pull origin main
@@ -121,13 +121,13 @@ rm -rf node_modules .output .vinxi .tanstack
 cat > .env.local << 'EOF'
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 EMAIL_REPLY_TO=info@mbventuresghana.com
 ADMIN_ALERT_EMAIL=info@mbventuresghana.com
 EMAIL_DAILY_LIMIT=250
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 EOF
 
 # 6. Install dependencies
@@ -166,7 +166,7 @@ cat .env.local
 # Should show all variables
 
 # Test production site
-curl https://mbventuresghana.com
+curl https://mbventuresgh.com
 # Should return HTML
 ```
 
@@ -176,7 +176,7 @@ curl https://mbventuresghana.com
 
 ### Production URLs:
 
-- **Site**: https://mbventuresghana.com
+- **Site**: https://mbventuresgh.com
 - **Convex Backend**: https://necessary-newt-861.convex.cloud
 - **Convex Dashboard**: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
 
@@ -190,26 +190,26 @@ curl https://mbventuresghana.com
 
 ### Admin Account (Register First):
 
-- **Email**: admin@mbventuresghana.com
+- **Email**: admin@mbventuresgh.com
 - **Password**: MBVentures2025!Admin#Secure
 
 ### Staff Account (Register First):
 
-- **Email**: staff@mbventuresghana.com
+- **Email**: staff@mbventuresgh.com
 - **Password**: MBVentures2025!Staff#Secure
 
 ### After Registration, Grant Privileges:
 
 ```powershell
 # Windows PowerShell
-npx convex run users:grantStaff '{\"email\":\"admin@mbventuresghana.com\"}' --prod
-npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"admin@mbventuresgh.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"staff@mbventuresgh.com\"}' --prod
 ```
 
 ```bash
 # Mac/Linux/Git Bash
-npx convex run users:grantStaff '{"email":"admin@mbventuresghana.com"}' --prod
-npx convex run users:grantStaff '{"email":"staff@mbventuresghana.com"}' --prod
+npx convex run users:grantStaff '{"email":"admin@mbventuresgh.com"}' --prod
+npx convex run users:grantStaff '{"email":"staff@mbventuresgh.com"}' --prod
 ```
 
 ---
@@ -218,7 +218,7 @@ npx convex run users:grantStaff '{"email":"staff@mbventuresghana.com"}' --prod
 
 - [ ] Environment variables set correctly (`.env.local` exists)
 - [ ] PM2 running (`pm2 status` shows online)
-- [ ] Site loads at https://mbventuresghana.com
+- [ ] Site loads at https://mbventuresgh.com
 - [ ] Admin account registered
 - [ ] Staff account registered
 - [ ] Privileges granted (can access /staff)

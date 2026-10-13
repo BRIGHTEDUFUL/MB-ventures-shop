@@ -2,7 +2,7 @@
 
 **Date:** 2025-01-10  
 **Project:** MB Ventures GH  
-**Domain:** mbventuresghana.com  
+**Domain:** mbventuresgh.com  
 **Backend:** Convex Cloud (necessary-newt-861.convex.cloud)
 
 ---
@@ -64,8 +64,8 @@ mkdir -p /var/www
 cd /var/www
 
 # Clone from GitHub (if not auto-deployed by Hostinger)
-git clone https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git mbventuresghana
-cd mbventuresghana
+git clone https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git mbventuresgh
+cd mbventuresgh
 
 # Verify files
 ls -la
@@ -80,7 +80,7 @@ ls -la
 ### 2.1 Set Up Environment Variables
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Run the environment setup script
 chmod +x scripts/setup-production-env.sh
@@ -93,7 +93,7 @@ cat .env.local
 **Expected variables in .env.local:**
 
 - ✓ `VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud`
-- ✓ `VITE_SITE_URL=https://mbventuresghana.com`
+- ✓ `VITE_SITE_URL=https://mbventuresgh.com`
 - ✓ `NODE_ENV=production`
 - ✓ `WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920`
 - ✓ `EMAIL_REPLY_TO=info@mbventuresghana.com`
@@ -130,7 +130,7 @@ npx convex env list --prod
 ### 3.1 Install Dependencies
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 npm install
 ```
 
@@ -196,7 +196,7 @@ nginx -v
 
 ```bash
 # Create Nginx config
-nano /etc/nginx/sites-available/mbventuresghana.com
+nano /etc/nginx/sites-available/mbventuresgh.com
 ```
 
 **Paste this configuration:**
@@ -205,7 +205,7 @@ nano /etc/nginx/sites-available/mbventuresghana.com
 server {
     listen 80;
     listen [::]:80;
-    server_name mbventuresghana.com www.mbventuresghana.com;
+    server_name mbventuresgh.com www.mbventuresgh.com;
 
     # Redirect to HTTPS (after SSL setup)
     # return 301 https://$server_name$request_uri;
@@ -248,7 +248,7 @@ server {
 
 ```bash
 # Create symbolic link
-ln -s /etc/nginx/sites-available/mbventuresghana.com /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/mbventuresgh.com /etc/nginx/sites-enabled/
 
 # Test configuration
 nginx -t
@@ -284,12 +284,12 @@ A       www     [your-server-ip]    3600
 
 ```bash
 # Check DNS resolution
-nslookup mbventuresghana.com
-nslookup www.mbventuresghana.com
+nslookup mbventuresgh.com
+nslookup www.mbventuresgh.com
 
 # Or use dig
-dig mbventuresghana.com +short
-dig www.mbventuresghana.com +short
+dig mbventuresgh.com +short
+dig www.mbventuresgh.com +short
 ```
 
 **Status:** ⏸️ Waiting for verification
@@ -305,7 +305,7 @@ dig www.mbventuresghana.com +short
 apt install -y certbot python3-certbot-nginx
 
 # Obtain certificate
-certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
+certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 
 # Follow prompts:
 # - Enter email for renewal notifications
@@ -327,7 +327,7 @@ certbot renew --dry-run
 
 ```bash
 # Test the site
-curl -I https://mbventuresghana.com
+curl -I https://mbventuresgh.com
 ```
 
 **Expected:** HTTP 200 OK response with SSL
@@ -340,12 +340,12 @@ curl -I https://mbventuresghana.com
 
 ### 7.1 Register Admin Account
 
-**Action:** Open https://mbventuresghana.com/auth/signup in browser
+**Action:** Open https://mbventuresgh.com/auth/signup in browser
 
 **Enter:**
 
 - Name: `MB Ventures Admin`
-- Email: `admin@mbventuresghana.com`
+- Email: `admin@mbventuresgh.com`
 - Phone: `+233 24 000 0001`
 - Password: `MBVentures2025!Admin#Secure`
 
@@ -355,12 +355,12 @@ curl -I https://mbventuresghana.com
 
 ### 7.2 Register Staff Account
 
-**Action:** Open https://mbventuresghana.com/auth/signup in browser
+**Action:** Open https://mbventuresgh.com/auth/signup in browser
 
 **Enter:**
 
 - Name: `MB Ventures Staff`
-- Email: `staff@mbventuresghana.com`
+- Email: `staff@mbventuresgh.com`
 - Phone: `+233 24 000 0002`
 - Password: `MBVentures2025!Staff#Secure`
 
@@ -372,10 +372,10 @@ curl -I https://mbventuresghana.com
 
 ```powershell
 # Grant admin role
-npx convex run users:grantStaff '{\"email\":\"admin@mbventuresghana.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"admin@mbventuresgh.com\"}' --prod
 
 # Grant staff role
-npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"staff@mbventuresgh.com\"}' --prod
 ```
 
 **Status:** ⏸️ Waiting for completion
@@ -386,8 +386,8 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --pr
 
 ### 8.1 Sign In as Admin
 
-1. Go to https://mbventuresghana.com/auth/signin
-2. Sign in with admin@mbventuresghana.com
+1. Go to https://mbventuresgh.com/auth/signin
+2. Sign in with admin@mbventuresgh.com
 3. Navigate to /staff
 
 **Status:** ⏸️ Waiting for verification
@@ -451,7 +451,7 @@ staff record receipt in `/staff` → Orders.
 
 ### 9.1 Test Admin Account
 
-- [x] Sign in as admin@mbventuresghana.com
+- [x] Sign in as admin@mbventuresgh.com
 - [x] Access /staff dashboard
 - [x] View all menu items
 - [x] Create/edit a product
@@ -464,7 +464,7 @@ staff record receipt in `/staff` → Orders.
 
 ### 9.2 Test Staff Account
 
-- [x] Sign in as staff@mbventuresghana.com
+- [x] Sign in as staff@mbventuresgh.com
 - [x] Access /staff dashboard
 - [x] View orders
 - [x] Update order status
@@ -480,7 +480,7 @@ staff record receipt in `/staff` → Orders.
 
 **As Guest:**
 
-1. [x] Browse products at https://mbventuresghana.com
+1. [x] Browse products at https://mbventuresgh.com
 2. [x] Add items to cart
 3. [x] Create customer account
 4. [x] Complete checkout
@@ -531,10 +531,10 @@ free -m
 ```bash
 # Database backups (Convex handles this)
 # Static assets backup
-tar -czf /root/backups/public-$(date +%Y%m%d).tar.gz /var/www/mbventuresghana/public
+tar -czf /root/backups/public-$(date +%Y%m%d).tar.gz /var/www/mbventuresgh/public
 
 # Nginx config backup
-cp /etc/nginx/sites-available/mbventuresghana.com /root/backups/nginx-$(date +%Y%m%d).conf
+cp /etc/nginx/sites-available/mbventuresgh.com /root/backups/nginx-$(date +%Y%m%d).conf
 ```
 
 **Status:** ⏸️ Waiting for setup
@@ -600,7 +600,7 @@ systemctl start fail2ban
 
 ### Production Site Checklist
 
-- [ ] Site loads at https://mbventuresghana.com
+- [ ] Site loads at https://mbventuresgh.com
 - [ ] SSL certificate valid (green padlock)
 - [ ] Products visible on homepage
 - [ ] Cart functionality works
@@ -674,7 +674,7 @@ systemctl reload nginx
 ### Build Errors
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 rm -rf node_modules .output
 npm install
 npm run build

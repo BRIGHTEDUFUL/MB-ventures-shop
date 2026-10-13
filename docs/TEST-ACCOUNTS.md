@@ -34,16 +34,24 @@ staff default when set — no `.env*` file sets it today, so the default stands.
 
 ## 2. Production — `prod:necessary-newt-861`
 
-Storefront: `https://mbventuresghana.com`.
+Storefront: `https://mbventuresgh.com`.
 
-| Email                           | Role    | Password                         | Notes                                     |
-| ------------------------------- | ------- | -------------------------------- | ----------------------------------------- |
-| `manager@mbventuresghana.com`   | `admin` | `MBVentures2025!Manager#Admin`   | New Store Manager (Full admin rights)     |
-| `attendant@mbventuresghana.com` | `staff` | `MBVentures2025!Attendant#Staff` | New Shop Attendant (Orders & inventory)   |
-| `admin@mbventuresghana.com`     | `admin` | `MBVentures2025!Admin#Secure`    | Full store admin (team, fees, settings)   |
-| `staff@mbventuresghana.com`     | `staff` | `MBVentures2025!Staff#Secure`    | Store staff (orders, products, inventory) |
-| `e2e.staff@example.com`         | `admin` | `E2eStaff!2026`                  | E2E test admin account                    |
-| `smoke-prod@example.com`        | `admin` | unknown                          |                                           |
+> **Domain cutover — PENDING (prepared 12 Oct 2026).** The four `@mbventuresgh.com`
+> accounts below are the **target** logins, registered on the new domain at
+> cutover (`docs/DOMAIN-MIGRATION.md` §6). Until the cutover runs, the live
+> production logins are the same four addresses on `@mbventuresghana.com` with
+> the same passwords. Both sets live in the same Convex backend
+> (`prod:necessary-newt-861`), so the old accounts keep working after cutover
+> until their `user_roles` rows are revoked.
+
+| Email                        | Role    | Password                         | Notes                                     |
+| ---------------------------- | ------- | -------------------------------- | ----------------------------------------- |
+| `manager@mbventuresgh.com`   | `admin` | `MBVentures2025!Manager#Admin`   | New Store Manager (Full admin rights)     |
+| `attendant@mbventuresgh.com` | `staff` | `MBVentures2025!Attendant#Staff` | New Shop Attendant (Orders & inventory)   |
+| `admin@mbventuresgh.com`     | `admin` | `MBVentures2025!Admin#Secure`    | Full store admin (team, fees, settings)   |
+| `staff@mbventuresgh.com`     | `staff` | `MBVentures2025!Staff#Secure`    | Store staff (orders, products, inventory) |
+| `e2e.staff@example.com`      | `admin` | `E2eStaff!2026`                  | E2E test admin account                    |
+| `smoke-prod@example.com`     | `admin` | unknown                          |                                           |
 
 Sign in at `/account` (or `/login`, `/auth/signin`). When signed in with staff or admin privileges, the account page shows a direct **Store staff hub** button linking to `/staff` (and `/admin` automatically redirects to `/staff`).
 
@@ -65,7 +73,7 @@ definitive check — it either returns session tokens or throws
 "Invalid email or password":
 
 ```powershell
-npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresghana.com\",\"password\":\"MBVentures2025!Admin#Secure\"}}' --prod
+npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresgh.com\",\"password\":\"MBVentures2025!Admin#Secure\"}}' --prod
 ```
 
 The returned tokens are short-lived and session-scoped: never paste them into a ticket, doc or log.

@@ -1,7 +1,7 @@
 # 🚀 Production Deployment Summary
 
 **Project:** MB Ventures GH (Circle Shop Express)  
-**Domain:** mbventuresghana.com  
+**Domain:** mbventuresgh.com  
 **Date:** January 10, 2025  
 **Status:** ✅ **DEPLOYED — LIVE IN PRODUCTION** (verified 10 Oct 2026)
 
@@ -44,7 +44,7 @@
 ### Admin Account
 
 ```
-Email: admin@mbventuresghana.com
+Email: admin@mbventuresgh.com
 Password: MBVentures2025!Admin#Secure
 Role: Administrator (Full Access)
 ```
@@ -52,7 +52,7 @@ Role: Administrator (Full Access)
 ### Staff Account
 
 ```
-Email: staff@mbventuresghana.com
+Email: staff@mbventuresgh.com
 Password: MBVentures2025!Staff#Secure
 Role: Staff (Standard Permissions)
 ```
@@ -69,7 +69,7 @@ Role: Staff (Standard Permissions)
 
 ```bash
 ssh root@[your-server-ip]
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 ```
 
 **2. Set up environment:**
@@ -92,13 +92,13 @@ pm2 save
 
 ```bash
 # See HOSTINGER-DEPLOYMENT.md for detailed steps
-certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
+certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 ```
 
 **5. Create accounts:**
 
-- Register at https://mbventuresghana.com/auth/signup
-- Grant privileges: `npx convex run users:grantStaff '{"email":"admin@mbventuresghana.com"}' --prod`
+- Register at https://mbventuresgh.com/auth/signup
+- Grant privileges: `npx convex run users:grantStaff '{"email":"admin@mbventuresgh.com"}' --prod`
 
 **6. Configure store:**
 
@@ -114,7 +114,7 @@ certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
 
 ```env
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 EMAIL_REPLY_TO=info@mbventuresghana.com
@@ -167,10 +167,10 @@ EMAIL_DAILY_LIMIT=250
 
 ### 1. Register Accounts (5 minutes)
 
-Navigate to https://mbventuresghana.com/auth/signup and register:
+Navigate to https://mbventuresgh.com/auth/signup and register:
 
-- Admin account (admin@mbventuresghana.com)
-- Staff account (staff@mbventuresghana.com)
+- Admin account (admin@mbventuresgh.com)
+- Staff account (staff@mbventuresgh.com)
 
 ### 2. Grant Privileges (2 minutes)
 
@@ -178,8 +178,8 @@ From your local machine:
 
 ```powershell
 # Windows PowerShell
-npx convex run users:grantStaff '{\"email\":\"admin@mbventuresghana.com\"}' --prod
-npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"admin@mbventuresgh.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"staff@mbventuresgh.com\"}' --prod
 ```
 
 ### 3. Verify Access (3 minutes)
@@ -309,7 +309,7 @@ free -m
 
 ### Deployment Complete When:
 
-- [ ] Site loads at https://mbventuresghana.com
+- [ ] Site loads at https://mbventuresgh.com
 - [ ] SSL certificate valid (HTTPS)
 - [ ] Admin account works (can access /staff)
 - [ ] Staff account works (limited access to /staff)

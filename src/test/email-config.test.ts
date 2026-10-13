@@ -106,7 +106,7 @@ describe("emailConfigView", () => {
         env({
           WEB3FORMS_ACCESS_KEY: "w3f_123",
           ADMIN_ALERT_EMAIL: "alerts@mbventuresghana.com",
-          SITE_URL: "https://mbventuresghana.com",
+          SITE_URL: "https://mbventuresgh.com",
         }),
       ),
     );
@@ -114,7 +114,7 @@ describe("emailConfigView", () => {
       mode: "live",
       dailyLimit: 100,
       logCodes: false,
-      siteUrl: "https://mbventuresghana.com",
+      siteUrl: "https://mbventuresgh.com",
       adminAlertEmail: "alerts@mbventuresghana.com",
     });
   });

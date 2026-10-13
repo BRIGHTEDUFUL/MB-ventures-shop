@@ -7,13 +7,19 @@ working in this repository. Read it in full before touching `convex/` or any rou
 
 ## 1. Project overview
 
-**MB Ventures GH** is a live e-commerce storefront at `https://mbventuresghana.com`
+**MB Ventures GH** is a live e-commerce storefront at `https://mbventuresgh.com`
 selling workspace and computer accessories (desks, gaming gear, mounts, audio equipment)
 from the Abelenkpe taxi rank shop in Accra, Ghana.
 
 - **Ordering is LIVE.** 11 real products are in the database with real stock (10 units each).
 - **Demo products** (10) are hidden (`visible: false, status: "draft"`) but preserved — never delete them.
 - **Currency:** Ghana cedis (GH₵).
+- **Domain cutover PENDING (12 Oct 2026).** The repo now targets
+  `mbventuresgh.com` on a new Hostinger account, but production still serves
+  `mbventuresghana.com` from the old server until the cutover runbook in
+  `docs/DOMAIN-MIGRATION.md` is executed. The site URL changed; the contact /
+  reply-to address `info@mbventuresghana.com` did not. Do NOT push to `main`
+  before cutover unless a deploy to the old server is intended.
 
 ---
 
@@ -171,6 +177,12 @@ Targets `prod:necessary-newt-861`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` �
 
 Automatic — GitHub Actions (`.github/workflows/deploy-hostinger.yml`) on every push to `main`.
 
+> **New Hostinger account:** the workflow's `HOSTINGER_*` GitHub secrets must be
+> repointed at the new account's VPS (new IP, credentials and
+> `HOSTINGER_PATH=/var/www/mbventuresgh`) before the first deploy of
+> `mbventuresgh.com`. Until then a push to `main` deploys to the **old**
+> server/domain. Steps: `docs/DOMAIN-MIGRATION.md`.
+
 ### Full production deploy (both layers)
 
 ```sh
@@ -233,7 +245,7 @@ mobile navigation is touched):
 
 ```sh
 node scripts/mobile-audit.mjs http://localhost:8080                       # dev
-node scripts/mobile-audit.mjs https://mbventuresghana.com --email=… --password=…
+node scripts/mobile-audit.mjs https://mbventuresgh.com --email=… --password=…
 # Expect "CLEAN — no mobile defects found across 14 routes × 3 widths."
 ```
 
@@ -279,12 +291,17 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 
 ## 8. Staff / admin accounts (production)
 
-| Email                         | Role  | Purpose                          |
-| ----------------------------- | ----- | -------------------------------- |
-| manager@mbventuresghana.com   | admin | Full back-office, team, settings |
-| admin@mbventuresghana.com     | admin | Full admin                       |
-| attendant@mbventuresghana.com | staff | Orders and inventory             |
-| staff@mbventuresghana.com     | staff | Orders and products              |
+| Email                      | Role  | Purpose                          |
+| -------------------------- | ----- | -------------------------------- |
+| manager@mbventuresgh.com   | admin | Full back-office, team, settings |
+| admin@mbventuresgh.com     | admin | Full admin                       |
+| attendant@mbventuresgh.com | staff | Orders and inventory             |
+| staff@mbventuresgh.com     | staff | Orders and products              |
+
+> These four accounts are **provisioned at domain cutover** (sign up fresh on
+> the new domain, then `users:grantStaff`). Until the cutover runs, the live
+> production accounts are the same four on `@mbventuresghana.com` — see
+> `docs/DOMAIN-MIGRATION.md` §6 and `docs/TEST-ACCOUNTS.md`.
 
 Full credentials and recovery steps: `docs/TEST-ACCOUNTS.md`.
 Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.
@@ -293,14 +310,14 @@ Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.
 
 ## 9. Environment files
 
-| File             | Purpose                                   | In git?         |
-| ---------------- | ----------------------------------------- | --------------- |
-| .env             | Shared VITE_CONVEX_URL (production)       | Yes             |
-| .env.development | VITE_SITE_URL=http://localhost:5173       | Yes             |
-| .env.production  | VITE_SITE_URL=https://mbventuresghana.com | Yes             |
-| .env.local       | Dev CONVEX_DEPLOYMENT + secrets           | No (gitignored) |
-| .env.prod.local  | CONVEX_DEPLOY_KEY                         | No (gitignored) |
-| .env.example     | Full variable template                    | Yes             |
+| File             | Purpose                                | In git?         |
+| ---------------- | -------------------------------------- | --------------- |
+| .env             | Shared VITE_CONVEX_URL (production)    | Yes             |
+| .env.development | VITE_SITE_URL=http://localhost:5173    | Yes             |
+| .env.production  | VITE_SITE_URL=https://mbventuresgh.com | Yes             |
+| .env.local       | Dev CONVEX_DEPLOYMENT + secrets        | No (gitignored) |
+| .env.prod.local  | CONVEX_DEPLOY_KEY                      | No (gitignored) |
+| .env.example     | Full variable template                 | Yes             |
 
 Never commit .env.local or .env.prod.local.
 Never log CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY, or JWKS.
@@ -332,7 +349,7 @@ Or use the staff panel at /staff Customization.
 ### Verify a production password
 
 ```powershell
-npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresghana.com\",\"password\":\"...\"}}' --env-file .env.prod.local
+npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresgh.com\",\"password\":\"...\"}}' --env-file .env.prod.local
 ```
 
 ---
@@ -374,15 +391,16 @@ npx convex run users:grantStaff '{"email":"x@y.com"}' --env-file .env.prod.local
 
 ## 13. Docs map
 
-| File                       | Contents                                       |
-| -------------------------- | ---------------------------------------------- |
-| AGENTS.md (this file)      | Architecture, invariants, workflow, full state |
-| README.md                  | Project overview, stack, live inventory table  |
-| docs/TEST-ACCOUNTS.md      | Staff/admin credentials, password recovery     |
-| docs/PROGRESS.md           | Chronological change log                       |
-| docs/EMAIL.md              | Email system full guide                        |
-| docs/PRODUCTION-CONFIG.md  | Deployment configuration reference             |
-| docs/INVENTORY-AUDIT.md    | Full product specs and original inventory doc  |
-| docs/PRODUCT-VARIANTS.md   | Options (colour/size/type): data model, stock, UI |
-| roadmap.md                 | Feature completion status                      |
-| convex/inventory_import.ts | Canonical source of all real product data      |
+| File                       | Contents                                                         |
+| -------------------------- | ---------------------------------------------------------------- |
+| AGENTS.md (this file)      | Architecture, invariants, workflow, full state                   |
+| README.md                  | Project overview, stack, live inventory table                    |
+| docs/TEST-ACCOUNTS.md      | Staff/admin credentials, password recovery                       |
+| docs/PROGRESS.md           | Chronological change log                                         |
+| docs/EMAIL.md              | Email system full guide                                          |
+| docs/PRODUCTION-CONFIG.md  | Deployment configuration reference                               |
+| docs/DOMAIN-MIGRATION.md   | Domain cutover runbook (mbventuresgh.com, new Hostinger account) |
+| docs/INVENTORY-AUDIT.md    | Full product specs and original inventory doc                    |
+| docs/PRODUCT-VARIANTS.md   | Options (colour/size/type): data model, stock, UI                |
+| roadmap.md                 | Feature completion status                                        |
+| convex/inventory_import.ts | Canonical source of all real product data                        |

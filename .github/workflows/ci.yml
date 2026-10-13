@@ -42,4 +42,4 @@ jobs:
         env:
           NODE_ENV: production
           VITE_CONVEX_URL: https://necessary-newt-861.convex.cloud
-          VITE_SITE_URL: https://mbventuresghana.com
+          VITE_SITE_URL: https://mbventuresgh.com

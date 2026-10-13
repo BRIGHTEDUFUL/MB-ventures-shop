@@ -16,7 +16,7 @@
       the safe-area wiring. Device-only checks (soft keyboard, real focus zoom, landscape) still
       need a phone — `MOBILE_TASKS.md` §3.
 - [x] Live inventory and payment model — ready for production. Email system live, domain
-      configured (`mbventuresghana.com`). No in-app payment: pickup pays at the shop counter,
+      configured (`mbventuresgh.com`). No in-app payment: pickup pays at the shop counter,
       delivery pays cash on arrival. `ordering_enabled` toggles via `/staff` customization
 
 ## Verification run — 9 October 2026
@@ -53,7 +53,7 @@
   - Admin alerts: `info@mbventuresghana.com`
   - Daily limit: 250 emails/day (production)
   - See `docs/EMAIL-SETUP-STATUS.md` and `docs/PRODUCTION-CONFIG.md`
-- ✅ **Production domain**: `https://mbventuresghana.com` configured
+- ✅ **Production domain**: `https://mbventuresgh.com` configured
   - `VITE_SITE_URL` set in `.env.production`
   - `SITE_URL` set in Convex production environment
   - All email links, canonical URLs, Open Graph tags use correct domain

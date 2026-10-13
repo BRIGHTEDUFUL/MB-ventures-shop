@@ -27,14 +27,14 @@ Mode is decided in exactly one place, `getEmailConfig()` in
 Read at runtime by Convex (set them with `npx convex env set NAME value`, or
 through the dashboard). See `.env.example` for the template.
 
-| Name                      | Required    | Default               | Purpose                                                                                                                                                 |
-| ------------------------- | ----------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WEB3FORMS_ACCESS_KEY`    | for live    | –                     | Web3Forms access key — the single switch between dry-run and live. Dropped from the config entirely while dry-run, so it cannot leak.                   |
-| `EMAIL_REPLY_TO`          | no          | –                     | `replyto` on every message. Empty omits the field from the payload entirely.                                                                            |
-| `ADMIN_ALERT_EMAIL`       | no          | store contact address | Where staff alerts and the contact-form alert go                                                                                                        |
-| `EMAIL_DAILY_LIMIT`       | no          | `100`                 | Messages per calendar day, per deployment. Unusable values fall back to the default; the ceiling is 5000.                                               |
-| `EMAIL_DRY_RUN_LOG_CODES` | no          | `false`               | Store one-time auth codes in `emailLogs` for local debugging.                                                                                           |
-| `SITE_URL`                | recommended | `CONVEX_SITE_URL`     | Origin every link is built from. Also gates the preview gallery and the startup assertion below. In production set it to `https://mbventuresghana.com`. |
+| Name                      | Required    | Default               | Purpose                                                                                                                                              |
+| ------------------------- | ----------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEB3FORMS_ACCESS_KEY`    | for live    | –                     | Web3Forms access key — the single switch between dry-run and live. Dropped from the config entirely while dry-run, so it cannot leak.                |
+| `EMAIL_REPLY_TO`          | no          | –                     | `replyto` on every message. Empty omits the field from the payload entirely.                                                                         |
+| `ADMIN_ALERT_EMAIL`       | no          | store contact address | Where staff alerts and the contact-form alert go                                                                                                     |
+| `EMAIL_DAILY_LIMIT`       | no          | `100`                 | Messages per calendar day, per deployment. Unusable values fall back to the default; the ceiling is 5000.                                            |
+| `EMAIL_DRY_RUN_LOG_CODES` | no          | `false`               | Store one-time auth codes in `emailLogs` for local debugging.                                                                                        |
+| `SITE_URL`                | recommended | `CONVEX_SITE_URL`     | Origin every link is built from. Also gates the preview gallery and the startup assertion below. In production set it to `https://mbventuresgh.com`. |
 
 **Startup assertion.** If `EMAIL_DRY_RUN_LOG_CODES` is `true` while `SITE_URL` is
 neither localhost nor a Convex dev host, `convex/emails/config.ts` throws at
@@ -183,7 +183,7 @@ The Convex suites run under `// @vitest-environment edge-runtime` and mock
 2. `npx convex env set WEB3FORMS_ACCESS_KEY <key>` (dev first:
    `npx convex env set --dev WEB3FORMS_ACCESS_KEY <key>`).
 3. Set `EMAIL_REPLY_TO`, `ADMIN_ALERT_EMAIL` and `EMAIL_DAILY_LIMIT`.
-4. Set production `SITE_URL` to `https://mbventuresghana.com`.
+4. Set production `SITE_URL` to `https://mbventuresgh.com`.
 5. Open `/admin/emails` — the banner must now read **Live mode**. If it still
    says dry-run, the variable is missing or blank.
 6. Send a test message from the console and confirm the row reaches `sent`

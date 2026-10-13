@@ -1,17 +1,17 @@
 # Quick Start - MB Ventures GH Storefront
 
 **Status:** ✅ Production Ready  
-**Domain:** https://mbventuresghana.com  
+**Domain:** https://mbventuresgh.com  
 **Email:** info@mbventuresghana.com
 
 ---
 
 ## ✅ What's Complete
 
-Everything is set up and the store is live (https://mbventuresghana.com):
+Everything is set up and the store is live (https://mbventuresgh.com):
 
 1. ✅ **Email system** - Configured with Web3Forms, live and sending
-2. ✅ **Domain** - mbventuresghana.com integrated throughout
+2. ✅ **Domain** - mbventuresgh.com integrated throughout
 3. ✅ **Tests** - 189 unit tests + 32 E2E tests, all passing
 4. ✅ **Mobile** - Responsive design, automated checks passing
 5. ✅ **Documentation** - Complete guides in `docs/` directory
@@ -84,7 +84,7 @@ npm run test:e2e:live
 
 Once deployed:
 
-1. Sign in at `https://mbventuresghana.com/staff`
+1. Sign in at `https://mbventuresgh.com/staff`
 2. Go to Customization → Ordering
 3. Toggle "Accept orders" to ON
 

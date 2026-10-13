@@ -14,7 +14,7 @@ module.exports = {
   apps: [
     {
       // Application name (used in PM2 commands)
-      name: "mbventuresghana",
+      name: "mbventuresgh",
 
       // Entry point (built by `npm run build`)
       script: ".output/server/index.mjs",
@@ -93,7 +93,7 @@ module.exports = {
       host: "YOUR_VPS_IP",
       ref: "origin/main",
       repo: "https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git",
-      path: "/var/www/mbventuresghana",
+      path: "/var/www/mbventuresgh",
 
       // Commands to run on server
       "post-deploy":

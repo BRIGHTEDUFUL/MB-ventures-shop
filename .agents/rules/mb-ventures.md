@@ -42,7 +42,7 @@ git add -A; git push origin main
 
 ## Live store facts
 
-- Site: https://mbventuresghana.com
+- Site: https://mbventuresgh.com
 - Convex prod: necessary-newt-861
 - Ordering: ENABLED
 - Real products: 11 (see AGENTS.md §7)

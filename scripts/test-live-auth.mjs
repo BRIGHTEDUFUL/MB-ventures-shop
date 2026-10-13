@@ -17,8 +17,8 @@ async function testRole(email, password, roleName) {
   });
   page.on("pageerror", (err) => console.error(`[${roleName} BROWSER ERROR]`, err.message));
 
-  console.log("Navigating to https://mbventuresghana.com/account ...");
-  await page.goto("https://mbventuresghana.com/account", {
+  console.log("Navigating to https://mbventuresgh.com/account ...");
+  await page.goto("https://mbventuresgh.com/account", {
     waitUntil: "networkidle",
     timeout: 45000,
   });
@@ -47,8 +47,8 @@ async function testRole(email, password, roleName) {
     }
 
     // Now test navigating to /staff
-    console.log(`Navigating to https://mbventuresghana.com/staff ...`);
-    await page.goto("https://mbventuresghana.com/staff", {
+    console.log(`Navigating to https://mbventuresgh.com/staff ...`);
+    await page.goto("https://mbventuresgh.com/staff", {
       waitUntil: "networkidle",
       timeout: 30000,
     });
@@ -74,8 +74,8 @@ async function testRole(email, password, roleName) {
 }
 
 async function main() {
-  await testRole("admin@mbventuresghana.com", "MBVentures2025!Admin#Secure", "Admin");
-  await testRole("staff@mbventuresghana.com", "MBVentures2025!Staff#Secure", "Staff");
+  await testRole("admin@mbventuresgh.com", "MBVentures2025!Admin#Secure", "Admin");
+  await testRole("staff@mbventuresgh.com", "MBVentures2025!Staff#Secure", "Staff");
 }
 
 main().catch((err) => {

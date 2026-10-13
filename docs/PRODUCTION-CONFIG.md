@@ -1,7 +1,7 @@
-# Production Configuration - mbventuresghana.com
+# Production Configuration - mbventuresgh.com
 
 **Date:** October 9, 2026  
-**Domain:** `https://mbventuresghana.com`  
+**Domain:** `https://mbventuresgh.com`  
 **Email:** `info@mbventuresghana.com`  
 **Deployment:** `prod:necessary-newt-861`
 
@@ -13,13 +13,13 @@ All production environment variables have been set and verified.
 
 ### Convex Production Environment Variables
 
-| Variable               | Value                         | Purpose                                                     |
-| ---------------------- | ----------------------------- | ----------------------------------------------------------- |
-| `SITE_URL`             | `https://mbventuresghana.com` | Origin for all email links, canonical URLs, Open Graph tags |
-| `WEB3FORMS_ACCESS_KEY` | `c8395fed-...` (set)          | Web3Forms API access key for email delivery                 |
-| `EMAIL_REPLY_TO`       | `info@mbventuresghana.com`    | Reply-to address on all outgoing emails                     |
-| `ADMIN_ALERT_EMAIL`    | `info@mbventuresghana.com`    | Where admin alerts and contact form messages go             |
-| `EMAIL_DAILY_LIMIT`    | `250`                         | Maximum emails per day (increased from default 100)         |
+| Variable               | Value                      | Purpose                                                     |
+| ---------------------- | -------------------------- | ----------------------------------------------------------- |
+| `SITE_URL`             | `https://mbventuresgh.com` | Origin for all email links, canonical URLs, Open Graph tags |
+| `WEB3FORMS_ACCESS_KEY` | `c8395fed-...` (set)       | Web3Forms API access key for email delivery                 |
+| `EMAIL_REPLY_TO`       | `info@mbventuresghana.com` | Reply-to address on all outgoing emails                     |
+| `ADMIN_ALERT_EMAIL`    | `info@mbventuresghana.com` | Where admin alerts and contact form messages go             |
+| `EMAIL_DAILY_LIMIT`    | `250`                      | Maximum emails per day (increased from default 100)         |
 
 ### Frontend Environment Variables (.env.production)
 
@@ -27,7 +27,7 @@ All production environment variables have been set and verified.
 | ---------------------- | ----------------------------------------- | -------------------------------- |
 | `VITE_CONVEX_URL`      | `https://necessary-newt-861.convex.cloud` | Production Convex API endpoint   |
 | `VITE_CONVEX_SITE_URL` | `https://necessary-newt-861.convex.site`  | Convex site URL                  |
-| `VITE_SITE_URL`        | `https://mbventuresghana.com`             | Public storefront origin for SEO |
+| `VITE_SITE_URL`        | `https://mbventuresgh.com`                | Public storefront origin for SEO |
 
 ---
 
@@ -46,7 +46,7 @@ All 12 email templates are configured to use:
 
 - **From domain:** Web3Forms (forwarded to your inbox)
 - **Reply-to:** `info@mbventuresghana.com`
-- **Links:** All point to `https://mbventuresghana.com`
+- **Links:** All point to `https://mbventuresgh.com`
 - **Branding:** MB Ventures GH
 
 **Customer emails:**
@@ -79,7 +79,7 @@ All 12 email templates are configured to use:
 
 ## Domain Integration Points
 
-The domain `mbventuresghana.com` is integrated throughout the application:
+The domain `mbventuresgh.com` is integrated throughout the application:
 
 ### 1. SEO & Metadata
 
@@ -87,14 +87,14 @@ The domain `mbventuresghana.com` is integrated throughout the application:
 
 ```typescript
 // Canonical URLs
-<link rel="canonical" href="https://mbventuresghana.com/product/standing-desk" />
+<link rel="canonical" href="https://mbventuresgh.com/product/standing-desk" />
 
 // Open Graph
-<meta property="og:url" content="https://mbventuresghana.com/product/standing-desk" />
-<meta property="og:image" content="https://mbventuresghana.com/images/standing-desk.jpg" />
+<meta property="og:url" content="https://mbventuresgh.com/product/standing-desk" />
+<meta property="og:image" content="https://mbventuresgh.com/images/standing-desk.jpg" />
 
 // Twitter Card
-<meta name="twitter:url" content="https://mbventuresghana.com/product/standing-desk" />
+<meta name="twitter:url" content="https://mbventuresgh.com/product/standing-desk" />
 ```
 
 ### 2. Sitemap & Robots
@@ -104,13 +104,13 @@ The domain `mbventuresghana.com` is integrated throughout the application:
 ```xml
 <!-- Sitemap -->
 <url>
-  <loc>https://mbventuresghana.com/</loc>
+  <loc>https://mbventuresgh.com/</loc>
   <lastmod>2026-10-09</lastmod>
   <priority>1.0</priority>
 </url>
 
 <!-- Robots.txt -->
-Sitemap: https://mbventuresghana.com/sitemap.xml
+Sitemap: https://mbventuresgh.com/sitemap.xml
 ```
 
 ### 3. Email Links
@@ -119,10 +119,10 @@ Sitemap: https://mbventuresghana.com/sitemap.xml
 
 All email templates build links from `SITE_URL`:
 
-- Order tracking: `https://mbventuresghana.com/track?ref=MB-...`
-- Password reset: `https://mbventuresghana.com/account?code=...`
-- Product links: `https://mbventuresghana.com/product/...`
-- Homepage: `https://mbventuresghana.com`
+- Order tracking: `https://mbventuresgh.com/track?ref=MB-...`
+- Password reset: `https://mbventuresgh.com/account?code=...`
+- Product links: `https://mbventuresgh.com/product/...`
+- Homepage: `https://mbventuresgh.com`
 
 ### 4. Contact Information
 
@@ -153,7 +153,7 @@ Displayed in:
   "@type": "Product",
   "offers": {
     "@type": "Offer",
-    "url": "https://mbventuresghana.com/product/standing-desk",
+    "url": "https://mbventuresgh.com/product/standing-desk",
     "availability": "https://schema.org/InStock"
   }
 }
@@ -202,7 +202,7 @@ Displayed in:
    ```
 
 6. **Test email system:**
-   - Sign in as admin at `https://mbventuresghana.com/admin/emails`
+   - Sign in as admin at `https://mbventuresgh.com/admin/emails`
    - Verify banner shows "Live mode" (green)
    - Send a test email
    - Check `info@mbventuresghana.com` inbox
@@ -216,7 +216,7 @@ Displayed in:
 
 - [ ] Domain DNS points to hosting/CDN
 - [ ] SSL certificate active
-- [ ] `https://mbventuresghana.com` loads the storefront
+- [ ] `https://mbventuresgh.com` loads the storefront
 - [ ] Email system in live mode (not dry-run)
 - [ ] Test order end-to-end (paid at pickup or cash on delivery)
 - [ ] Staff can access `/staff` and `/admin`
@@ -242,7 +242,7 @@ npx convex env get SITE_URL
 
 # Should show:
 # - Key: c8395fed-...
-# - URL: http://localhost:5173 (dev) OR https://mbventuresghana.com (if set for testing)
+# - URL: http://localhost:5173 (dev) OR https://mbventuresgh.com (if set for testing)
 ```
 
 ### Production Testing
@@ -255,7 +255,7 @@ npx convex env get EMAIL_REPLY_TO --prod
 
 # Should show:
 # - Key: c8395fed-...
-# - URL: https://mbventuresghana.com
+# - URL: https://mbventuresgh.com
 # - Reply: info@mbventuresghana.com
 ```
 
@@ -264,14 +264,14 @@ npx convex env get EMAIL_REPLY_TO --prod
 1. **Customer Order Confirmation:**
    - Place order on storefront
    - Check `info@mbventuresghana.com` for forwarded confirmation
-   - Verify links point to `mbventuresghana.com`
+   - Verify links point to `mbventuresgh.com`
    - Reply-to should be customer's email
 
 2. **Password Reset:**
    - Click "Forgot password" on `/account`
    - Enter any email (e.g., `test@example.com`)
    - Check `info@mbventuresghana.com` for forwarded reset email
-   - Verify reset link: `https://mbventuresghana.com/account?code=...`
+   - Verify reset link: `https://mbventuresgh.com/account?code=...`
 
 3. **Contact Form:**
    - Submit contact form on `/contact`
@@ -291,7 +291,7 @@ npx convex env get EMAIL_REPLY_TO --prod
 | Issue                          | Solution                                                     |
 | ------------------------------ | ------------------------------------------------------------ |
 | Emails not delivering          | Verify `WEB3FORMS_ACCESS_KEY` is set for correct deployment  |
-| Links point to localhost       | Update `SITE_URL` to `https://mbventuresghana.com`           |
+| Links point to localhost       | Update `SITE_URL` to `https://mbventuresgh.com`              |
 | Wrong reply-to address         | Update `EMAIL_REPLY_TO` in Convex env                        |
 | Admin alerts go to wrong inbox | Update `ADMIN_ALERT_EMAIL` in Convex env                     |
 | Daily limit reached            | Increase `EMAIL_DAILY_LIMIT` (max 5000)                      |
@@ -348,7 +348,7 @@ npm start
 **Store Address:** Abelenkpe taxi rank, Accra, Ghana  
 **Store Hours:** Monday to Saturday, 8:00 AM to 6:00 PM
 
-**Domain:** mbventuresghana.com  
+**Domain:** mbventuresgh.com  
 **Production Deployment:** prod:necessary-newt-861  
 **Development Deployment:** dev:stoic-elephant-714
 
@@ -375,4 +375,4 @@ All email and domain configuration is complete. The system is ready to:
 - ✅ Forward all emails to info@mbventuresghana.com
 - ✅ Support password resets, order confirmations, contact forms
 
-**Next step:** Deploy to production hosting with DNS pointing to `mbventuresghana.com`
+**Next step:** Deploy to production hosting with DNS pointing to `mbventuresgh.com`

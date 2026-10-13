@@ -63,7 +63,7 @@ Add staff member by email (user must register first):
 
 ```typescript
 await addStaff({
-  email: "newstaff@mbventuresghana.com",
+  email: "newstaff@mbventuresgh.com",
   role: "staff", // or "admin"
 });
 ```

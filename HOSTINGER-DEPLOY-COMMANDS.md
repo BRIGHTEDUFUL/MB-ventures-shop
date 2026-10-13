@@ -7,7 +7,7 @@
 ## Step 1: Navigate to Project Directory
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 ```
 
 **If directory doesn't exist, create it:**
@@ -15,8 +15,8 @@ cd /var/www/mbventuresghana
 ```bash
 sudo mkdir -p /var/www
 cd /var/www
-sudo git clone https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git mbventuresghana
-cd mbventuresghana
+sudo git clone https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git mbventuresgh
+cd mbventuresgh
 ```
 
 ---
@@ -45,7 +45,7 @@ cat .env.local
 **Should show:**
 
 - VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-- VITE_SITE_URL=https://mbventuresghana.com
+- VITE_SITE_URL=https://mbventuresgh.com
 - WEB3FORMS_ACCESS_KEY=c8395fed...
 - And other production variables
 
@@ -188,12 +188,12 @@ bash scripts/setup-production-env.sh
 
 ### Configure Nginx (if needed)
 
-Create `/etc/nginx/sites-available/mbventuresghana.com`:
+Create `/etc/nginx/sites-available/mbventuresgh.com`:
 
 ```nginx
 server {
     listen 80;
-    server_name mbventuresghana.com www.mbventuresghana.com;
+    server_name mbventuresgh.com www.mbventuresgh.com;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -209,7 +209,7 @@ server {
 Enable and restart:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/mbventuresghana.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/mbventuresgh.com /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -218,7 +218,7 @@ sudo systemctl reload nginx
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
+sudo certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 ```
 
 ---
@@ -227,29 +227,29 @@ sudo certbot --nginx -d mbventuresghana.com -d www.mbventuresghana.com
 
 ### On Production Site
 
-1. Go to: https://mbventuresghana.com/auth/signup
-2. Register admin: admin@mbventuresghana.com
-3. Register staff: staff@mbventuresghana.com
+1. Go to: https://mbventuresgh.com/auth/signup
+2. Register admin: admin@mbventuresgh.com
+3. Register staff: staff@mbventuresgh.com
 
 ### Grant Privileges (from your local machine)
 
 ```powershell
 # Windows PowerShell
-npx convex run users:grantStaff '{\"email\":\"admin@mbventuresghana.com\"}' --prod
-npx convex run users:grantStaff '{\"email\":\"staff@mbventuresghana.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"admin@mbventuresgh.com\"}' --prod
+npx convex run users:grantStaff '{\"email\":\"staff@mbventuresgh.com\"}' --prod
 ```
 
 ```bash
 # Mac/Linux
-npx convex run users:grantStaff '{"email":"admin@mbventuresghana.com"}' --prod
-npx convex run users:grantStaff '{"email":"staff@mbventuresghana.com"}' --prod
+npx convex run users:grantStaff '{"email":"admin@mbventuresgh.com"}' --prod
+npx convex run users:grantStaff '{"email":"staff@mbventuresgh.com"}' --prod
 ```
 
 ---
 
 ## Final Verification
 
-1. ✅ Site loads at https://mbventuresghana.com
+1. ✅ Site loads at https://mbventuresgh.com
 2. ✅ Can sign up for customer account
 3. ✅ Can sign in with admin account
 4. ✅ Admin can access /staff

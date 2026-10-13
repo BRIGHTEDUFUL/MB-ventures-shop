@@ -8,7 +8,7 @@
 
 **File to upload:** `.env.hostinger`  
 **From:** Your local repository  
-**To:** `/var/www/mbventuresghana/.env.local` on Hostinger
+**To:** `/var/www/mbventuresgh/.env.local` on Hostinger
 
 ---
 
@@ -19,7 +19,7 @@
 1. **Login to hPanel**: https://hpanel.hostinger.com
 2. Click your **VPS/Hosting service**
 3. Go to **Files** → **File Manager**
-4. Navigate to `/var/www/mbventuresghana`
+4. Navigate to `/var/www/mbventuresgh`
 5. Click **Upload** button (top right)
 6. Select `.env.hostinger` from your computer
 7. After upload, **right-click** → **Rename** → Change to `.env.local`
@@ -39,7 +39,7 @@
 
 2. **Connect via SFTP**
 
-3. **Navigate to:** `/var/www/mbventuresghana`
+3. **Navigate to:** `/var/www/mbventuresgh`
 
 4. **Upload** `.env.hostinger` from your local folder
 
@@ -54,25 +54,25 @@
 ### Option A: Create from content
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 cat > .env.local << 'EOF'
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 EMAIL_REPLY_TO=info@mbventuresghana.com
 ADMIN_ALERT_EMAIL=info@mbventuresghana.com
 EMAIL_DAILY_LIMIT=250
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 EOF
 ```
 
 ### Option B: Download from GitHub
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Download the file
 wget https://raw.githubusercontent.com/BRIGHTEDUFUL/MB-ventures-shop/main/.env.hostinger
@@ -84,7 +84,7 @@ mv .env.hostinger .env.local
 ### Option C: Use git (if cloned)
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Pull latest (includes .env.hostinger)
 git pull origin main
@@ -100,7 +100,7 @@ cp .env.hostinger .env.local
 **After upload, verify it exists:**
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 cat .env.local
 ```
 
@@ -109,13 +109,13 @@ cat .env.local
 ```
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
 EMAIL_REPLY_TO=info@mbventuresghana.com
 ADMIN_ALERT_EMAIL=info@mbventuresghana.com
 EMAIL_DAILY_LIMIT=250
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 ```
 
 ---
@@ -125,7 +125,7 @@ SITE_URL=https://mbventuresghana.com
 **Now deploy your app:**
 
 ```bash
-cd /var/www/mbventuresghana
+cd /var/www/mbventuresgh
 
 # Install dependencies
 npm install
@@ -156,7 +156,7 @@ pm2 status
 
 **File not found after upload?**
 
-- Check you're in correct directory: `/var/www/mbventuresghana`
+- Check you're in correct directory: `/var/www/mbventuresgh`
 - File might be hidden (starts with dot)
 - In File Manager, enable "Show hidden files"
 

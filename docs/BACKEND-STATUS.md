@@ -41,7 +41,7 @@
 ✓ EMAIL_REPLY_TO: info@mbventuresghana.com
 ✓ ADMIN_ALERT_EMAIL: info@mbventuresghana.com
 ✓ EMAIL_DAILY_LIMIT: 250 (higher for production)
-✓ SITE_URL: https://mbventuresghana.com
+✓ SITE_URL: https://mbventuresgh.com
 ✓ JWKS: Configured (separate production keys)
 ✓ JWT_PRIVATE_KEY: Configured (separate production keys)
 ```
@@ -330,7 +330,7 @@
 
 - ✅ Environment variables set (dev and prod)
 - ✅ Email system live (Web3Forms configured)
-- ✅ Production domain configured (mbventuresghana.com)
+- ✅ Production domain configured (mbventuresgh.com)
 - ✅ JWT keys separate per environment
 - ✅ Daily email limits appropriate (100 dev, 250 prod)
 - ✅ Schema validated on both deployments
@@ -342,7 +342,7 @@
 ### Production-Only Steps
 
 1. ⏸️ Register owner account on production
-2. ⏸️ Grant staff privileges: `npx convex run users:grantStaff '{\"email\":\"owner@mbventuresghana.com\"}' --prod`
+2. ⏸️ Grant staff privileges: `npx convex run users:grantStaff '{\"email\":\"owner@mbventuresgh.com\"}' --prod`
 3. ⏸️ Run seed (optional): `npx convex run seed:seed --prod`
 4. ➖ ~~Set MoMo wallet details~~ — not needed: payment is collected offline (no in-app payment step)
 5. ⏸️ Enable ordering toggle (ordering_enabled setting)

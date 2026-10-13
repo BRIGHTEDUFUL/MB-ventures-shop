@@ -4,7 +4,7 @@ Live storefront for **MB Ventures GH** — a workspace and computer accessories 
 rank, Accra. Shoppers browse desks, gaming gear, accessories, mounts and streaming equipment in
 Ghana cedis, and order for delivery across Ghana or collection from the Abelenkpe shop.
 
-🌐 **Live at:** [`https://mbventuresghana.com`](https://mbventuresghana.com)
+🌐 **Live at:** [`https://mbventuresgh.com`](https://mbventuresgh.com)
 
 ## Current status
 

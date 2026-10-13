@@ -57,7 +57,7 @@ async function createAccount(email, password, name, phone, role) {
 
 async function main() {
   await createAccount(
-    "manager@mbventuresghana.com",
+    "manager@mbventuresgh.com",
     "MBVentures2025!Manager#Admin",
     "Store Manager",
     "0241234567",
@@ -65,7 +65,7 @@ async function main() {
   );
 
   await createAccount(
-    "attendant@mbventuresghana.com",
+    "attendant@mbventuresgh.com",
     "MBVentures2025!Attendant#Staff",
     "Shop Attendant",
     "0247654321",

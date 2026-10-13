@@ -20,7 +20,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_DIR="/var/www/mbventuresghana"
+PROJECT_DIR="/var/www/mbventuresgh"
 GITHUB_REPO="https://github.com/BRIGHTEDUFUL/MB-ventures-shop.git"
 
 echo -e "${YELLOW}Step 1: Checking system...${NC}"
@@ -74,8 +74,8 @@ else
     
     # Clone repository
     echo "Cloning repository from GitHub..."
-    sudo git clone "$GITHUB_REPO" mbventuresghana
-    cd mbventuresghana
+    sudo git clone "$GITHUB_REPO" mbventuresgh
+    cd mbventuresgh
 fi
 
 echo ""
@@ -165,5 +165,5 @@ echo "To stop:"
 echo "  pm2 stop mb-ventures-gh"
 echo ""
 echo "Production site should be available at:"
-echo "  https://mbventuresghana.com"
+echo "  https://mbventuresgh.com"
 echo ""

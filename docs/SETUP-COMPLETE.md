@@ -31,7 +31,7 @@ The following items that were previously "blocked on external information" are n
 |                 | Daily limit               | 100 emails                             |
 | **Production**  | `prod:necessary-newt-861` | ✅ Live mode                           |
 |                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
-|                 | Site URL                  | `https://mbventuresghana.com`          |
+|                 | Site URL                  | `https://mbventuresgh.com`             |
 |                 | Reply-to                  | `info@mbventuresghana.com`             |
 |                 | Admin alerts              | `info@mbventuresghana.com`             |
 |                 | Daily limit               | 250 emails                             |
@@ -77,37 +77,37 @@ npx convex env get EMAIL_REPLY_TO --prod
 
 **What is now configured:**
 
-**Domain:** `https://mbventuresghana.com`
+**Domain:** `https://mbventuresgh.com`
 
 **Frontend (.env.production):**
 
 ```env
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 ```
 
 **Backend (Convex production env):**
 
 ```
-SITE_URL=https://mbventuresghana.com
+SITE_URL=https://mbventuresgh.com
 ```
 
 **Where domain is used:**
 
 1. **SEO Metadata:**
-   - Canonical URLs: `<link rel="canonical" href="https://mbventuresghana.com/..." />`
-   - Open Graph: `<meta property="og:url" content="https://mbventuresghana.com/..." />`
-   - Twitter Cards: `<meta name="twitter:url" content="https://mbventuresghana.com/..." />`
+   - Canonical URLs: `<link rel="canonical" href="https://mbventuresgh.com/..." />`
+   - Open Graph: `<meta property="og:url" content="https://mbventuresgh.com/..." />`
+   - Twitter Cards: `<meta name="twitter:url" content="https://mbventuresgh.com/..." />`
 
 2. **Sitemaps & Robots:**
-   - Sitemap: `https://mbventuresghana.com/sitemap.xml`
-   - Robots.txt: `https://mbventuresghana.com/robots.txt`
+   - Sitemap: `https://mbventuresgh.com/sitemap.xml`
+   - Robots.txt: `https://mbventuresgh.com/robots.txt`
    - All product URLs in sitemap
 
 3. **Email Links:**
-   - Order tracking: `https://mbventuresghana.com/track?ref=MB-...`
-   - Password reset: `https://mbventuresghana.com/account?code=...`
-   - Product links: `https://mbventuresghana.com/product/...`
+   - Order tracking: `https://mbventuresgh.com/track?ref=MB-...`
+   - Password reset: `https://mbventuresgh.com/account?code=...`
+   - Product links: `https://mbventuresgh.com/product/...`
 
 4. **Schema.org Structured Data:**
    - Product offers include full domain URLs
@@ -160,7 +160,7 @@ All contact information is properly set throughout the application:
 **Phone:** `0249564442`  
 **Address:** Abelenkpe taxi rank, Accra, Ghana  
 **Hours:** Monday to Saturday, 8:00 AM to 6:00 PM  
-**Domain:** `https://mbventuresghana.com`
+**Domain:** `https://mbventuresgh.com`
 
 **Where configured:**
 
@@ -238,16 +238,16 @@ Upload `.output/` contents to your hosting provider (Netlify, Vercel, Cloudflare
 
 ### 4. Configure DNS
 
-Point `mbventuresghana.com` DNS to your hosting provider
+Point `mbventuresgh.com` DNS to your hosting provider
 
 ### 5. Verify Deployment
 
 ```powershell
 # Test the live site
-curl https://mbventuresghana.com
+curl https://mbventuresgh.com
 
 # Check email system
-# Visit https://mbventuresghana.com/admin/emails
+# Visit https://mbventuresgh.com/admin/emails
 # Should show "Live mode" banner
 ```
 
@@ -279,7 +279,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@example.com\"}' --prod
 
 Before announcing to customers:
 
-- [ ] Homepage loads at `https://mbventuresghana.com`
+- [ ] Homepage loads at `https://mbventuresgh.com`
 - [ ] SSL certificate shows as secure
 - [ ] All product images load correctly
 - [ ] Search works
@@ -319,15 +319,15 @@ These can be tested after going live and adjusted if needed.
 **🎉 All blocked items are now COMPLETE:**
 
 1. ✅ **Email system** - Web3Forms configured, live in dev and prod
-2. ✅ **Production domain** - `mbventuresghana.com` fully integrated
+2. ✅ **Production domain** - `mbventuresgh.com` fully integrated
 3. ✅ **Payment** - Collected offline (counter or cash on delivery); no wallet setup needed
 
 **📊 Current Status:**
 
 - **Development:** Fully operational with live email
-- **Production:** Live at https://mbventuresghana.com
+- **Production:** Live at https://mbventuresgh.com
 - **Email:** 250 emails/day limit, all templates working
-- **Domain:** All links point to `mbventuresghana.com`
+- **Domain:** All links point to `mbventuresgh.com`
 - **Quality:** All tests passing (189 unit + 32 E2E + 4 live)
 
 **🚀 Ready to launch when you are!**

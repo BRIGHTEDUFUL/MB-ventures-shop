@@ -1,7 +1,7 @@
 # 🚀 Circle Shop Express - PRODUCTION READY
 
 **Date:** October 9, 2026  
-**Status:** ✅ Deployed — live at https://mbventuresghana.com (verified 10 Oct 2026)
+**Status:** ✅ Deployed — live at https://mbventuresgh.com (verified 10 Oct 2026)
 
 ---
 
@@ -19,7 +19,7 @@ All previously blocked items are now **COMPLETE**:
 
 ### 2. Production Domain ✅
 
-- **Domain:** https://mbventuresghana.com
+- **Domain:** https://mbventuresgh.com
 - **Frontend:** Configured in `.env.production`
 - **Backend:** Configured in Convex production env
 - **Integration:** All links, SEO tags, sitemap use correct domain
@@ -68,7 +68,7 @@ Development:
 
 Production:
   Access Key:    c8395fed-... (set)
-  Site URL:      https://mbventuresghana.com
+  Site URL:      https://mbventuresgh.com
   Reply-to:      info@mbventuresghana.com
   Admin Alerts:  info@mbventuresghana.com
   Daily Limit:   250 emails
@@ -108,11 +108,11 @@ Upload `.output/` to your hosting provider:
 
 ### 4. Point DNS
 
-Configure DNS for `mbventuresghana.com`:
+Configure DNS for `mbventuresgh.com`:
 
 ```
 Type: A or CNAME
-Name: @ (or mbventuresghana.com)
+Name: @ (or mbventuresgh.com)
 Value: [Your hosting provider's IP/URL]
 ```
 
@@ -122,22 +122,22 @@ Enable SSL certificate at your hosting provider (usually automatic)
 
 ```powershell
 # Test homepage loads
-curl https://mbventuresghana.com
+curl https://mbventuresgh.com
 
 # Check email admin panel
-# Visit: https://mbventuresghana.com/admin/emails
+# Visit: https://mbventuresgh.com/admin/emails
 # Should show: "Live mode" banner (green)
 
 # Test sitemap
-curl https://mbventuresghana.com/sitemap.xml
+curl https://mbventuresgh.com/sitemap.xml
 
 # Test robots
-curl https://mbventuresghana.com/robots.txt
+curl https://mbventuresgh.com/robots.txt
 ```
 
 ### 6. Enable Ordering
 
-1. Navigate to `https://mbventuresghana.com/staff`
+1. Navigate to `https://mbventuresgh.com/staff`
 2. Sign in as admin
 3. Go to Customization → Ordering
 4. Enter wallet name and number
@@ -154,7 +154,7 @@ Before announcing to customers:
 
 - [ ] Domain DNS points to hosting
 - [ ] SSL certificate active (https:// works)
-- [ ] Homepage loads at `https://mbventuresghana.com`
+- [ ] Homepage loads at `https://mbventuresgh.com`
 - [ ] All product images display correctly
 - [ ] Search functionality works
 - [ ] Add to cart works
@@ -167,7 +167,7 @@ Before announcing to customers:
 - [ ] Admin panel shows "Live mode" (not dry-run)
 - [ ] Test email sends successfully
 - [ ] Emails arrive at `info@mbventuresghana.com`
-- [ ] Email links point to `mbventuresghana.com`
+- [ ] Email links point to `mbventuresgh.com`
 - [ ] Password reset email works
 - [ ] Contact form sends
 
@@ -225,10 +225,10 @@ Before announcing to customers:
 
 **Production:**
 
-- Storefront: `https://mbventuresghana.com`
-- Staff Console: `https://mbventuresghana.com/staff`
-- Admin Panel: `https://mbventuresghana.com/admin`
-- Email Admin: `https://mbventuresghana.com/admin/emails`
+- Storefront: `https://mbventuresgh.com`
+- Staff Console: `https://mbventuresgh.com/staff`
+- Admin Panel: `https://mbventuresgh.com/admin`
+- Email Admin: `https://mbventuresgh.com/admin/emails`
 
 **Convex Dashboard:**
 
@@ -292,7 +292,7 @@ All systems are configured and tested. The storefront is ready to accept real or
 
 **Support:** All documentation is in `docs/` directory  
 **Contact:** info@mbventuresghana.com  
-**Domain:** https://mbventuresghana.com
+**Domain:** https://mbventuresgh.com
 
 ---
 

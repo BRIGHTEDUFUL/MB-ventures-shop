@@ -5,7 +5,47 @@ still open is listed under **Open**.
 
 ---
 
-## Production's old "Circle" address cleared (12 October 2026)
+## Domain migration prepared: mbventuresghana.com → mbventuresgh.com (12–13 October 2026)
+
+**Status:** Repo fully switched over locally — **not deployed**, nothing pushed.
+Full runbook: `docs/DOMAIN-MIGRATION.md`.
+
+The store is moving to `https://mbventuresgh.com` on a **new Hostinger
+account**. The backend stays exactly where it is (Convex
+`prod:necessary-newt-861`); only the frontend origin, the hosting target and
+the staff logins change.
+
+What changed in the tree (41 tracked files, rule-based swap + hand edits):
+
+- Site URL → `https://mbventuresgh.com` everywhere it drove SEO/canonical
+  URLs, CI, workflows, scripts and docs — `.env.production`,
+  `.env.example`, `.env.hostinger`, `.env.production.complete`,
+  `.hostinger-env`, both GitHub workflows, every deploy doc and script.
+- Staff/admin **login** addresses → `@mbventuresgh.com`
+  (`manager@`, `admin@`, `attendant@`, `staff@`) in `AGENTS.md`,
+  `docs/TEST-ACCOUNTS.md`, `docs/PRODUCTION-CREDENTIALS.md` and the
+  provisioning/verification scripts.
+- Server paths and process names: `/var/www/mbventuresghana` →
+  `/var/www/mbventuresgh`; PM2 app name (`ecosystem.config.js`, workflows,
+  `scripts/*.sh`) → `mbventuresgh`.
+- Hand edits: cutover-pending banners in `AGENTS.md`, `docs/TEST-ACCOUNTS.md`
+  and `docs/PRODUCTION-CREDENTIALS.md`; secrets-repoint warning in
+  `deploy-hostinger.yml`.
+
+Deliberately untouched: `info@mbventuresghana.com` (the live Web3Forms inbox —
+contact, reply-to, admin alerts and the UI fallbacks all keep it), the
+`WEB3FORMS_ACCESS_KEY`, the Convex deployment URLs, and `convex/auth.config.ts`
+(JWT issuer must stay `CONVEX_SITE_URL`). `docs/PROGRESS.md` history is
+unmodified; passwords were not rotated (rotation procedure in the runbook §9).
+
+Cutover itself — DNS, SSL, nginx, GitHub `HOSTINGER_*` secrets,
+`npx convex env set SITE_URL https://mbventuresgh.com --prod`, and registering
+the four new-domain accounts — is documented step-by-step in
+`docs/DOMAIN-MIGRATION.md` §5–§8 and waits for deploy time. Until then a push
+to `main` would deploy the new domain strings to the **old** server, so main
+must not be pushed before cutover.
+
+---
 
 **Status:** Complete — data fix only, no source change.
 

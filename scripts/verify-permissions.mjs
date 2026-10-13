@@ -5,30 +5,30 @@ async function testPermissions() {
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  console.log("Logging in as admin@mbventuresghana.com...");
-  await page.goto("https://mbventuresghana.com/account", {
+  console.log("Logging in as admin@mbventuresgh.com...");
+  await page.goto("https://mbventuresgh.com/account", {
     waitUntil: "networkidle",
     timeout: 45000,
   });
-  await page.locator('input[type="email"]').fill("admin@mbventuresghana.com");
+  await page.locator('input[type="email"]').fill("admin@mbventuresgh.com");
   await page.locator('input[type="password"]').fill("MBVentures2025!Admin#Secure");
   await page.locator("form.auth-form button").click();
   await page.waitForSelector("text=Sign out", { timeout: 20000 });
   console.log("✅ Sign in successful.");
 
   console.log("Checking /staff/team...");
-  await page.goto("https://mbventuresghana.com/staff/team", {
+  await page.goto("https://mbventuresgh.com/staff/team", {
     waitUntil: "networkidle",
     timeout: 30000,
   });
   const teamText = await page.textContent("body");
   console.log(
     "✅ Team roster loaded:",
-    teamText.includes("admin@mbventuresghana.com") || teamText.includes("Team access"),
+    teamText.includes("admin@mbventuresgh.com") || teamText.includes("Team access"),
   );
 
   console.log("Checking /staff/settings...");
-  await page.goto("https://mbventuresghana.com/staff/settings", {
+  await page.goto("https://mbventuresgh.com/staff/settings", {
     waitUntil: "networkidle",
     timeout: 30000,
   });
@@ -39,7 +39,7 @@ async function testPermissions() {
   );
 
   console.log("Checking /staff/inventory...");
-  await page.goto("https://mbventuresghana.com/staff/inventory", {
+  await page.goto("https://mbventuresgh.com/staff/inventory", {
     waitUntil: "networkidle",
     timeout: 30000,
   });

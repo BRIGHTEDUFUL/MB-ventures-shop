@@ -5,7 +5,7 @@
 
 ## Quick orientation
 
-- **Live store:** https://mbventuresghana.com — ordering is enabled, real products in stock
+- **Live store:** https://mbventuresgh.com — ordering is enabled, real products in stock
 - **Backend:** Convex (`convex/`) — `prod:necessary-newt-861`
 - **Frontend:** TanStack Start SSR → Hostinger VPS via GitHub Actions
 - **Auth:** Email + password only (Convex Auth). No OAuth.

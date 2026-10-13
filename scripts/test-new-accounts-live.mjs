@@ -2,20 +2,20 @@ import { chromium } from "@playwright/test";
 
 async function testAdminFlow() {
   console.log(`\n========================================`);
-  console.log(`Testing NEW ADMIN: manager@mbventuresghana.com`);
+  console.log(`Testing NEW ADMIN: manager@mbventuresgh.com`);
   console.log(`========================================`);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  console.log("Navigating to https://mbventuresghana.com/account ...");
-  await page.goto("https://mbventuresghana.com/account", {
+  console.log("Navigating to https://mbventuresgh.com/account ...");
+  await page.goto("https://mbventuresgh.com/account", {
     waitUntil: "networkidle",
     timeout: 45000,
   });
 
-  await page.locator('input[type="email"]').fill("manager@mbventuresghana.com");
+  await page.locator('input[type="email"]').fill("manager@mbventuresgh.com");
   await page.locator('input[type="password"]').fill("MBVentures2025!Manager#Admin");
   await page.locator("form.auth-form button").click();
 
@@ -24,7 +24,7 @@ async function testAdminFlow() {
   console.log('✅ Admin session active! "Sign out" visible.');
 
   console.log("Navigating to /staff/settings (admin-only area)...");
-  await page.goto("https://mbventuresghana.com/staff/settings", {
+  await page.goto("https://mbventuresgh.com/staff/settings", {
     waitUntil: "networkidle",
     timeout: 30000,
   });
@@ -40,7 +40,7 @@ async function testAdminFlow() {
   }
 
   console.log("Navigating to /staff/team (admin-only team management)...");
-  await page.goto("https://mbventuresghana.com/staff/team", {
+  await page.goto("https://mbventuresgh.com/staff/team", {
     waitUntil: "networkidle",
     timeout: 30000,
   });
@@ -54,20 +54,20 @@ async function testAdminFlow() {
 
 async function testStaffFlow() {
   console.log(`\n========================================`);
-  console.log(`Testing NEW STAFF: attendant@mbventuresghana.com`);
+  console.log(`Testing NEW STAFF: attendant@mbventuresgh.com`);
   console.log(`========================================`);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  console.log("Navigating to https://mbventuresghana.com/account ...");
-  await page.goto("https://mbventuresghana.com/account", {
+  console.log("Navigating to https://mbventuresgh.com/account ...");
+  await page.goto("https://mbventuresgh.com/account", {
     waitUntil: "networkidle",
     timeout: 45000,
   });
 
-  await page.locator('input[type="email"]').fill("attendant@mbventuresghana.com");
+  await page.locator('input[type="email"]').fill("attendant@mbventuresgh.com");
   await page.locator('input[type="password"]').fill("MBVentures2025!Attendant#Staff");
   await page.locator("form.auth-form button").click();
 
@@ -76,7 +76,7 @@ async function testStaffFlow() {
   console.log('✅ Staff session active! "Sign out" visible.');
 
   console.log("Navigating to /staff/orders (staff orders view)...");
-  await page.goto("https://mbventuresghana.com/staff/orders", {
+  await page.goto("https://mbventuresgh.com/staff/orders", {
     waitUntil: "networkidle",
     timeout: 30000,
   });
@@ -90,7 +90,7 @@ async function testStaffFlow() {
   }
 
   console.log("Navigating to /staff/inventory (staff inventory view)...");
-  await page.goto("https://mbventuresghana.com/staff/inventory", {
+  await page.goto("https://mbventuresgh.com/staff/inventory", {
     waitUntil: "networkidle",
     timeout: 30000,
   });

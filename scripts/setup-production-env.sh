@@ -20,7 +20,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Project directory (adjust if needed)
-PROJECT_DIR="/var/www/mbventuresghana"
+PROJECT_DIR="/var/www/mbventuresgh"
 ENV_FILE="$PROJECT_DIR/.env.local"
 
 echo -e "${YELLOW}Setting up production environment at:${NC}"
@@ -55,7 +55,7 @@ cat > "$ENV_FILE" << 'EOF'
 VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 
 # Site Configuration
-VITE_SITE_URL=https://mbventuresghana.com
+VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 
 # ============================================
@@ -107,7 +107,7 @@ echo "  • WEB3FORMS_ACCESS_KEY = c8395fed-e25e-4350-a914-df8e592f5920"
 echo "  • EMAIL_REPLY_TO = info@mbventuresghana.com"
 echo "  • ADMIN_ALERT_EMAIL = info@mbventuresghana.com"
 echo "  • EMAIL_DAILY_LIMIT = 250"
-echo "  • SITE_URL = https://mbventuresghana.com"
+echo "  • SITE_URL = https://mbventuresgh.com"
 echo "  • JWT_PRIVATE_KEY = [Separate production key]"
 echo "  • JWKS = [Separate production keys]"
 echo ""
@@ -164,7 +164,7 @@ echo ""
 echo "5. Enable SSL certificate (Let's Encrypt)"
 echo ""
 echo "6. Create admin and staff accounts:"
-echo "   - Register at https://mbventuresghana.com/auth/signup"
+echo "   - Register at https://mbventuresgh.com/auth/signup"
 echo "   - Grant privileges with Convex CLI (see docs/PRODUCTION-CREDENTIALS.md)"
 echo ""
 echo "7. Test the production site:"

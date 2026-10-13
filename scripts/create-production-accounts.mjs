@@ -10,12 +10,12 @@ import { execSync } from "child_process";
 
 const accounts = [
   {
-    email: "admin@mbventuresghana.com",
+    email: "admin@mbventuresgh.com",
     name: "MB Ventures Admin",
     role: "Administrator",
   },
   {
-    email: "staff@mbventuresghana.com",
+    email: "staff@mbventuresgh.com",
     name: "MB Ventures Staff",
     role: "Staff",
   },
@@ -26,7 +26,7 @@ console.log("Production Account Setup - MB Ventures GH");
 console.log("=".repeat(60));
 console.log("");
 
-console.log("STEP 1: Register accounts at https://mbventuresghana.com/account?signup=true");
+console.log("STEP 1: Register accounts at https://mbventuresgh.com/account?signup=true");
 console.log("");
 
 for (const account of accounts) {
@@ -68,7 +68,7 @@ console.log("=".repeat(60));
 console.log("");
 console.log("VERIFICATION:");
 console.log("");
-console.log("1. Sign in at https://mbventuresghana.com/auth/signin");
+console.log("1. Sign in at https://mbventuresgh.com/auth/signin");
 console.log("2. Navigate to /staff");
 console.log("3. Verify admin sees Mobile Money settings");
 console.log("4. Verify staff does NOT see Mobile Money settings");
