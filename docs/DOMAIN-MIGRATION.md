@@ -1,13 +1,18 @@
 # Domain migration — mbventuresghana.com → mbventuresgh.com
 
-**Status:** 🔶 Repo ready + staff accounts provisioned — **NOT deployed** (12–13 Oct 2026)
+**Status:** 🟡 Pushed to `origin/main` (13 Oct 2026) — deploying to the **old**
+server for now (user-directed); new-Hostinger steps §5–§9 pending
 **Target:** `https://mbventuresgh.com` on a **new Hostinger account**
 **Backend:** unchanged — Convex `prod:necessary-newt-861` / `dev:stoic-elephant-714`
 
 This runbook is the single source of truth for the domain move. The repository
 targets the new domain end-to-end and the four `@mbventuresgh.com` staff/admin
-accounts are already live on the backend (§6); the remaining infrastructure
-steps (§5, §6 pending item, §7–§8) happen at cutover time.
+accounts are already live on the backend (§6). On 13 Oct 2026 the user directed
+a push to `main` knowing the `HOSTINGER_*` secrets still point at the old
+server — so every push (this one included) deploys the current build to the
+**old** VPS/domain until the secrets are repointed (§5.4), after which pushes
+deploy `mbventuresgh.com`. The remaining cutover steps are §5, §6 (pending
+item), §7–§9.
 
 ---
 
@@ -295,26 +300,40 @@ served locally):
 
 ## 12. Session record (12–13 October 2026)
 
-Everything done during the migration effort, in order. All of it is local —
-nothing was pushed and no code was deployed.
+Everything done during the migration effort, in order. Local until 13 Oct 2026;
+on that date the user directed the push to `origin/main` described under
+_Infrastructure actions_ below.
 
-### Commits (on `main`, not pushed)
+### Commits (pushed to `origin/main` on 13 Oct 2026)
 
 | Commit    | What                                                                                                      |
 | --------- | --------------------------------------------------------------------------------------------------------- |
+| `3b4faf1` | Product options (colour/size/type) with per-option stock and pricing — pre-existing head of `main`        |
 | `3292504` | Domain swap (43 files) — site URL, staff logins, server paths, PM2 names; this runbook added              |
 | `dddbe46` | Doc fix — stale vitest count 189 → 216 in `AGENTS.md` / `README.md`                                       |
 | `b9d2cc2` | (other agent) 320px option-picker overflow fix — landed during the session                                |
 | `024d9de` | Consolidation audit recorded — `main` is single source of truth                                           |
 | `b1c2867` | Four `@mbventuresgh.com` accounts provisioned on prod; provisioning script extended to four; docs updated |
+| `5cffd37` | Documentation refresh — final file counts, definitive gate results, this session record                   |
 
 ### Infrastructure actions
 
-- **Production backend (`prod:necessary-newt-861`)** — the only writes: four
+- **GitHub — `main` pushed to `origin` (13 Oct 2026, user-directed after an
+  explicit risk acknowledgement).** The push fires `ci.yml` and
+  `deploy-hostinger.yml`: quality gates, then (if the `CONVEX_DEPLOY_KEY`
+  secret is set) a Convex **production backend deploy**, then an SSH deploy
+  that rebuilds and reloads PM2 **on the old VPS** — because the
+  `HOSTINGER_*` secrets still target the old server (§5.4). The old domain
+  therefore starts serving the new-domain build (new canonical/og URLs, new
+  PM2 app name); accepted by the user, who will connect the new service and
+  take the old server down later. After §5.4 repoints the secrets, every push
+  to `main` deploys `mbventuresgh.com` instead — no workflow change needed.
+- **Production backend (`prod:necessary-newt-861`)** — direct writes: four
   account signups + four `users:grantStaff` role grants, executed by
   `node scripts/create-new-accounts.mjs`, each verified with a real
-  `auth:signIn`. No other mutation; no env var was changed on prod
-  (`SITE_URL` deliberately untouched, §6).
+  `auth:signIn`. No other direct mutation; no env var was changed on prod
+  (`SITE_URL` deliberately untouched, §6). Note that CI's `convex deploy`
+  step (above) pushes the current `convex/` code as part of the workflow.
 - **Read-only inspections** — prod account listing and `convex env list`
   (note: `env list` prints secret values to the terminal, including
   `JWT_PRIVATE_KEY`; nothing was written to disk or the repo).

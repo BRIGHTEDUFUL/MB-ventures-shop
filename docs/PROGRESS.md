@@ -67,10 +67,20 @@ All local env files (`.env*`) and CI workflow envs verified complete for a
 full-stack deploy; the sole remaining deploy-time inputs are the GitHub
 `HOSTINGER_*` secrets for the new VPS (runbook §5.4).
 
-Commits for this whole effort (on `main`, not pushed): `3292504` domain swap +
-runbook · `dddbe46` test-count doc fix · `024d9de` consolidation audit ·
-`b1c2867` account provisioning. Full chronological detail, including every
-infrastructure write and audit performed: `docs/DOMAIN-MIGRATION.md` §12.
+**Pushed to GitHub (13 October).** On the user's explicit instruction — with
+the old-server deploy risk acknowledged — `main` was pushed to `origin`
+(seven commits: `3b4faf1` options work → `5cffd37` docs). Because the
+`HOSTINGER_*` secrets still point at the old VPS, that push fires a full
+deploy to the **old** server (Convex prod backend included); accepted — the
+new service will be connected and the old one taken down later. Once the
+runbook §5.4 secrets are repointed, every push to `main` deploys
+`mbventuresgh.com` automatically.
+
+Commits for this whole effort: `3292504` domain swap + runbook · `dddbe46`
+test-count doc fix · `024d9de` consolidation audit · `b1c2867` account
+provisioning · `5cffd37` documentation refresh. Full chronological detail,
+including every infrastructure write and audit performed:
+`docs/DOMAIN-MIGRATION.md` §12.
 
 ---
 
