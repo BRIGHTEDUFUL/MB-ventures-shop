@@ -35,6 +35,7 @@ import { Route as StaffCategoriesRouteImport } from './routes/staff/categories'
 import { Route as StaffCustomizationRouteImport } from './routes/staff/customization'
 import { Route as StaffHealthRouteImport } from './routes/staff/health'
 import { Route as StaffInventoryRouteImport } from './routes/staff/inventory'
+import { Route as StaffMessagesRouteImport } from './routes/staff/messages'
 import { Route as StaffTeamRouteImport } from './routes/staff/team'
 import { Route as StaffOrdersIndexRouteImport } from './routes/staff/orders/index'
 import { Route as StaffOrdersIdRouteImport } from './routes/staff/orders/$id'
@@ -172,6 +173,11 @@ const StaffInventoryRoute = StaffInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => StaffRoute,
 } as any)
+const StaffMessagesRoute = StaffMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => StaffRoute,
+} as any)
 const StaffTeamRoute = StaffTeamRouteImport.update({
   id: '/team',
   path: '/team',
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/staff/customization': typeof StaffCustomizationRoute
   '/staff/health': typeof StaffHealthRoute
   '/staff/inventory': typeof StaffInventoryRoute
+  '/staff/messages': typeof StaffMessagesRoute
   '/staff/team': typeof StaffTeamRoute
   '/admin/': typeof AdminIndexRoute
   '/staff/': typeof StaffIndexRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/staff/customization': typeof StaffCustomizationRoute
   '/staff/health': typeof StaffHealthRoute
   '/staff/inventory': typeof StaffInventoryRoute
+  '/staff/messages': typeof StaffMessagesRoute
   '/staff/team': typeof StaffTeamRoute
   '/admin': typeof AdminIndexRoute
   '/staff': typeof StaffIndexRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/staff/customization': typeof StaffCustomizationRoute
   '/staff/health': typeof StaffHealthRoute
   '/staff/inventory': typeof StaffInventoryRoute
+  '/staff/messages': typeof StaffMessagesRoute
   '/staff/team': typeof StaffTeamRoute
   '/admin/': typeof AdminIndexRoute
   '/staff/': typeof StaffIndexRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/staff/customization'
     | '/staff/health'
     | '/staff/inventory'
+    | '/staff/messages'
     | '/staff/team'
     | '/admin/'
     | '/staff/'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/staff/customization'
     | '/staff/health'
     | '/staff/inventory'
+    | '/staff/messages'
     | '/staff/team'
     | '/admin'
     | '/staff'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/staff/customization'
     | '/staff/health'
     | '/staff/inventory'
+    | '/staff/messages'
     | '/staff/team'
     | '/admin/'
     | '/staff/'
@@ -616,6 +628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffInventoryRouteImport
       parentRoute: typeof StaffRoute
     }
+    '/staff/messages': {
+      id: '/staff/messages'
+      path: '/messages'
+      fullPath: '/staff/messages'
+      preLoaderRoute: typeof StaffMessagesRouteImport
+      parentRoute: typeof StaffRoute
+    }
     '/staff/team': {
       id: '/staff/team'
       path: '/team'
@@ -667,6 +686,7 @@ interface StaffRouteChildren {
   StaffCustomizationRoute: typeof StaffCustomizationRoute
   StaffHealthRoute: typeof StaffHealthRoute
   StaffInventoryRoute: typeof StaffInventoryRoute
+  StaffMessagesRoute: typeof StaffMessagesRoute
   StaffTeamRoute: typeof StaffTeamRoute
   StaffIndexRoute: typeof StaffIndexRoute
   StaffOrdersIdRoute: typeof StaffOrdersIdRoute
@@ -682,6 +702,7 @@ const StaffRouteChildren: StaffRouteChildren = {
   StaffCustomizationRoute: StaffCustomizationRoute,
   StaffHealthRoute: StaffHealthRoute,
   StaffInventoryRoute: StaffInventoryRoute,
+  StaffMessagesRoute: StaffMessagesRoute,
   StaffTeamRoute: StaffTeamRoute,
   StaffIndexRoute: StaffIndexRoute,
   StaffOrdersIdRoute: StaffOrdersIdRoute,

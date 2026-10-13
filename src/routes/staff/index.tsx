@@ -6,6 +6,7 @@ import {
   Banknote,
   Boxes,
   ClipboardList,
+  MessageSquare,
   PackageSearch,
   ShoppingCart,
   TriangleAlert,
@@ -52,12 +53,13 @@ type QueueItem = {
   tone: "offer" | "destructive" | "plain";
   label: string;
   hint: string;
-  to: "/staff/orders" | "/staff/inventory" | "/staff/products";
+  to: "/staff/orders" | "/staff/inventory" | "/staff/products" | "/staff/messages";
 };
 
 function Dashboard() {
   const overview = useQuery({ ...convexQueryOptions(api.stats.overview, {}) });
   const trends = useQuery({ ...convexQueryOptions(api.stats.trends, {}) });
+  const unreadMessages = useQuery({ ...convexQueryOptions(api.contact.unreadCount, {}) });
 
   if (overview.isPending)
     return <p className="text-sm text-muted-foreground">Loading dashboard…</p>;
@@ -71,8 +73,18 @@ function Dashboard() {
   /* ------------------------------------------------------------- the queue */
 
   // Everything waiting on a human, in the order a shop would clear it: money
-  // first, then the shelves, then the catalogue. One list, one place.
+  // first, then customer messages, shelves, catalogue. One list, one place.
   const queue: QueueItem[] = [];
+  if ((unreadMessages.data ?? 0) > 0) {
+    queue.push({
+      key: "messages",
+      icon: MessageSquare,
+      tone: "offer",
+      label: `Review ${unreadMessages.data} unread customer message${unreadMessages.data === 1 ? "" : "s"}`,
+      hint: "Customer inquiries submitted through the contact form.",
+      to: "/staff/messages",
+    });
+  }
   if (orders.awaiting_payment > 0) {
     queue.push({
       key: "payment",

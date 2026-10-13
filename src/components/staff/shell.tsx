@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  MessageSquare,
   MoreHorizontal,
   Package,
   Palette,
@@ -46,6 +47,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/staff", label: "Dashboard", icon: LayoutDashboard, end: true },
       { to: "/staff/orders", label: "Orders", icon: ClipboardList },
+      { to: "/staff/messages", label: "Messages", icon: MessageSquare },
     ],
   },
   {

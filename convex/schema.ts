@@ -524,4 +524,16 @@ export default defineSchema({
     source: v.string(),
     actor_id: v.optional(v.id("users")),
   }).index("by_email", ["email"]),
+
+  // Customer inquiries submitted through the contact form or storefront.
+  contact_messages: defineTable({
+    name: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+    subject: v.string(),
+    message: v.string(),
+    status: v.union(v.literal("unread"), v.literal("read"), v.literal("replied")),
+    read_at: v.optional(v.number()),
+    read_by: v.optional(v.id("users")),
+  }).index("by_status", ["status"]),
 });
