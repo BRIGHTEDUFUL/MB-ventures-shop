@@ -67,6 +67,11 @@ All local env files (`.env*`) and CI workflow envs verified complete for a
 full-stack deploy; the sole remaining deploy-time inputs are the GitHub
 `HOSTINGER_*` secrets for the new VPS (runbook §5.4).
 
+Commits for this whole effort (on `main`, not pushed): `3292504` domain swap +
+runbook · `dddbe46` test-count doc fix · `024d9de` consolidation audit ·
+`b1c2867` account provisioning. Full chronological detail, including every
+infrastructure write and audit performed: `docs/DOMAIN-MIGRATION.md` §12.
+
 ---
 
 **Status:** Complete — data fix only, no source change.

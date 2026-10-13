@@ -24,7 +24,8 @@ steps (§5, §6 pending item, §7–§8) happen at cutover time.
 
 ## 2. What changed in the repository
 
-Automated, rule-based swap across 41 tracked files (see `git diff --stat`):
+Automated, rule-based swap across 40 tracked files (43 files in migration
+commit `3292504` including hand-edits and this runbook):
 
 1. `https://mbventuresghana.com` → `https://mbventuresgh.com` — every site URL.
 2. Staff/admin login addresses `admin@`, `staff@`, `manager@`, `attendant@`,
@@ -52,8 +53,9 @@ Targeted hand-edits on top of the swap:
 - `AGENTS.md` — cutover banner (§1), Hostinger-secrets warning (§5), new-domain
   accounts table + provisioning note (§8), env table, password-verify example,
   mobile-audit URL, docs map row for this file.
-- `docs/TEST-ACCOUNTS.md`, `docs/PRODUCTION-CREDENTIALS.md` — pending-cutover
-  banners explaining old vs. new logins.
+- `docs/TEST-ACCOUNTS.md`, `docs/PRODUCTION-CREDENTIALS.md` — account-status
+  banners explaining old vs. new logins (the latter is gitignored on purpose:
+  it holds plaintext passwords and stays local-only).
 - `.github/workflows/deploy-hostinger.yml` — comment above `VITE_SITE_URL`
   warning that `HOSTINGER_*` secrets must be repointed before first deploy.
 
@@ -73,9 +75,10 @@ Targeted hand-edits on top of the swap:
 - **Repo (this working tree):** fully targets `mbventuresgh.com`. A production
   build served locally emits `https://mbventuresgh.com/...` canonical/og URLs.
 - **Live production (until cutover):** still `mbventuresghana.com` on the old
-  Hostinger VPS, still served by the same Convex backend, still using the
-  `@mbventuresghana.com` staff logins. Everything keeps working — the repo
-  change is inert until a deploy happens.
+  Hostinger VPS, still served by the same Convex backend. Both staff-login
+  sets work on that backend — the legacy `@mbventuresghana.com` accounts and
+  the new `@mbventuresgh.com` accounts (§6). Everything keeps working — the
+  repo change is inert until a deploy happens.
 - **Risk window:** pushing to `main` today would deploy the _new domain
   strings_ to the _old_ server (wrong canonicals on the old site). Either
   complete §5–§6 first, or accept a short-lived inconsistency.
@@ -230,14 +233,32 @@ must use a password that appears nowhere in this repository.
 
 All quality gates from AGENTS.md §6, run on this working tree:
 
-| Gate                     | Result                                                                                                                                         |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npx tsc --noEmit`       | 0 errors                                                                                                                                       |
-| `npm run lint`           | 0 errors (7 pre-existing react-refresh warnings)                                                                                               |
-| `npm test`               | 216/216 passed                                                                                                                                 |
-| `npx prettier --check .` | clean                                                                                                                                          |
-| `npm run build`          | succeeds                                                                                                                                       |
-| `npm run test:e2e`       | 32/32 (one `/track` head check initially hit a Playwright artifact-write ENOENT from a concurrent audit run; the spec passes 24/24 on its own) |
+| Gate                     | Result                                                                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npx tsc --noEmit`       | 0 errors                                                                                                                                                                          |
+| `npm run lint`           | 0 errors (7 pre-existing react-refresh warnings)                                                                                                                                  |
+| `npm test`               | 216/216 passed                                                                                                                                                                    |
+| `npx prettier --check .` | clean                                                                                                                                                                             |
+| `npm run build`          | succeeds                                                                                                                                                                          |
+| `npm run test:e2e`       | 32/32 (one `/track` head check initially hit a Playwright artifact-write ENOENT from a concurrent audit run; the spec passes 24/24 on its own — a later full run was clean 32/32) |
+
+Gates were re-run after every subsequent commit (the other agent's `b9d2cc2`
+and the account-provisioning commit `b1c2867`): `tsc` 0 errors, `lint` 0
+errors, 216/216 vitest, prettier clean, build succeeds, e2e 32/32 on the
+combined tree.
+
+Repo-wide audits performed alongside the gates:
+
+- **Domain-reference audit** — every remaining `mbventuresghana` occurrence is
+  an intended category (`info@`/`alerts@`/`deploy@` addresses, cutover-banner
+  narrative, `docs/PROGRESS.md` history); zero unintended leftovers.
+- **Typo scan** — no `mbventuresgh.com.com` doubles; every bare `mbventuresgh`
+  is a server path, PM2 name or narrative mention; no `/var/www/mbventuresghana`
+  stragglers.
+- **Encoding check** — byte-level verification that the swap introduced no
+  BOMs and no line-ending churn.
+- **Script syntax** — `node --check` passes on `ecosystem.config.js` and every
+  `scripts/*.mjs`.
 
 Runtime check on the production build (`node .output/server/index.mjs`,
 served locally):
@@ -271,3 +292,38 @@ served locally):
   live Web3Forms inbox and deliberately stays.
 - **Do not** change `convex/auth.config.ts` to the new domain — the JWT issuer
   must remain `CONVEX_SITE_URL`.
+
+## 12. Session record (12–13 October 2026)
+
+Everything done during the migration effort, in order. All of it is local —
+nothing was pushed and no code was deployed.
+
+### Commits (on `main`, not pushed)
+
+| Commit    | What                                                                                                      |
+| --------- | --------------------------------------------------------------------------------------------------------- |
+| `3292504` | Domain swap (43 files) — site URL, staff logins, server paths, PM2 names; this runbook added              |
+| `dddbe46` | Doc fix — stale vitest count 189 → 216 in `AGENTS.md` / `README.md`                                       |
+| `b9d2cc2` | (other agent) 320px option-picker overflow fix — landed during the session                                |
+| `024d9de` | Consolidation audit recorded — `main` is single source of truth                                           |
+| `b1c2867` | Four `@mbventuresgh.com` accounts provisioned on prod; provisioning script extended to four; docs updated |
+
+### Infrastructure actions
+
+- **Production backend (`prod:necessary-newt-861`)** — the only writes: four
+  account signups + four `users:grantStaff` role grants, executed by
+  `node scripts/create-new-accounts.mjs`, each verified with a real
+  `auth:signIn`. No other mutation; no env var was changed on prod
+  (`SITE_URL` deliberately untouched, §6).
+- **Read-only inspections** — prod account listing and `convex env list`
+  (note: `env list` prints secret values to the terminal, including
+  `JWT_PRIVATE_KEY`; nothing was written to disk or the repo).
+- **Hostinger** — no API calls, no SSH, no DNS changes (the connected
+  Hostinger API belongs to the old account; the new account is set up per §5).
+
+### Audits
+
+- Quality gates run after every commit (§10) — final state all green.
+- Domain-reference, typo, BOM and script-syntax audits (§10).
+- Other-agent worktree (`Temp/opencode/mbv-deploy`) audited file-by-file:
+  no unique work, superseded snapshot, left untouched (§11).

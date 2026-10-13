@@ -388,6 +388,13 @@ npx convex run users:grantStaff '{\"email\":\"x@y.com\",\"role\":\"admin\"}' --e
 npx convex run users:grantStaff '{"email":"x@y.com"}' --env-file .env.prod.local
 ```
 
+That escaping breaks down for JSON containing spaces (e.g. a `name` field) —
+the argument splits and `convex run` reports "too many arguments". Passing the
+JSON via a PowerShell variable does not help either (the quotes get eaten). For
+such payloads, drive the CLI from a Node script with an args array instead —
+see `scripts/create-new-accounts.mjs` (`spawnSync` with `shell: true` and
+`\"`-escaped JSON).
+
 ---
 
 ## 13. Docs map
