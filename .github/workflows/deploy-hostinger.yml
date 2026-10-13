@@ -42,9 +42,9 @@ jobs:
           VITE_CONVEX_URL: https://necessary-newt-861.convex.cloud
           # NOTE (domain cutover, docs/DOMAIN-MIGRATION.md): the site URL now
           # targets the NEW Hostinger account's domain. The HOSTINGER_* secrets
-          # below must be repointed at the new VPS before the first deploy of
-          # mbventuresgh.com — until then this workflow still deploys to the
-          # old server/domain.
+          # must be created for the new VPS (runbook §5.4) before this workflow
+          # deploys anything — as of 13 Oct 2026 no secrets exist on the repo,
+          # so the VPS step below skips and nothing is published.
           VITE_SITE_URL: https://mbventuresgh.com
 
       - name: Deploy Convex Backend

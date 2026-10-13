@@ -1,18 +1,22 @@
 # Domain migration — mbventuresghana.com → mbventuresgh.com
 
-**Status:** 🟡 Pushed to `origin/main` (13 Oct 2026) — deploying to the **old**
-server for now (user-directed); new-Hostinger steps §5–§9 pending
+**Status:** 🟡 Pushed to `origin/main` (13 Oct 2026) — CI green, **no deploy**
+(Actions has no secrets; both deploy steps skipped); new-Hostinger §5–§9 pending
 **Target:** `https://mbventuresgh.com` on a **new Hostinger account**
 **Backend:** unchanged — Convex `prod:necessary-newt-861` / `dev:stoic-elephant-714`
 
 This runbook is the single source of truth for the domain move. The repository
 targets the new domain end-to-end and the four `@mbventuresgh.com` staff/admin
-accounts are already live on the backend (§6). On 13 Oct 2026 the user directed
-a push to `main` knowing the `HOSTINGER_*` secrets still point at the old
-server — so every push (this one included) deploys the current build to the
-**old** VPS/domain until the secrets are repointed (§5.4), after which pushes
-deploy `mbventuresgh.com`. The remaining cutover steps are §5, §6 (pending
-item), §7–§9.
+accounts are already live on the backend (§6). On 13 Oct 2026 `main` was pushed
+to `origin` (user-directed): CI passed, but **no deploy happened** — the
+repository has zero GitHub Actions secrets (`gh secret list` empty), so the
+Convex backend step and the VPS SSH step both skipped, verified from the run
+annotations ("HOSTINGER_HOST secret is not configured - skipping the VPS
+deploy step"). Adding the six `HOSTINGER_*` secrets for the new VPS (§5.4) is
+therefore the only missing input: once they exist, a `workflow_dispatch` of
+the Deploy workflow — or any push to `main` — publishes the current version to
+`mbventuresgh.com`. The remaining cutover steps are §5, §6 (pending item),
+§7–§9.
 
 ---
 
@@ -62,7 +66,8 @@ Targeted hand-edits on top of the swap:
   banners explaining old vs. new logins (the latter is gitignored on purpose:
   it holds plaintext passwords and stays local-only).
 - `.github/workflows/deploy-hostinger.yml` — comment above `VITE_SITE_URL`
-  warning that `HOSTINGER_*` secrets must be repointed before first deploy.
+  warning that `HOSTINGER_*` secrets must be created for the new VPS before
+  this workflow publishes anything (none exist yet, §5.4).
 
 ## 3. What did NOT change (and why)
 
@@ -138,7 +143,13 @@ sudo ln -s /etc/nginx/sites-available/mbventuresgh.com /etc/nginx/sites-enabled/
 sudo certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 ```
 
-### 5.4 GitHub secrets — repoint to the new account
+### 5.4 GitHub secrets — create for the new account
+
+**Observed 13 Oct 2026: the repository has NO Actions secrets at all**
+(`gh secret list` is empty) — every recent Deploy run, including the 13 Oct
+push, skipped the VPS step for that reason. Add these six fresh for the new
+VPS (GitHub UI → Settings → Secrets and variables → Actions, or
+`gh secret set NAME --body "…"`):
 
 | Secret               | New value                                     |
 | -------------------- | --------------------------------------------- |
@@ -149,7 +160,10 @@ sudo certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 | `HOSTINGER_PORT`     | `22` (default)                                |
 | `HOSTINGER_PATH`     | `/var/www/mbventuresgh`                       |
 
-`CONVEX_DEPLOY_KEY` stays as-is (same backend).
+Optional: `CONVEX_DEPLOY_KEY` — if set, CI's "Deploy Convex Backend" step
+deploys the backend on every push; without it (current state), backend
+deploys stay manual: `npx convex deploy --env-file .env.prod.local`
+(AGENTS.md §5).
 
 ### 5.5 First deploy
 
@@ -319,15 +333,17 @@ _Infrastructure actions_ below.
 ### Infrastructure actions
 
 - **GitHub — `main` pushed to `origin` (13 Oct 2026, user-directed after an
-  explicit risk acknowledgement).** The push fires `ci.yml` and
-  `deploy-hostinger.yml`: quality gates, then (if the `CONVEX_DEPLOY_KEY`
-  secret is set) a Convex **production backend deploy**, then an SSH deploy
-  that rebuilds and reloads PM2 **on the old VPS** — because the
-  `HOSTINGER_*` secrets still target the old server (§5.4). The old domain
-  therefore starts serving the new-domain build (new canonical/og URLs, new
-  PM2 app name); accepted by the user, who will connect the new service and
-  take the old server down later. After §5.4 repoints the secrets, every push
-  to `main` deploys `mbventuresgh.com` instead — no workflow change needed.
+  explicit risk acknowledgement), 8 commits `3b4faf1` → `131c577`.** Actual
+  outcome, read back from the Actions runs (`38334286875` CI,
+  `38334286892` Deploy — both `success`): CI & Quality Gates **passed** on
+  the pushed code (tsc, lint, 216 tests, build); the Deploy workflow's
+  Convex step and VPS SSH step both **skipped** — the repository has **zero**
+  Actions secrets (`gh secret list` empty), annotated "HOSTINGER_HOST secret
+  is not configured - skipping the VPS deploy step". Net effect: **nothing
+  was deployed anywhere** — the old live site and the prod backend are
+  untouched. Once §5.4 creates the `HOSTINGER_*` secrets, one
+  `workflow_dispatch` of the Deploy workflow publishes the current `main`
+  (no new commit needed); subsequent pushes to `main` deploy automatically.
 - **Production backend (`prod:necessary-newt-861`)** — direct writes: four
   account signups + four `users:grantStaff` role grants, executed by
   `node scripts/create-new-accounts.mjs`, each verified with a real

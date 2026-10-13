@@ -67,14 +67,16 @@ All local env files (`.env*`) and CI workflow envs verified complete for a
 full-stack deploy; the sole remaining deploy-time inputs are the GitHub
 `HOSTINGER_*` secrets for the new VPS (runbook §5.4).
 
-**Pushed to GitHub (13 October).** On the user's explicit instruction — with
-the old-server deploy risk acknowledged — `main` was pushed to `origin`
-(seven commits: `3b4faf1` options work → `5cffd37` docs). Because the
-`HOSTINGER_*` secrets still point at the old VPS, that push fires a full
-deploy to the **old** server (Convex prod backend included); accepted — the
-new service will be connected and the old one taken down later. Once the
-runbook §5.4 secrets are repointed, every push to `main` deploys
-`mbventuresgh.com` automatically.
+**Pushed to GitHub (13 October).** `main` went to `origin` on the user's
+instruction (8 commits, `3b4faf1` → `131c577`). Both workflows ran and
+reported success — but **nothing deployed**: the repository has no Actions
+secrets configured (`gh secret list` empty), so the Convex backend step and
+the VPS SSH step both skipped (annotated "HOSTINGER_HOST secret is not
+configured - skipping the VPS deploy step"). The live old site and the prod
+backend are therefore untouched. When the new Hostinger service is connected,
+adding the six `HOSTINGER_*` secrets (runbook §5.4) is the only missing
+input — one `workflow_dispatch` of the Deploy workflow (or any push to
+`main`) then publishes the current version to `mbventuresgh.com`.
 
 Commits for this whole effort: `3292504` domain swap + runbook · `dddbe46`
 test-count doc fix · `024d9de` consolidation audit · `b1c2867` account

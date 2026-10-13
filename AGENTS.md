@@ -177,11 +177,13 @@ Targets `prod:necessary-newt-861`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` �
 
 Automatic — GitHub Actions (`.github/workflows/deploy-hostinger.yml`) on every push to `main`.
 
-> **New Hostinger account:** the workflow's `HOSTINGER_*` GitHub secrets must be
-> repointed at the new account's VPS (new IP, credentials and
+> **New Hostinger account:** the workflow's `HOSTINGER_*` GitHub secrets **do
+> not exist yet** (verified 13 Oct 2026 — `gh secret list` empty, so the VPS
+> deploy step skips and pushes currently deploy _nothing_). Create them for
+> the new account's VPS (new IP, credentials and
 > `HOSTINGER_PATH=/var/www/mbventuresgh`) before the first deploy of
-> `mbventuresgh.com`. Until then a push to `main` deploys to the **old**
-> server/domain. Steps: `docs/DOMAIN-MIGRATION.md`.
+> `mbventuresgh.com` — then `workflow_dispatch` the Deploy workflow (or push
+> to `main`) to publish. Steps: `docs/DOMAIN-MIGRATION.md` §5.4.
 
 ### Full production deploy (both layers)
 
