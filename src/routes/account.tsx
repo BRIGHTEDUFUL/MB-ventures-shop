@@ -12,7 +12,7 @@ import { images, imageSize } from "@/lib/store-images";
 import { AuthFrame } from "@/components/auth-frame";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { isAdminUnlocked } from "@/lib/admin-token";
+import { isAdminUnlocked, ADMIN_HUB_TOKEN } from "@/lib/admin-token";
 
 const NEXT_ROUTES = ["/checkout", "/cart", "/track", "/staff", "/admin/emails"] as const;
 type NextRoute = (typeof NEXT_ROUTES)[number];
@@ -76,19 +76,27 @@ function Account() {
   const addAddress = useConvexMutation(api.addresses.add);
   const removeAddress = useConvexMutation(api.addresses.remove);
 
+  // Client-side check — sessionStorage is unavailable during SSR so we use a
+  // lazy initializer that reads it synchronously on the first client render
+  // (typeof window guard keeps SSR safe). The useEffect is a fallback re-check
+  // for when the component mounts before sessionStorage becomes readable.
+  const [adminUnlocked, setAdminUnlocked] = useState(() =>
+    typeof window !== "undefined" ? isAdminUnlocked() : false,
+  );
+  useEffect(() => {
+    setAdminUnlocked(isAdminUnlocked());
+  }, []);
+
   // Send the visitor back to where they came from once signed in.
-  // Intercept admin accounts: admin auth is only available via the private URL.
-  // Standard login and the staff link at the bottom of the page do NOT allow admin auth.
+  // Admin accounts are redirected to the private hub URL rather than being
+  // silently signed out — this gives admins a clear path to their portal
+  // instead of a confusing error.
   useEffect(() => {
     if (loading || role.isPending || !session) return;
-    if (role.data === "admin" && !isAdminUnlocked()) {
-      void signOut();
-      setError(
-        "Admin authentication is not available here. Please use your private administrator URL.",
-      );
-      toast.error(
-        "Admin authentication is not available here. Please use your private administrator URL.",
-      );
+    if (role.data === "admin" && !adminUnlocked) {
+      // Admin signed in via /account — send them to the hub to unlock admin access.
+      toast.info("Admin access requires the administrator portal. Redirecting…");
+      window.location.href = `/admin-hub/${ADMIN_HUB_TOKEN}`;
       return;
     }
     if (submitted) {
@@ -98,7 +106,7 @@ function Account() {
         navigate({ to: "/staff" });
         return;
       }
-      if (role.data === "admin" && isAdminUnlocked()) {
+      if (role.data === "admin" && adminUnlocked) {
         toast.success("Welcome back, Administrator! Opening store hub...");
         navigate({ to: "/staff" });
         return;
@@ -121,9 +129,9 @@ function Account() {
     role.data,
     redirectTo,
     navigate,
-    signOut,
     submitted,
     signup,
+    adminUnlocked,
   ]);
 
   /** Wraps a promise with a timeout so a hung Convex connection never silently disables the button. */
@@ -243,7 +251,7 @@ function Account() {
     // page states who this is exactly once.
     const roleLine = isTeam
       ? role.data === "admin"
-        ? isAdminUnlocked()
+        ? adminUnlocked
           ? "Store owner · full access"
           : "Customer account"
         : "Shop team · orders and stock"
@@ -280,7 +288,7 @@ function Account() {
             - Staff accounts see the hub card and can navigate directly.
             - Admin accounts only see the hub card if their admin session is unlocked via private URL.
             - Customers never see a locked door. */}
-        {role.data === "staff" || (role.data === "admin" && isAdminUnlocked()) ? (
+        {role.data === "staff" || (role.data === "admin" && adminUnlocked) ? (
           <Link to="/staff" className="auth-hub-card">
             <span className="auth-hub-icon" aria-hidden>
               <LayoutDashboard />

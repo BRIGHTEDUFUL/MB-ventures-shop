@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useConvexAction, useConvexMutation } from "@convex-dev/react-query";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../convex/_generated/api";
@@ -61,10 +61,18 @@ function EmailsPage() {
   const { session, loading } = useSession();
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
 
+  // sessionStorage is unavailable during SSR — lazy initializer keeps it safe.
+  const [adminUnlocked, setAdminUnlocked] = useState(() =>
+    typeof window !== "undefined" ? isAdminUnlocked() : false,
+  );
+  useEffect(() => {
+    setAdminUnlocked(isAdminUnlocked());
+  }, [role.data]);
+
   if (loading || (session && role.isPending)) {
     return <div className="page-content wrap">Checking access…</div>;
   }
-  if (!session || role.data !== "admin" || !isAdminUnlocked()) {
+  if (!session || role.data !== "admin" || !adminUnlocked) {
     return (
       <Gate
         title="Emails"

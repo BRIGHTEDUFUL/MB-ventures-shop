@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { pageHead } from "@/lib/store";
 import { AuthFrame } from "@/components/auth-frame";
 import { StaffShell } from "@/components/staff/shell";
-import { isAdminUnlocked, lockAdmin } from "@/lib/admin-token";
+import { isAdminUnlocked, lockAdmin, ADMIN_HUB_TOKEN } from "@/lib/admin-token";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/staff")({
   head: () =>
@@ -33,8 +34,21 @@ export const Route = createFileRoute("/staff")({
 function StaffLayout() {
   const { session, loading } = useSession();
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
-
   const { signOut } = useAuthActions();
+
+  // isAdminUnlocked() reads sessionStorage, which is unavailable during SSR.
+  // The lazy initializer runs only on the client (typeof window guard), so
+  // SSR always starts with false and there is no hydration mismatch. Because
+  // the initializer runs synchronously before the first paint, a legitimately
+  // unlocked admin never sees the "Access restricted" screen, even for one
+  // frame. The useEffect re-checks after role resolves in case the component
+  // mounts before sessionStorage is readable (e.g. sandboxed iframes).
+  const [adminUnlocked, setAdminUnlocked] = useState(() =>
+    typeof window !== "undefined" ? isAdminUnlocked() : false,
+  );
+  useEffect(() => {
+    setAdminUnlocked(isAdminUnlocked());
+  }, [role.data]);
 
   if (loading || (session && role.isPending)) {
     return <AuthFrame title="Store hub" lead="Checking who you are…" />;
@@ -115,13 +129,21 @@ function StaffLayout() {
 
   // Admin accounts require the sessionStorage token set by /admin-hub/<token>.
   // Staff accounts skip this check entirely — their flow is unchanged.
-  if (role.data === "admin" && !isAdminUnlocked()) {
+  if (role.data === "admin" && !adminUnlocked) {
     return (
       <AuthFrame
         title="Access restricted"
         lead="Admin authentication is not available from this link. Please use your private administrator access URL."
       >
         <div className="mt-6 flex flex-wrap gap-3">
+          <Button
+            variant="default"
+            onClick={() => {
+              window.location.href = `/admin-hub/${ADMIN_HUB_TOKEN}`;
+            }}
+          >
+            Go to administrator portal
+          </Button>
           <Button
             variant="outline"
             onClick={async () => {
@@ -131,9 +153,6 @@ function StaffLayout() {
             }}
           >
             Sign out
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/account">Go to account</Link>
           </Button>
         </div>
       </AuthFrame>
