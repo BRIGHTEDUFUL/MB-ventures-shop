@@ -142,7 +142,9 @@ function Index() {
                       are h2 as well. */}
                   <h2 className="text-sm font-semibold">{featured.name}</h2>
                 </Link>
-                <p className="mt-1 text-sm font-semibold">{money(featured.price)}</p>
+                <p className="mt-1 text-sm font-semibold" style={{ color: "var(--price-ink)" }}>
+                  {money(featured.price)}
+                </p>
                 {!featured.verified && (
                   <p className="text-[9px] text-muted-foreground">Sample item · example price</p>
                 )}
@@ -240,7 +242,8 @@ function Index() {
                     onClick={() => add(p)}
                     className="h-11 gap-3 px-3 text-xs"
                   >
-                    {money(p.price)} <Plus className="size-3" />
+                    <span style={{ color: "var(--price-ink)" }}>{money(p.price)}</span>{" "}
+                    <Plus className="size-3" />
                   </Button>
                 </div>
               ))}

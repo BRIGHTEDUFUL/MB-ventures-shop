@@ -4,7 +4,7 @@ import { money, type Receipt } from "@/lib/store";
 import { Printer, CheckCircle2 } from "lucide-react";
 export function OrderReceipt({ order: o }: { order: Receipt }) {
   const items = Array.isArray(o.items)
-    ? (o.items as { name: string; quantity: number; price: number }[])
+    ? (o.items as { name: string; quantity: number; price: number; variant_name?: string }[])
     : [];
   return (
     <section className="receipt">
@@ -50,7 +50,12 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
         <tbody>
           {items.map((l, i) => (
             <tr key={i}>
-              <td>{l.name}</td>
+              <td>
+                {l.name}
+                {l.variant_name && (
+                  <span className="block text-xs text-muted-foreground">{l.variant_name}</span>
+                )}
+              </td>
               <td>{l.quantity}</td>
               <td>{money(l.price * l.quantity, true)}</td>
             </tr>

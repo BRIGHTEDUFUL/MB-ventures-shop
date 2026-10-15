@@ -336,6 +336,18 @@ function Account() {
                 <span className="text-sm capitalize">
                   {o.status} · Payment {o.payment_status}
                 </span>
+                {o.items.length > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    {(() => {
+                      const first = o.items[0];
+                      if (!first) return null;
+                      const name =
+                        first.name.length > 40 ? first.name.slice(0, 40) + "…" : first.name;
+                      const extra = o.items.length > 1 ? ` + ${o.items.length - 1} more` : "";
+                      return name + extra;
+                    })()}
+                  </span>
+                )}
                 <span className="font-mono font-semibold tabular-nums">{money(o.total)}</span>
                 <Link className="text-sm underline" to="/track">
                   View with phone number
