@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Plus, ZoomIn, X, MapPin, Truck, ShieldCheck, MessageCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,14 @@ function ProductPage() {
     [zoom, setZoom] = useState(false),
     // Axis name → chosen value. Empty until the product's options seed it.
     [chosen, setChosen] = useState<Record<string, string>>({});
+  // Reset axis selection and quantity when navigating between products.
+  // TanStack Router reuses the same component instance for different slugs, so
+  // without an explicit reset the previous product's choices survive in state.
+  // Keyed on slug: fires once per product, not on every re-render.
+  useEffect(() => {
+    setChosen({});
+    setQuantity(1);
+  }, [slug]);
   if (!p) return <PageNotFound />;
   const axes = p.axes ?? [],
     variants = p.variants ?? [],

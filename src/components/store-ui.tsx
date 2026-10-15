@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Plus, Minus, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
@@ -14,7 +15,13 @@ export function ProductCard({ product: p }: { product: Product }) {
   // The option count only ever replaces the plain "In stock" — it is the one
   // thing a grid can say about a product you must open to choose from, and a
   // card is not the place to ask for a colour.
-  const optionCount = p.variants?.length ?? 0;
+  // Use the number of option *axes* (Colour, Size, …) not the number of
+  // variant rows. A product with one Colour axis and two colour variants
+  // should redirect to the detail page just like one with two axes. A
+  // product with exactly one variant row but a real axis entry must also
+  // redirect — that variant still requires the shopper to confirm their
+  // choice before adding to cart.
+  const axisCount = p.axes?.length ?? 0;
   const badge: { text: string; tone?: "out" | "low" | "sale" | "stock" } = !p.verified
     ? { text: "Sample item" }
     : p.stock === 0
@@ -23,8 +30,8 @@ export function ProductCard({ product: p }: { product: Product }) {
         ? { text: `${p.stock} left`, tone: "low" }
         : p.original_price
           ? { text: "Sale", tone: "sale" }
-          : optionCount > 1
-            ? { text: `${optionCount} options` }
+          : axisCount >= 1
+            ? { text: `${p.variants?.length ?? axisCount} options` }
             : { text: "In stock", tone: "stock" };
   return (
     <article className="product-card">
@@ -39,12 +46,12 @@ export function ProductCard({ product: p }: { product: Product }) {
           variant="ghost"
           className="product-add"
           aria-label={`Add ${p.name} to cart`}
-          title={optionCount > 1 ? "Choose options" : "Add to cart"}
+          title={axisCount >= 1 ? "Choose options" : "Add to cart"}
           disabled={p.verified && p.stock === 0}
-          asChild={optionCount > 1}
-          onClick={optionCount > 1 ? undefined : () => add(p)}
+          asChild={axisCount >= 1}
+          onClick={axisCount >= 1 ? undefined : () => add(p)}
         >
-          {optionCount > 1 ? (
+          {axisCount >= 1 ? (
             <Link to="/product/$slug" params={{ slug: p.id }}>
               <Plus />
             </Link>
@@ -115,6 +122,25 @@ export function Quantity({
 export function CartLines() {
   const { lines, change, remove } = useCart();
   const { data } = useQuery(storeQuery);
+
+  // Clamp over-stock quantities in a side-effect, never during render.
+  // React requires render to be pure; calling setLines (via change) during
+  // render causes a double-render and prints a Strict Mode warning.
+  useEffect(() => {
+    lines.forEach((line) => {
+      const key = lineKey(line);
+      const liveProduct = data?.products.find((prod) => prod.id === line.product.id);
+      const availableStock = line.variant
+        ? (liveProduct?.variants?.find((v) => v.key === line.variant!.key)?.stock ??
+          line.variant.stock)
+        : (liveProduct?.stock ?? line.product.stock);
+      if (availableStock > 0 && line.quantity > availableStock) {
+        change(key, availableStock);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, data]);
+
   return (
     <>
       {lines.map((line) => {
@@ -134,11 +160,11 @@ export function CartLines() {
           ? (liveProduct?.variants?.find((v) => v.key === variant.key)?.stock ?? variant.stock)
           : (liveProduct?.stock ?? p.stock);
 
-        // Clamp: if the cart already holds more than what is in stock, pull the
-        // quantity down automatically so checkout never surprises the shopper.
-        const clampedQty = Math.min(quantity, availableStock > 0 ? availableStock : quantity);
-        const overStock = clampedQty < quantity;
-        if (overStock) change(key, clampedQty);
+        // Determine if the quantity in the cart exceeds available stock (for
+        // the warning message only — the useEffect above handles the actual
+        // clamp asynchronously on the next tick).
+        const overStock = availableStock > 0 && quantity > availableStock;
+        const displayQty = Math.min(quantity, availableStock > 0 ? availableStock : quantity);
 
         return (
           <div className="cart-line" key={key}>
@@ -152,7 +178,7 @@ export function CartLines() {
               )}
               <p className="mb-3 text-xs text-muted-foreground">{money(price, true)}</p>
               <Quantity
-                value={clampedQty}
+                value={displayQty}
                 onChange={(q) => change(key, q)}
                 max={availableStock > 0 ? availableStock : 1}
               />
@@ -164,7 +190,7 @@ export function CartLines() {
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold" style={{ color: "var(--price-ink)" }}>
-                {money(price * clampedQty, true)}
+                {money(price * displayQty, true)}
               </p>
               <Button
                 className="mt-3 icon-control"
