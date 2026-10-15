@@ -39,11 +39,18 @@ export function ProductCard({ product: p }: { product: Product }) {
           variant="ghost"
           className="product-add"
           aria-label={`Add ${p.name} to cart`}
-          title="Add to cart"
+          title={optionCount > 1 ? "Choose options" : "Add to cart"}
           disabled={p.verified && p.stock === 0}
-          onClick={() => add(p)}
+          asChild={optionCount > 1}
+          onClick={optionCount > 1 ? undefined : () => add(p)}
         >
-          <Plus />
+          {optionCount > 1 ? (
+            <Link to="/product/$slug" params={{ slug: p.id }}>
+              <Plus />
+            </Link>
+          ) : (
+            <Plus />
+          )}
         </Button>
       </div>
       <p className="brand">{p.brand}</p>
@@ -72,7 +79,17 @@ export function ProductCard({ product: p }: { product: Product }) {
     </article>
   );
 }
-export function Quantity({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+export function Quantity({
+  value,
+  onChange,
+  max,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  /** Hard ceiling on the quantity — defaults to 50. Pass product/variant stock to prevent over-ordering. */
+  max?: number;
+}) {
+  const ceiling = max !== undefined ? Math.min(max, 50) : 50;
   return (
     <div className="quantity">
       <Button
@@ -88,7 +105,7 @@ export function Quantity({ value, onChange }: { value: number; onChange: (n: num
         variant="ghost"
         aria-label="Increase quantity"
         onClick={() => onChange(value + 1)}
-        disabled={value >= 50}
+        disabled={value >= ceiling}
       >
         <Plus className="size-3" />
       </Button>
@@ -97,6 +114,7 @@ export function Quantity({ value, onChange }: { value: number; onChange: (n: num
 }
 export function CartLines() {
   const { lines, change, remove } = useCart();
+  const { data } = useQuery(storeQuery);
   return (
     <>
       {lines.map((line) => {
@@ -108,6 +126,20 @@ export function CartLines() {
           // subtotal and the server use.
           price = variant?.price ?? p.price,
           imageKey = variant?.image_key ?? p.image_key;
+
+        // Use live stock from the store query when available; fall back to the
+        // snapshot in the cart line so the stepper still renders while loading.
+        const liveProduct = data?.products.find((prod) => prod.id === p.id);
+        const availableStock = variant
+          ? (liveProduct?.variants?.find((v) => v.key === variant.key)?.stock ?? variant.stock)
+          : (liveProduct?.stock ?? p.stock);
+
+        // Clamp: if the cart already holds more than what is in stock, pull the
+        // quantity down automatically so checkout never surprises the shopper.
+        const clampedQty = Math.min(quantity, availableStock > 0 ? availableStock : quantity);
+        const overStock = clampedQty < quantity;
+        if (overStock) change(key, clampedQty);
+
         return (
           <div className="cart-line" key={key}>
             <img {...imageSize(imageKey)} src={images[imageKey]} alt={p.name} />
@@ -119,10 +151,21 @@ export function CartLines() {
                 <p className="mt-0.5 mb-3 text-xs text-muted-foreground">{variant.name}</p>
               )}
               <p className="mb-3 text-xs text-muted-foreground">{money(price, true)}</p>
-              <Quantity value={quantity} onChange={(q) => change(key, q)} />
+              <Quantity
+                value={clampedQty}
+                onChange={(q) => change(key, q)}
+                max={availableStock > 0 ? availableStock : 1}
+              />
+              {overStock && (
+                <p className="mt-1 text-xs text-amber-600" role="alert">
+                  Only {availableStock} left
+                </p>
+              )}
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold">{money(price * quantity, true)}</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--price-ink)" }}>
+                {money(price * clampedQty, true)}
+              </p>
               <Button
                 className="mt-3 icon-control"
                 variant="ghost"

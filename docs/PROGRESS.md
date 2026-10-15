@@ -53,9 +53,9 @@ panel. Two root causes were found and fixed:
 
 ### Sign-in URLs
 
-| Role  | URL |
-|-------|-----|
-| Staff | `https://mbventuresgh.com/account` |
+| Role  | URL                                                  |
+| ----- | ---------------------------------------------------- |
+| Staff | `https://mbventuresgh.com/account`                   |
 | Admin | `https://mbventuresgh.com/admin-hub/mbvg-admin-2026` |
 
 ---

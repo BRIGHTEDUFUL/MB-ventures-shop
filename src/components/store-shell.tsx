@@ -337,7 +337,9 @@ export function StoreOverlays() {
                     {p.verified ? (p.stock ? "In stock" : "Out of stock") : "Sample catalogue"}
                   </p>
                 </div>
-                <span className="text-sm font-semibold">{money(p.price)}</span>
+                <span className="text-sm font-semibold" style={{ color: "var(--price-ink)" }}>
+                  {money(p.price)}
+                </span>
               </Link>
             ))}
             {results.length === 0 && (

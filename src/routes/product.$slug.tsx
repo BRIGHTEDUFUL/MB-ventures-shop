@@ -73,6 +73,9 @@ function ProductPage() {
   // without them keeps exactly the numbers this page has always shown.
   const price = selectedVariant?.price ?? p.price,
     stock = selectedVariant ? selectedVariant.stock : p.stock,
+    // Clamp the quantity to the available stock so that switching to a variant
+    // with less stock never leaves a number that the server would reject.
+    effectiveQty = stock > 0 ? Math.min(quantity, stock) : quantity,
     sku = selectedVariant?.sku ?? `MB-${p.id.toUpperCase()}`,
     // Fail closed: options are on offer but nothing buyable sits behind the
     // current choice, so the shopper must not be able to put it in the cart.
@@ -155,7 +158,7 @@ function ProductPage() {
                 </span>
               ))}
           </div>
-          <p className="mt-7 text-3xl font-semibold">
+          <p className="mt-7 text-3xl font-semibold" style={{ color: "var(--price-ink)" }}>
             <span className={compareAt !== null ? "sale-price" : undefined}>{money(price)}</span>{" "}
             {compareAt !== null && (
               <del className="text-lg font-normal text-muted-foreground">{money(compareAt)}</del>
@@ -187,7 +190,7 @@ function ProductPage() {
             onSelect={(axis, value) => setChosen({ ...selectedOptions, [axis]: value })}
           />
           <div className="mt-7 flex gap-4">
-            <Quantity value={quantity} onChange={setQuantity} />
+            <Quantity value={effectiveQty} onChange={setQuantity} max={stock > 0 ? stock : 1} />
             {/*
               The button says only "Add to cart". Naming the chosen option here
               too looked helpful, but `whitespace-nowrap` makes the button's
@@ -199,7 +202,7 @@ function ProductPage() {
             <Button
               className="min-w-0 flex-1"
               disabled={soldOut}
-              onClick={() => cart.add(p, quantity, selectedVariant)}
+              onClick={() => cart.add(p, effectiveQty, selectedVariant)}
             >
               Add to cart <Plus />
             </Button>
@@ -209,7 +212,7 @@ function ProductPage() {
             className="mt-3 w-full"
             disabled={soldOut}
             onClick={() => {
-              cart.add(p, quantity, selectedVariant);
+              cart.add(p, effectiveQty, selectedVariant);
               navigate({ to: "/checkout" });
             }}
           >
@@ -238,7 +241,7 @@ function ProductPage() {
               ))}
             </select>
             <p className="mt-3 text-sm">
-              {money(delivery(settings, zone, price * quantity))} ·{" "}
+              {money(delivery(settings, zone, price * effectiveQty))} ·{" "}
               {zones.find((z) => z.id === zone)?.time}
             </p>
             <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">

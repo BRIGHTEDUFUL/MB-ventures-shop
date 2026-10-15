@@ -357,6 +357,7 @@ so the SSH deploy step skips. Use the MCP method above for frontend deploys unti
 the secrets are added.
 
 > **Manual deploy (Hostinger MCP — recommended until GitHub secrets are set up):**
+>
 > ```powershell
 > node scripts/pack-deploy.mjs   # creates deploy.zip
 > # Then use Hostinger MCP tool: hosting_deploy-js-application

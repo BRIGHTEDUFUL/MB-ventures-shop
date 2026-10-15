@@ -598,6 +598,7 @@ label textarea {
   margin-top: 12px;
   font-weight: 600;
   font-size: 16px;
+  color: var(--price-ink);
 }
 .product-add {
   position: absolute;
@@ -855,6 +856,7 @@ label textarea {
   padding-top: 16px;
   font-weight: 600;
   font-size: 20px;
+  color: var(--price-ink);
 }
 .two-column {
   display: grid;
@@ -1534,10 +1536,13 @@ label textarea {
 :root {
   --offer-ink: color-mix(in oklch, var(--offer) 75%, black);
   --success-ink: color-mix(in oklch, var(--success) 80%, black);
+  /* Price text — emerald green in both themes, AA-compliant on white. */
+  --price-ink: color-mix(in oklch, var(--success) 80%, black);
 }
 .dark {
   --offer-ink: color-mix(in oklch, var(--offer) 72%, white);
   --success-ink: color-mix(in oklch, var(--success) 62%, white);
+  --price-ink: color-mix(in oklch, var(--success) 62%, white);
 }
 h1,
 h2,
@@ -1596,7 +1601,7 @@ h4 {
   color: var(--muted-foreground);
 }
 .sale-price {
-  color: var(--offer-ink);
+  color: var(--price-ink);
 }
 
 /* ── Staff hub: settings tabs, sticky save, mobile tab bar ─────────────── */
