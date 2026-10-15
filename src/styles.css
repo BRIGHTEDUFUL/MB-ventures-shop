@@ -32,6 +32,7 @@
   --color-offer: var(--offer);
   --color-success-ink: var(--success-ink);
   --color-offer-ink: var(--offer-ink);
+  --color-danger-ink: var(--danger-ink);
   --color-link: var(--link);
   --color-photo-text: var(--photo-text);
   --color-photo-shade: var(--photo-shade);
@@ -1530,18 +1531,21 @@ label textarea {
   }
 }
 /* ── Storefront polish ────────────────────────────────────────────────
- * Information color: green reads "in stock", ochre reads "sale / running
- * low". The ink tones are derived with color-mix so 10-16px badge text
- * keeps AA contrast on the tinted badges in both light and dark modes. */
+ * Information color: green reads "in stock" (and shouts "Sale" as a solid
+ * chip), ochre reads "running low", red reads "out of stock". The ink tones
+ * are derived with color-mix so 10-16px badge text keeps AA contrast on the
+ * tinted badges in both light and dark modes. */
 :root {
   --offer-ink: color-mix(in oklch, var(--offer) 75%, black);
   --success-ink: color-mix(in oklch, var(--success) 80%, black);
+  --danger-ink: color-mix(in oklch, var(--destructive) 75%, black);
   /* Price text — emerald green in both themes, AA-compliant on white. */
   --price-ink: color-mix(in oklch, var(--success) 80%, black);
 }
 .dark {
   --offer-ink: color-mix(in oklch, var(--offer) 72%, white);
   --success-ink: color-mix(in oklch, var(--success) 62%, white);
+  --danger-ink: color-mix(in oklch, var(--destructive) 72%, white);
   --price-ink: color-mix(in oklch, var(--success) 62%, white);
 }
 h1,
@@ -1591,14 +1595,19 @@ h4 {
   background: color-mix(in oklch, var(--success) 14%, var(--card));
   color: var(--success-ink);
 }
-.product-badge[data-tone="sale"],
+/* The sale chip is the one solid badge on the card — it should read as a
+ * promotion at a glance, not as another stock note. */
+.product-badge[data-tone="sale"] {
+  background: var(--success);
+  color: oklch(1 0 0);
+}
 .product-badge[data-tone="low"] {
   background: color-mix(in oklch, var(--offer) 14%, var(--card));
   color: var(--offer-ink);
 }
 .product-badge[data-tone="out"] {
-  background: var(--secondary);
-  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--destructive) 14%, var(--card));
+  color: var(--danger-ink);
 }
 .sale-price {
   color: var(--price-ink);

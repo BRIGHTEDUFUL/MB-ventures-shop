@@ -131,8 +131,8 @@ function Content() {
             <p>{s?.address || "Abelenkpe taxi rank, Accra, Ghana"}</p>
             <p>{s?.hours || "Monday to Saturday, 8:00 AM to 6:00 PM"}</p>
             <p>
-              <a className="underline" href={`tel:${s?.phone || "0249564442"}`}>
-                {s?.phone || "0249564442"}
+              <a className="underline" href={`tel:${s?.phone || "0249654442"}`}>
+                {s?.phone || "0249654442"}
               </a>
               <br />
               {whatsapp && (

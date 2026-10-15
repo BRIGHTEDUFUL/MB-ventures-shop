@@ -1,5 +1,5 @@
 import { type Product } from "@/lib/store";
-import { combineAxes, variantKey } from "../../convex/lib/variants";
+import { findVariantByOptions } from "../../convex/lib/variants";
 
 /**
  * The option picker: one row per axis, colour axis first (that ordering
@@ -8,9 +8,10 @@ import { combineAxes, variantKey } from "../../convex/lib/variants";
  * Every chip is resolved against `product.variants` before it renders, so a
  * combination the shop does not actually sell is disabled rather than offered
  * and then refused at checkout — the shopper can only ever walk the page
- * towards a variant that exists. The keys are the canonical ones from
- * `convex/lib/variants.ts`, the same strings the cart, the order lines and the
- * stock ledger point at, so the picker can never disagree with the backend.
+ * towards a variant that exists. Chips match on the variant's *options*
+ * (`findVariantByOptions`), never on a recomputed key string: a stored key is
+ * an opaque, stable identifier that old orders and the ledger point at, and
+ * rows written under a different axis order must still resolve.
  *
  * The colour circle is the hex the server worked out (`Variant.swatch`). When
  * that is `null` the colour name is not in the swatch table and the chip is
@@ -42,13 +43,9 @@ export function VariantPicker({
     return <div className="mt-7" />;
   }
 
-  const axisNames = axes.map((axis) => axis.name);
-  // The full option grid, keyed the way a variant is keyed. A chip is enabled
-  // only when the cell it would land on has a variant behind it, which is what
+  // Each chip resolves against the variants themselves: a chip is enabled only
+  // when a real variant sits behind the choice it would make, which is what
   // keeps an impossible combination from ever reaching the cart.
-  const cells = new Map(
-    combineAxes(axes).map((cell) => [cell.key, variants.find((v) => v.key === cell.key) ?? null]),
-  );
 
   // Base classes shared by every chip regardless of type, state, or axis.
   // h-9 (36px logical, 44px min touch via the inline min-h) + px-4 keeps text
@@ -65,7 +62,7 @@ export function VariantPicker({
           <div className="flex flex-wrap gap-2">
             {axis.values.map((value) => {
               const match =
-                cells.get(variantKey({ ...selected, [axis.name]: value }, axisNames)) ?? null;
+                findVariantByOptions(variants, { ...selected, [axis.name]: value }) ?? null;
               // A hidden variant is as unbuyable as one that does not exist —
               // orders.place refuses both — so both render disabled, and the
               // label says which of the two the shopper is looking at.

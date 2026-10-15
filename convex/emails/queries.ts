@@ -18,7 +18,7 @@ export async function renderContext(ctx: QueryCtx): Promise<RenderContext> {
     name: "MB Ventures GH",
     address: "Abelenkpe taxi rank, Accra, Ghana",
     hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
-    phone: "0249564442",
+    phone: "0249654442",
     email: "info@mbventuresghana.com",
   };
   try {

@@ -7,7 +7,13 @@ import { requirePermission } from "./lib/permissions";
 import { getSettings } from "./lib/settings";
 import { isValidEmail, round2, validateWhatsApp } from "./lib/rules";
 import { applyStockChange } from "./lib/stock";
-import { VARIANT_LIMITS, deriveAxes, variantLabel } from "./lib/variants";
+import {
+  VARIANT_LIMITS,
+  deriveAxes,
+  optionsSignature,
+  variantKey,
+  variantLabel,
+} from "./lib/variants";
 import { trustIcon } from "./schema";
 
 /**
@@ -246,18 +252,48 @@ export const saveProduct = mutation({
       });
     } else {
       if (existing === null) throw new ConvexError({ message: "Product not found." });
-      await applyStockChange(ctx, {
-        slug,
-        command: { kind: "set_on_hand", value: args.stock },
-        movement_type: "adjustment",
-        source: "product",
-        reason:
-          existing.stock === args.stock && (existing.reserved ?? 0) === 0
-            ? "Stock confirmed on the product form"
-            : "Stock edited on the product form",
-        actor_id: actorId,
-        patch: row,
-      });
+      // A product that sells in options keeps its stock as the derived sum of
+      // them — the form's number is a read-only echo, never the truth. When
+      // options exist, re-derive the aggregate through the single writer (a
+      // no-op movement on one option refreshes the product's totals in the
+      // same transaction as the copy edits) so a stale or hand-typed form
+      // value can never clobber what the options actually add up to.
+      const firstOption = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", slug))
+        .first();
+      await applyStockChange(
+        ctx,
+        firstOption === null
+          ? {
+              slug,
+              command: { kind: "set_on_hand", value: args.stock },
+              movement_type: "adjustment",
+              source: "product",
+              reason:
+                existing.stock === args.stock && (existing.reserved ?? 0) === 0
+                  ? "Stock confirmed on the product form"
+                  : "Stock edited on the product form",
+              actor_id: actorId,
+              patch: row,
+            }
+          : {
+              slug,
+              variant_key: firstOption.key,
+              // The same on-hand the option already holds: nothing moves and
+              // no movement is written, but the product's derived stock and
+              // reserved totals are refreshed from every option.
+              command: {
+                kind: "set_on_hand",
+                value: firstOption.stock + (firstOption.reserved ?? 0),
+              },
+              movement_type: "adjustment",
+              source: "product",
+              reason: "Product details saved — option totals re-derived",
+              actor_id: actorId,
+              patch: row,
+            },
+      );
     }
 
     await logActivity(
@@ -774,6 +810,7 @@ export const saveVariants = mutation({
     }
 
     const submittedKeys = new Set<string>();
+    const submittedSignatures = new Set<string>();
     const submittedSkus = new Map<string, string>();
     for (const row of args.variants) {
       const key = row.key.trim().toLowerCase();
@@ -783,6 +820,14 @@ export const saveVariants = mutation({
         fail("VALIDATION_FAILED", `“${label}” is listed twice — each combination appears once.`);
       }
       submittedKeys.add(key);
+      // Two rows carrying the same choices are the same option whatever their
+      // keys say — the picker could not tell them apart, and one would shadow
+      // the other in every lookup.
+      const signature = optionsSignature(row.options);
+      if (submittedSignatures.has(signature)) {
+        fail("VALIDATION_FAILED", `“${label}” is listed twice — each combination appears once.`);
+      }
+      submittedSignatures.add(signature);
 
       if (!Number.isInteger(row.stock) || row.stock < 0) {
         fail("VALIDATION_FAILED", `Stock for “${label}” must be a whole number of 0 or more.`);
@@ -831,7 +876,24 @@ export const saveVariants = mutation({
       .query("product_variants")
       .withIndex("by_product", (q) => q.eq("product_slug", slug))
       .collect();
-    const existingByKey = new Map(existing.map((row) => [row.key, row]));
+    // Saved rows are matched to the submission by their *options*, never by
+    // their key: a key is an opaque identifier that past orders and the stock
+    // ledger point at, and rows written under a different axis order must not
+    // be dropped — stock and all — just because the strings differ. If the
+    // stored data is already corrupt (two rows holding the same choices),
+    // refuse loudly rather than silently pick a winner.
+    const existingBySignature = new Map<string, (typeof existing)[number]>();
+    for (const row of existing) {
+      const signature = optionsSignature(row.options);
+      const clash = existingBySignature.get(signature);
+      if (clash !== undefined) {
+        fail(
+          "STATE_CONFLICT",
+          `Two saved options hold the same choices — “${clash.name}” and “${row.name}”. Remove one on the product form before saving.`,
+        );
+      }
+      existingBySignature.set(signature, row);
+    }
 
     const removingAll = existing.length > 0 && args.variants.length === 0;
     const addingFirst = existing.length === 0 && args.variants.length > 0;
@@ -860,7 +922,7 @@ export const saveVariants = mutation({
     // that says so, so the aggregate's drop is explained rather than mysterious.
     let handedBack = 0;
     for (const row of existing) {
-      if (submittedKeys.has(row.key)) continue;
+      if (submittedSignatures.has(optionsSignature(row.options))) continue;
       if (removingAll) handedBack += row.stock + (row.reserved ?? 0);
       await applyStockChange(ctx, {
         slug,
@@ -888,14 +950,15 @@ export const saveVariants = mutation({
     }
 
     // ---- write ----------------------------------------------------------
+    const axisOrder = axes.map((a) => a.name);
     for (const [index, input] of args.variants.entries()) {
-      const key = input.key.trim().toLowerCase();
-      const name =
-        input.name.trim() ||
-        variantLabel(
-          input.options,
-          axes.map((a) => a.name),
-        );
+      // Matched by options, not by key. A saved row keeps the key it was born
+      // with — old orders and the stock ledger still point at that string —
+      // and only a genuinely new combination is born with a fresh canonical
+      // key, whatever axis order the client happened to send.
+      const matched = existingBySignature.get(optionsSignature(input.options));
+      const key = matched?.key ?? variantKey(input.options, axisOrder);
+      const name = input.name.trim() || variantLabel(input.options, axisOrder);
       const sku = (input.sku ?? "").trim().toUpperCase();
       const patch = {
         name,
@@ -912,7 +975,7 @@ export const saveVariants = mutation({
         visible: input.visible,
       };
 
-      const row = existingByKey.get(key);
+      const row = matched;
       if (row === undefined) {
         // Insert at zero, then move — so the opening quantity is a real,
         // auditable movement like every other count. Mirrors `saveProduct`.

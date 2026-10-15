@@ -6,7 +6,7 @@ const SETTINGS = {
   key: "singleton",
   hero_title: "Made for your workspace.",
   hero_subtitle: "Desks, chairs and everyday tech. From our Abelenkpe shop to your setup.",
-  phone: "0249564442",
+  phone: "0249654442",
   email: "info@mbventuresghana.com",
   address: "Abelenkpe taxi rank, Accra, Ghana",
   hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
@@ -280,5 +280,38 @@ export const syncContactEmail = internalMutation({
     if (!stale.includes(settings.email.trim().toLowerCase())) return { updated: false };
     await ctx.db.patch(settings._id, { email: SETTINGS.email });
     return { updated: true };
+  },
+});
+
+/**
+ * Rewrites `store_settings.phone` (and the WhatsApp recipient when it still
+ * points at the same old line) from the retired shop number to the current
+ * one. A number the shop entered itself is left alone, so this is safe to
+ * run repeatedly:
+ *
+ * `npx convex run seed:syncContactPhone` (add `--env-file .env.prod.local` for production)
+ */
+export const syncContactPhone = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db
+      .query("store_settings")
+      .withIndex("by_key", (q) => q.eq("key", "singleton"))
+      .unique();
+    if (settings === null) return { updated: [] as string[] };
+
+    const RETIRED = ["0249564442", "+233249564442", "233249564442"];
+    const updated: string[] = [];
+    const patch: { phone?: string; whatsapp?: string } = {};
+    if (RETIRED.includes(settings.phone.trim())) {
+      patch.phone = SETTINGS.phone;
+      updated.push("phone");
+    }
+    if (RETIRED.includes(settings.whatsapp.trim())) {
+      patch.whatsapp = SETTINGS.phone;
+      updated.push("whatsapp");
+    }
+    if (updated.length > 0) await ctx.db.patch(settings._id, patch);
+    return { updated };
   },
 });

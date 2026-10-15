@@ -10,8 +10,9 @@ import { images, imageSize } from "@/lib/store-images";
 import { remainingForFreeDelivery } from "../../convex/lib/rules";
 export function ProductCard({ product: p }: { product: Product }) {
   const { add } = useCart();
-  // Badge color carries the information: green in stock, ochre sale/low,
-  // neutral for unverified samples so they never read as live inventory.
+  // Badge color carries the information: green in stock, solid green shouts
+  // "Sale", ochre when running low, red out of stock, neutral for unverified
+  // samples so they never read as live inventory.
   // The option count only ever replaces the plain "In stock" — it is the one
   // thing a grid can say about a product you must open to choose from, and a
   // card is not the place to ask for a colour.

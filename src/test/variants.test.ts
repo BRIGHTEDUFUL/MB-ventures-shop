@@ -7,7 +7,9 @@ import schema from "../../convex/schema";
 import {
   combineAxes,
   deriveAxes,
+  findVariantByOptions,
   isColourAxis,
+  optionsSignature,
   swatchFor,
   variantKey,
   variantLabel,
@@ -184,6 +186,35 @@ describe("the key is canonical", () => {
   });
 });
 
+describe("options identify a variant by its choices, not by its key", () => {
+  it("the same choices are the same option whatever order, case or spacing they arrive in", () => {
+    expect(optionsSignature({ Colour: "Black", Size: "120 x 60 cm" })).toBe(
+      optionsSignature({ size: " 120 X 60 CM ", colour: "black" }),
+    );
+  });
+
+  it("different choices are different options, and a missing axis is not a partial match", () => {
+    expect(optionsSignature({ Colour: "Black", Size: "L" })).not.toBe(
+      optionsSignature({ Colour: "Black", Size: "S" }),
+    );
+    expect(optionsSignature({ Colour: "Black" })).not.toBe(
+      optionsSignature({ Colour: "Black", Size: "L" }),
+    );
+  });
+
+  it("resolves a choice set even when the stored keys were written in another axis order", () => {
+    // The shape that broke the live storefront: keys Size-first, options both axes.
+    const stored = [
+      { key: "120-x-60-cm--black", options: { Colour: "Black", Size: "120 x 60 cm" } },
+      { key: "120-x-60-cm--white", options: { Colour: "White", Size: "120 x 60 cm" } },
+    ];
+    expect(findVariantByOptions(stored, { Size: "120 x 60 cm", Colour: "Black" })?.key).toBe(
+      "120-x-60-cm--black",
+    );
+    expect(findVariantByOptions(stored, { Size: "120 x 60 cm", Colour: "Grey" })).toBeUndefined();
+  });
+});
+
 describe("colour is treated as its own kind of axis", () => {
   it("recognises the shop's spellings", () => {
     expect(isColourAxis("Colour")).toBe(true);
@@ -345,6 +376,274 @@ describe("catalogue.saveVariants — options become the unit of stock", () => {
     // Nothing moved: the product still owns its 47.
     expect((await readProduct(env))?.stock).toBe(47);
     expect(await variantsOf(env)).toHaveLength(0);
+  });
+
+  it("refuses two options that carry the same choices under different keys", async () => {
+    const env = await setup();
+    const error = await capture(
+      env.staff.mutation(api.catalogue.saveVariants, {
+        slug: "standing-desk",
+        variants: [
+          { ...BLACK_WHITE[0]!, key: "black", options: { Colour: "Black" } },
+          { ...BLACK_WHITE[1]!, key: "white", name: "Also black", options: { Colour: "Black" } },
+        ],
+      }),
+    );
+    expect(error).toBeInstanceOf(ConvexError);
+    expect(messageOf(error)).toMatch(/listed twice/);
+    expect(await variantsOf(env)).toHaveLength(0);
+  });
+
+  it("refuses to save while two stored options hold the same choices, rather than pick one", async () => {
+    const env = await setup();
+    await withColours(env);
+    // Corrupt the stored data directly: same choices, two different keys.
+    await env.t.run(async (ctx) => {
+      const dupe = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product_key", (q) =>
+          q.eq("product_slug", "standing-desk").eq("key", "white"),
+        )
+        .unique();
+      await ctx.db.patch(dupe!._id, { key: "old-white", options: { Colour: "White" } });
+      await ctx.db.insert("product_variants", {
+        product_slug: "standing-desk",
+        key: "white",
+        name: "White",
+        options: { Colour: "White" },
+        price: null,
+        sku: null,
+        barcode: null,
+        image_key: null,
+        cost_price: null,
+        sort_order: 1,
+        visible: true,
+        stock: 0,
+        reserved: 0,
+        version: 0,
+      });
+    });
+
+    const error = await capture(
+      env.staff.mutation(api.catalogue.saveVariants, {
+        slug: "standing-desk",
+        variants: [BLACK_WHITE[0]!],
+      }),
+    );
+    expect(error).toBeInstanceOf(ConvexError);
+    expect(messageOf(error)).toMatch(/same choices/);
+  });
+
+  it("stores a new option under the canonical key, whatever key order the client sent", async () => {
+    const env = await setup();
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        {
+          key: "120-x-60-cm--black", // Size-first — not canonical.
+          name: "120 x 60 cm / Black",
+          options: { Colour: "Black", Size: "120 x 60 cm" },
+          price: null,
+          sku: "DESK-BLK",
+          barcode: null,
+          image_key: null,
+          cost_price: null,
+          stock: 4,
+          visible: true,
+        },
+      ],
+    });
+    const rows = await variantsOf(env);
+    expect(rows.map((r) => r.key)).toEqual(["black--120-x-60-cm"]);
+    expect(rows[0]).toMatchObject({ stock: 4, sku: "DESK-BLK" });
+  });
+});
+
+describe("options stored under a different key order keep working", () => {
+  /**
+   * The live shop's shape: keys written Size-first (the staff editor once
+   * crossed axes in insertion order), while every client since derives axes
+   * colour-first. 4 + 3 = 7 units behind keys no canonical computation can
+   * spell, and a parent row whose total had drifted to 5.
+   */
+  async function withStoredSizeFirst(env: Env) {
+    await env.t.run(async (ctx) => {
+      const desk = await ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", "standing-desk"))
+        .unique();
+      for (const row of [
+        {
+          key: "120-x-60-cm--black",
+          name: "120 x 60 cm / Black",
+          options: { Colour: "Black", Size: "120 x 60 cm" },
+          stock: 4,
+        },
+        {
+          key: "120-x-60-cm--white",
+          name: "120 x 60 cm / White",
+          options: { Colour: "White", Size: "120 x 60 cm" },
+          stock: 3,
+        },
+      ]) {
+        await ctx.db.insert("product_variants", {
+          product_slug: "standing-desk",
+          key: row.key,
+          name: row.name,
+          options: row.options,
+          price: null,
+          sku: null,
+          barcode: null,
+          image_key: null,
+          cost_price: null,
+          sort_order: 0,
+          visible: true,
+          stock: row.stock,
+          reserved: 0,
+          version: 0,
+        });
+      }
+      // The drifted parent total this suite exists to explain.
+      await ctx.db.patch(desk!._id, { stock: 5, reserved: 0, version: (desk!.version ?? 0) + 1 });
+    });
+  }
+
+  const savedRow = (key: string, options: Record<string, string>, stock: number) => ({
+    key,
+    name: key,
+    options,
+    price: null,
+    sku: null,
+    barcode: null,
+    image_key: null,
+    cost_price: null,
+    stock,
+    visible: true,
+  });
+
+  it("a re-save matches by options: keys survive, nothing is written off, totals heal", async () => {
+    const env = await setup();
+    await withStoredSizeFirst(env);
+
+    // Exactly what the fixed staff editor submits: the stored keys, unchanged.
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        savedRow("120-x-60-cm--black", { Colour: "Black", Size: "120 x 60 cm" }, 4),
+        savedRow("120-x-60-cm--white", { Colour: "White", Size: "120 x 60 cm" }, 3),
+      ],
+    });
+
+    const rows = await variantsOf(env);
+    expect(rows.map((r) => r.key).sort()).toEqual(["120-x-60-cm--black", "120-x-60-cm--white"]);
+    expect(rows.map((r) => r.stock).sort()).toEqual([3, 4]);
+    // 4 + 3: the drifted parent total is back in agreement with its options.
+    expect((await readProduct(env))?.stock).toBe(7);
+    // Not one unit was written off on the way.
+    expect((await movements(env)).map((m) => m.reason)).not.toContain(
+      "Option “120 x 60 cm / Black” removed",
+    );
+  });
+
+  it("even a stale client sending canonical keys cannot churn the rows: options match, keys stay", async () => {
+    const env = await setup();
+    await withStoredSizeFirst(env);
+
+    // A client that recomputes keys colour-first — the exact mismatch that
+    // broke the storefront. The rows must be matched by their options.
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        savedRow("black--120-x-60-cm", { Colour: "Black", Size: "120 x 60 cm" }, 4),
+        savedRow("white--120-x-60-cm", { Colour: "White", Size: "120 x 60 cm" }, 3),
+      ],
+    });
+
+    const rows = await variantsOf(env);
+    expect(rows.map((r) => r.key).sort()).toEqual(["120-x-60-cm--black", "120-x-60-cm--white"]);
+    expect(rows.map((r) => r.stock).sort()).toEqual([3, 4]);
+    expect((await readProduct(env))?.stock).toBe(7);
+  });
+});
+
+describe("the product form cannot re-write what the options add up to", () => {
+  const formSave = (stock: number) => ({
+    isNew: false,
+    id: "standing-desk",
+    name: "Electric sit-stand desk",
+    brand: "IKEA",
+    category: "desks",
+    price: 999.99,
+    original_price: null,
+    stock,
+    description: "A desk that rises with the day, sold in colours.",
+    image_key: "desk",
+    gallery: [] as string[],
+    specs: {},
+    verified: true,
+  });
+
+  it("saves the copy but leaves the derived total to the options", async () => {
+    const env = await setup();
+    await withColours(env); // Black 4 + White 3
+    expect((await readProduct(env))?.stock).toBe(7);
+
+    // A hand-typed "99" on the old editable field used to clobber the total.
+    await env.staff.mutation(api.catalogue.saveProduct, formSave(99));
+
+    expect((await readProduct(env))?.stock).toBe(7);
+    expect((await variantOf(env, "black"))?.stock).toBe(4);
+    expect((await variantOf(env, "white"))?.stock).toBe(3);
+  });
+});
+
+describe("inventory refuses a product-level move once options own the stock", () => {
+  it("adjust without an option is refused, adjust with one still works", async () => {
+    const env = await setup();
+    await withColours(env);
+
+    const error = await capture(
+      env.staff.mutation(api.inventory.adjust, {
+        product_id: "standing-desk",
+        delta: 5,
+        reason: "Delivery received",
+      }),
+    );
+    expect(error).toBeInstanceOf(ConvexError);
+    expect(messageOf(error)).toMatch(/sells in options/);
+
+    await env.staff.mutation(api.inventory.adjust, {
+      product_id: "standing-desk",
+      variant_key: "black",
+      delta: 5,
+      reason: "Delivery received",
+    });
+    expect((await variantOf(env, "black"))?.stock).toBe(9);
+    expect((await readProduct(env))?.stock).toBe(12);
+  });
+
+  it("count without an option is refused", async () => {
+    const env = await setup();
+    await withColours(env);
+
+    const error = await capture(
+      env.staff.mutation(api.inventory.count, {
+        product_id: "standing-desk",
+        counted: 100,
+      }),
+    );
+    expect(error).toBeInstanceOf(ConvexError);
+    expect(messageOf(error)).toMatch(/sells in options/);
+    expect((await readProduct(env))?.stock).toBe(7);
+  });
+
+  it("a product with no options still counts at product level", async () => {
+    const env = await setup();
+    await env.staff.mutation(api.inventory.count, {
+      product_id: "standing-desk",
+      counted: 42,
+    });
+    expect((await readProduct(env))?.stock).toBe(42);
   });
 });
 

@@ -508,7 +508,7 @@ export function StoreOverlays() {
                     </a>
                   )}
                   <a
-                    href={`tel:${data?.settings?.phone || "0249564442"}`}
+                    href={`tel:${data?.settings?.phone || "0249654442"}`}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-border bg-card hover:bg-secondary font-medium text-xs transition-colors"
                   >
                     <Phone className="size-3.5" />
@@ -621,9 +621,9 @@ export function StoreFooter() {
           <h2>Visit us at Abelenkpe</h2>
           <p>{s?.address || "Abelenkpe taxi rank, Accra, Ghana"}</p>
           <p>{s?.hours || "Monday to Saturday, 8:00 AM to 6:00 PM"}</p>
-          <a href={`tel:${s?.phone || "0249564442"}`} className="flex items-center gap-2">
+          <a href={`tel:${s?.phone || "0249654442"}`} className="flex items-center gap-2">
             <Phone className="mr-1 inline size-3" />
-            {s?.phone || "0249564442"}
+            {s?.phone || "0249654442"}
           </a>
           {whatsapp && (
             <a href={whatsapp} target="_blank" rel="noreferrer" className="flex items-center gap-2">

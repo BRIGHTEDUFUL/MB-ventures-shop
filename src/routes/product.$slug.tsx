@@ -15,7 +15,7 @@ import {
 import { VariantPicker } from "@/components/variant-picker";
 import { images } from "@/lib/store-images";
 import { storeQuery, pageHead, money, specs, delivery, zones, whatsappHref } from "@/lib/store";
-import { variantKey } from "../../convex/lib/variants";
+import { findVariantByOptions } from "../../convex/lib/variants";
 import { toast } from "sonner";
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ context, params }) => {
@@ -76,14 +76,10 @@ function ProductPage() {
   const defaultOptions = variants.find((v) => v.visible)?.options ?? variants[0]?.options ?? {};
   const selectedOptions = axes.length > 0 ? { ...defaultOptions, ...chosen } : defaultOptions;
 
-  const selectedVariant = variants.find(
-    (v) =>
-      v.key ===
-      variantKey(
-        selectedOptions,
-        axes.map((axis) => axis.name),
-      ),
-  );
+  // The chosen options resolve to a variant by matching the options
+  // themselves — never by a recomputed key string, since stored keys are
+  // opaque identifiers past orders point at.
+  const selectedVariant = findVariantByOptions(variants, selectedOptions);
   // With options on offer the *option* decides price, stock and SKU. A product
   // without them keeps exactly the numbers this page has always shown.
   const price = selectedVariant?.price ?? p.price,
@@ -182,7 +178,11 @@ function ProductPage() {
           <p
             className={
               "mt-3 text-sm " +
-              (p.verified && stock > 0 ? "text-success-ink" : "text-muted-foreground")
+              (p.verified
+                ? stock > 0
+                  ? "text-success-ink"
+                  : "text-danger-ink"
+                : "text-muted-foreground")
             }
           >
             {/* The option joins the sentence so two lines of the same shelf

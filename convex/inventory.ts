@@ -65,6 +65,21 @@ export const adjust = mutation({
     if (heldKey !== "" && variant === null) {
       throw new ConvexError({ message: "That option no longer exists." });
     }
+    // A product that sells in options keeps its stock as the derived sum of
+    // them — there is no "product-level" number to adjust. Writing one would
+    // silently detach the total from what the options add up to (it is exactly
+    // how the storefront's totals once drifted), so it is refused outright.
+    if (variant === null) {
+      const hasOptions = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", args.product_id))
+        .first();
+      if (hasOptions !== null) {
+        throw new ConvexError({
+          message: "This product sells in options — adjust the option you counted, not the total.",
+        });
+      }
+    }
     const before = variant === null ? product.stock : variant.stock;
     const who = variant === null ? product.name : `${product.name} — ${variant.name}`;
 
@@ -138,6 +153,20 @@ export const count = mutation({
             .unique();
     if (heldKey !== "" && variant === null) {
       throw new ConvexError({ message: "That option no longer exists." });
+    }
+    // A counted "total" on an options product would detach the number from
+    // what the options add up to — same drift, one stocktake later. Count the
+    // option itself.
+    if (variant === null) {
+      const hasOptions = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", args.product_id))
+        .first();
+      if (hasOptions !== null) {
+        throw new ConvexError({
+          message: "This product sells in options — count the option itself, not the total.",
+        });
+      }
     }
     const before = variant === null ? product.stock : variant.stock;
     const who = variant === null ? product.name : `${product.name} — ${variant.name}`;

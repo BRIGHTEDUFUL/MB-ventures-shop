@@ -137,6 +137,42 @@ export function variantLabel(
     .join(" / ");
 }
 
+/**
+ * An order-independent identity for one full set of options.
+ *
+ * "Black + 120 × 60 cm" is the same option whatever order its axes arrive in.
+ * The picker, the product page and the staff editor all match variants on this
+ * signature instead of on a recomputed key, because the *key is an opaque,
+ * stable identifier* — production rows exist whose keys were written in a
+ * different axis order, and past orders and the stock ledger still point at
+ * them. A signature can never go stale: it is built from the options
+ * themselves, trimmed and lower-cased the way `variantKey` slugifies, so
+ * matching stays case- and whitespace-tolerant exactly as key matching was.
+ */
+export function optionsSignature(options: Record<string, string>): string {
+  return JSON.stringify(
+    Object.entries(options)
+      .map(([axis, value]) => [axis.trim().toLowerCase(), value.trim().toLowerCase()] as const)
+      .filter(([axis, value]) => axis !== "" && value !== "")
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
+}
+
+/**
+ * The variant a full set of options names, or `undefined` when the product
+ * does not sell that combination.
+ *
+ * Field-for-field equality on the options — never a key string the caller
+ * recomputed, so any stored key order resolves correctly.
+ */
+export function findVariantByOptions<T extends { options: Record<string, string> }>(
+  variants: readonly T[],
+  options: Record<string, string>,
+): T | undefined {
+  const signature = optionsSignature(options);
+  return variants.find((variant) => optionsSignature(variant.options) === signature);
+}
+
 /** One option axis with its values in the order staff arranged them. */
 export type Axis = {
   name: string;

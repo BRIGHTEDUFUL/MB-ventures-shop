@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, type QueryCtx } from "./_generated/server";
-import { stockStateOf } from "./lib/stock";
+import { applyStockChange, stockStateOf, variantAggregate } from "./lib/stock";
 
 /**
  * Backfill for the available/reserved split (D1 in `docs/INVENTORY-DECISIONS.md`).
@@ -167,6 +167,72 @@ export const backfillReservations = internalMutation({
     report.orders_stamped = stamped;
     report.reserved_added = added;
     return report;
+  },
+});
+
+/**
+ * Re-derive every options product's `stock`/`reserved` from its options.
+ *
+ * The product row carries the *sum* of its options — that invariant lives in
+ * `applyStockChange` — but two writes could still detach it: the old
+ * `saveProduct`, which set the parent's stock straight from the form (now
+ * fixed and made read-only), and anything written outside the single writer.
+ * This reconciles the totals the way every real movement does: a no-op
+ * movement on one option, which refreshes the aggregate in the same
+ * transaction and writes no ledger row, because nothing actually moved.
+ *
+ * - **Idempotent** — a product already in agreement is skipped; re-running
+ *   finds nothing to do.
+ * - **Dry run first** — `{ dry_run: true }` reports what would change without
+ *   writing.
+ *
+ * Run:
+ *   npx convex run migrations:reconcileVariantAggregates '{"dry_run":true}'
+ *   npx convex run migrations:reconcileVariantAggregates '{}'
+ */
+export const reconcileVariantAggregates = internalMutation({
+  args: { dry_run: v.optional(v.boolean()) },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ dry_run: boolean; checked: number; reconciled: string[] }> => {
+    const products = await ctx.db.query("products").collect();
+    const reconciled: string[] = [];
+    let checked = 0;
+
+    for (const product of products) {
+      const options = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
+        .collect();
+      const first = options[0];
+      if (first === undefined) continue; // not an options product
+      checked += 1;
+
+      const aggregate = await variantAggregate(ctx, product.slug);
+      if (product.stock === aggregate.stock && (product.reserved ?? 0) === aggregate.reserved) {
+        continue; // already agrees with itself
+      }
+
+      reconciled.push(
+        `${product.slug}: product said ${product.stock}/${product.reserved ?? 0}, options add up to ${aggregate.stock}/${aggregate.reserved}`,
+      );
+      if (args.dry_run !== true) {
+        await applyStockChange(ctx, {
+          slug: product.slug,
+          variant_key: first.key,
+          // The same on-hand this option already holds: nothing moves and no
+          // movement is written, but the product's totals are refreshed from
+          // every option through the single writer.
+          command: { kind: "set_on_hand", value: first.stock + (first.reserved ?? 0) },
+          movement_type: "adjustment",
+          source: "import",
+          reason: "Option totals reconciled — product total re-derived",
+        });
+      }
+    }
+
+    return { dry_run: args.dry_run === true, checked, reconciled };
   },
 });
 

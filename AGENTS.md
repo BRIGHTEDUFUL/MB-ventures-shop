@@ -468,7 +468,7 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 - hero_image: "hero-workspace" (public/images/hero-workspace.webp — 1376x768)
 - hero_title: "Your workspace. Elevated."
 - Featured hotspots: electric-standing-desk-rgb-160, mottian-ai-smart-keyboard-mouse, custom-macro-mechanical-keyboard
-- Contact: `phone` and `whatsapp` are both `0249564442` — one shop number for
+- Contact: `phone` and `whatsapp` are both `0249654442` — one shop number for
   every `tel:` link and every WhatsApp button. Edit both together in
   `/staff` → Customization → Contact.
 - Payments: no in-app payment — pickup pays at the shop counter, delivery pays cash on

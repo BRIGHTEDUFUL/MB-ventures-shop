@@ -10,6 +10,7 @@ import {
   VARIANT_LIMITS,
   combineAxes,
   deriveAxes,
+  optionsSignature,
   swatchFor,
   variantLabel,
 } from "../../../convex/lib/variants";
@@ -158,9 +159,11 @@ export function VariantEditor({ slug, basePrice }: Props) {
   /**
    * Cross the axes into rows, keeping every row that already exists.
    *
-   * Matching by `key` is what makes this safe to press twice: stock, SKU and
-   * price survive a re-generation untouched, and only genuinely new
-   * combinations arrive at 0.
+   * Matching is by the row's *options*, not by its key: keys are opaque
+   * identifiers that may have been written under a different axis order, and
+   * a key-based match would treat every saved option as a brand-new one —
+   * writing its stock off and starting it again at zero. On a signature match
+   * the whole row survives: key, stock, SKU, price and photo.
    */
   const build = (): void => {
     const combos = combineAxes(axes);
@@ -174,8 +177,10 @@ export function VariantEditor({ slug, basePrice }: Props) {
       );
       return;
     }
-    const live = new Set(combos.map((combo) => combo.key));
-    const dropping = rows.filter((row) => !live.has(row.key) && Number(row.stock) > 0);
+    const live = new Set(combos.map((combo) => optionsSignature(combo.options)));
+    const dropping = rows.filter(
+      (row) => !live.has(optionsSignature(row.options)) && Number(row.stock) > 0,
+    );
     if (
       dropping.length > 0 &&
       !window.confirm(
@@ -187,11 +192,11 @@ export function VariantEditor({ slug, basePrice }: Props) {
       return;
     }
 
-    const byKey = new Map(rows.map((row) => [row.key, row]));
+    const bySignature = new Map(rows.map((row) => [optionsSignature(row.options), row] as const));
     const order = axes.map((axis) => axis.name);
     setRows(
       combos.map((combo) => {
-        const existing = byKey.get(combo.key);
+        const existing = bySignature.get(optionsSignature(combo.options));
         if (existing) return existing;
         return {
           key: combo.key,

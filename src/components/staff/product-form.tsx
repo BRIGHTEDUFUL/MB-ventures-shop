@@ -76,6 +76,10 @@ export function ProductForm({
   onCancel: () => void;
 }) {
   const isNew = product === undefined;
+  // Products that sell in options keep stock per option; the product's own
+  // number is a derived total (see `catalogue.saveProduct`), so the form shows
+  // it read-only rather than offering a second, conflicting way to set it.
+  const sellsInOptions = (product?.variants?.length ?? 0) > 0;
   const [d, setD] = useState<Draft>(() => toDraft(product, master));
   const [busy, setBusy] = useState(false);
   const uploadImage = useImageUpload();
@@ -297,14 +301,27 @@ export function ProductForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <label>
             Available to sell
-            <input
-              required
-              type="number"
-              min="0"
-              step="1"
-              value={d.stock}
-              onChange={(e) => set("stock", e.target.value)}
-            />
+            {sellsInOptions ? (
+              // Options carry the real counts; this number is the derived sum.
+              // Read-only on purpose: a hand-typed total would detach it from
+              // what the options add up to, which is exactly how the storefront
+              // once showed the wrong stock. The Options panel owns the counts.
+              <>
+                <input readOnly aria-readonly value={d.stock} className="opacity-60" />
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Total across your options — change each count in the Options panel below.
+                </span>
+              </>
+            ) : (
+              <input
+                required
+                type="number"
+                min="0"
+                step="1"
+                value={d.stock}
+                onChange={(e) => set("stock", e.target.value)}
+              />
+            )}
           </label>
           <label>
             Reorder point (low-stock warning)
