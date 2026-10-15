@@ -16,6 +16,14 @@ export const Route = createFileRoute("/staff/orders/$id")({
   component: OrderDetail,
 });
 
+/** Strips the trailing " — <variantName>" suffix from a compound product name,
+ *  using lastIndexOf so only the final occurrence is removed. */
+function stripVariantSuffix(name: string, variantName: string): string {
+  const suffix = ` \u2014 ${variantName}`;
+  const i = name.lastIndexOf(suffix);
+  return i !== -1 ? name.slice(0, i) : name;
+}
+
 const statusOptions = (o: Order) =>
   [
     "received",
@@ -196,7 +204,7 @@ function OrderView({
                       {/* Show only the product name, not the compound "Product — Variant" string.
                           For variant orders, item.variant_name carries the option label separately. */}
                       {item.variant_name
-                        ? item.name.replace(` — ${item.variant_name}`, "")
+                        ? stripVariantSuffix(item.name, item.variant_name)
                         : item.name}
                     </Link>
                     {item.variant_name && (
