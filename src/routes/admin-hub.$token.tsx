@@ -54,6 +54,7 @@ function AdminHubPage() {
   useEffect(() => {
     if (!loading && session && role.data === "admin") {
       unlockAdmin();
+      toast.success("Welcome back, Administrator! Opening store hub...");
       void navigate({ to: "/staff" });
     }
   }, [loading, session, role.data, navigate]);
@@ -67,7 +68,7 @@ function AdminHubPage() {
       await signIn("password", { flow: "signIn", email, password });
       unlockAdmin();
       void queryClient.invalidateQueries();
-      toast.success("Administrator session unlocked.");
+      toast.success("Welcome back, Administrator! Opening store hub...");
       void navigate({ to: "/staff" });
     } catch (err) {
       const msg = errorMessage(err, "Email or password is incorrect.");

@@ -15,6 +15,7 @@ import {
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../convex/_generated/api";
 import { money, pageHead } from "@/lib/store";
+import { useSession } from "@/lib/use-session";
 import { EmptyState, Panel, PaymentPill, Stat, StatusPill } from "@/components/staff/bits";
 import { FulfilmentSplit, PipelineChart, TillTape, TopSellers } from "@/components/staff/charts";
 
@@ -57,6 +58,8 @@ type QueueItem = {
 };
 
 function Dashboard() {
+  const { session, profile } = useSession();
+  const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}), enabled: !!session });
   const overview = useQuery({ ...convexQueryOptions(api.stats.overview, {}) });
   const trends = useQuery({ ...convexQueryOptions(api.stats.trends, {}) });
   const unreadMessages = useQuery({ ...convexQueryOptions(api.contact.unreadCount, {}) });
@@ -126,10 +129,17 @@ function Dashboard() {
     });
   }
 
+  const firstName = profile?.name?.trim().split(/\s+/)[0];
+  const greeting = firstName ? `Welcome back, ${firstName}` : "Welcome back";
+  const subtitle =
+    role.data === "admin"
+      ? "Administrator dashboard — overview of store performance, orders, stock and operations."
+      : "Staff dashboard — overview of shop orders, stock alerts and customer queue.";
+
   return (
     <div>
-      <h2 className="page-title">Dashboard</h2>
-      <p className="page-lead">Everything happening in the shop today.</p>
+      <h2 className="page-title">{greeting}</h2>
+      <p className="page-lead">{subtitle}</p>
 
       {/* KPI strip ------------------------------------------------------- */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

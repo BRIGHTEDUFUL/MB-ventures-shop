@@ -68,7 +68,8 @@ function Account() {
     [forgot, setForgot] = useState(false),
     [resetSent, setResetSent] = useState(false),
     [newPassword, setNewPassword] = useState(""),
-    [confirmPassword, setConfirmPassword] = useState("");
+    [confirmPassword, setConfirmPassword] = useState(""),
+    [submitted, setSubmitted] = useState(false);
   const redirectTo = isNextRoute(next) ? next : "";
   const orders = useQuery({ ...convexQueryOptions(api.orders.mine, {}), enabled: !!session });
   const addresses = useQuery({ ...convexQueryOptions(api.addresses.list, {}), enabled: !!session });
@@ -90,8 +91,40 @@ function Account() {
       );
       return;
     }
+    if (submitted) {
+      setSubmitted(false);
+      if (role.data === "staff") {
+        toast.success("Welcome back! Opening staff dashboard...");
+        navigate({ to: "/staff" });
+        return;
+      }
+      if (role.data === "admin" && isAdminUnlocked()) {
+        toast.success("Welcome back, Administrator! Opening store hub...");
+        navigate({ to: "/staff" });
+        return;
+      }
+      if (redirectTo) {
+        toast.success("Welcome back! Redirecting...");
+        navigate({ to: redirectTo });
+        return;
+      }
+      toast.success(
+        signup ? "Account created. Welcome to MB Ventures GH." : "Welcome back to your account!",
+      );
+      return;
+    }
     if (redirectTo) navigate({ to: redirectTo });
-  }, [loading, role.isPending, session, role.data, redirectTo, navigate, signOut]);
+  }, [
+    loading,
+    role.isPending,
+    session,
+    role.data,
+    redirectTo,
+    navigate,
+    signOut,
+    submitted,
+    signup,
+  ]);
 
   /** Wraps a promise with a timeout so a hung Convex connection never silently disables the button. */
   const withTimeout = <T,>(promise: Promise<T>, ms: number, timeoutMsg: string): Promise<T> => {
@@ -116,15 +149,8 @@ function Account() {
         15000,
         "Connection was temporarily interrupted. Please try again.",
       );
-      if (signup) {
-        toast.success("Account created. Welcome to MB Ventures GH.");
-      } else {
-        toast.success("Signed in successfully.");
-      }
+      setSubmitted(true);
       void queryClient.invalidateQueries();
-      if (redirectTo) {
-        navigate({ to: redirectTo });
-      }
     } catch (err) {
       const msg = signup
         ? errorMessage(err, "Your account could not be created. Check your details and try again.")
