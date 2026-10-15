@@ -153,7 +153,15 @@ function Checkout() {
   return (
     <div className="page-content wrap">
       <p className="breadcrumbs">
-        <Link to="/cart">Cart</Link> / Checkout
+        <Link to="/" className="flex min-h-10 items-center px-1.5 -mx-1.5">
+          Home
+        </Link>
+        <span>/</span>
+        <Link to="/cart" className="flex min-h-10 items-center px-1.5 -mx-1.5">
+          Cart
+        </Link>
+        <span>/</span>
+        <span>Checkout</span>
       </p>
       <h1 className="page-title">Checkout</h1>
       {!cart.lines.length ? (
@@ -380,7 +388,7 @@ function Checkout() {
                 Prices are rechecked by the store when your order is placed.
               </p>
               {!canOrder && (
-                <p className="mt-4 rounded-lg bg-secondary p-3 text-xs">
+                <p className="notice mt-4">
                   Orders are temporarily closed. Contact the Abelenkpe shop or check back soon.
                 </p>
               )}

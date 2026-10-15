@@ -20,23 +20,36 @@ import {
   MobileNavigation,
 } from "@/components/store-shell";
 import { Toaster } from "sonner";
+import { Button } from "@/components/ui/button";
 
+/**
+ * Root-level not-found and error screens. They render *inside* the store shell
+ * (header, footer, nav), so they use the standard page scaffolding —
+ * `.page-content` gives them the same top spacing and a 60vh floor as every
+ * other page, and the same Button component every other action uses. A
+ * `min-h-screen` here used to stack a full viewport under the header and push
+ * the footer a whole screen below the message.
+ */
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
+    <div className="page-content wrap">
+      <div className="py-10 text-center">
+        <h1 className="text-7xl font-bold">404</h1>
+        <h2 className="mt-4 text-2xl font-semibold">Page not found</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild>
+            <Link to="/">Go home</Link>
+          </Button>
+          {/* The route-level not-found already offers the catalogue; the root
+              one sends you back into the shop the same way. */}
+          <Button asChild variant="outline">
+            <Link to="/catalogue" search={{ category: "", q: "" }}>
+              Shop the catalogue
+            </Link>
+          </Button>
         </div>
       </div>
     </div>
@@ -48,30 +61,24 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+    <div className="page-content wrap">
+      <div className="py-10 text-center">
+        <h1 className="text-2xl font-semibold">This page didn't load</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/">Go home</Link>
+          </Button>
         </div>
       </div>
     </div>

@@ -240,7 +240,7 @@ function MessagesPage() {
                           variant="secondary"
                           size="sm"
                           asChild
-                          className="h-8 text-xs bg-emerald-600/15 text-emerald-600 hover:bg-emerald-600/25 dark:text-emerald-400"
+                          className="h-8 text-xs bg-success/15 text-success hover:bg-success/25"
                         >
                           <a
                             href={`https://wa.me/${ghanaWaNumber}?text=${encodeURIComponent(`Hi ${msg.name}, thank you for contacting MB Ventures GH regarding: ${msg.subject}`)}`}

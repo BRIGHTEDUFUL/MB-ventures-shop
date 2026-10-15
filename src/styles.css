@@ -699,6 +699,9 @@ label textarea {
 }
 .breadcrumbs {
   display: flex;
+  /* Links carry phone-sized tap targets (min-h-10); the plain spans and the
+     current page would otherwise hug the top of that row and stagger. */
+  align-items: center;
   gap: 10px;
   font-size: 12px;
   color: var(--muted-foreground);
@@ -834,17 +837,6 @@ label textarea {
   text-align: center;
   font-size: 12px;
 }
-.progress-track {
-  height: 4px;
-  background: var(--secondary);
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 10px 0;
-}
-.progress-track div {
-  height: 100%;
-  background: var(--link);
-}
 .summary-row {
   display: flex;
   justify-content: space-between;
@@ -875,59 +867,11 @@ label textarea {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
-.checkout-step {
-  padding: 28px 0;
-  border-bottom: 1px solid var(--border);
-}
-.checkout-step h2 {
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.step-number {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  font-size: 13px;
-}
-.selection-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.selection {
-  border: 1px solid var(--border);
-  padding: 20px;
-  min-height: 100px;
-  text-align: left;
-  background: var(--card);
-  border-radius: 8px;
-}
-.selection.selected {
-  border: 2px solid var(--primary);
-  padding: 19px;
-}
-.selection small {
-  display: block;
-  color: var(--muted-foreground);
-  font-weight: 400;
-  white-space: normal;
-}
 .notice {
   background: var(--secondary);
   padding: 16px;
   border-radius: 8px;
   font-size: 13px;
-}
-.error-text {
-  color: var(--destructive);
-  font-size: 13px;
-  margin-top: 12px;
 }
 .gallery {
   background: var(--secondary);
@@ -970,64 +914,8 @@ label textarea {
   font-weight: 400;
   width: 40%;
 }
-.content-reading {
-  max-width: 760px;
-}
-.content-reading h2 {
-  font-size: 25px;
-  margin: 32px 0 16px;
-}
-.content-reading p {
-  color: var(--muted-foreground);
-  margin: 16px 0;
-}
 .mobile-nav {
   display: none;
-}
-.admin-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 30px 0;
-}
-.admin-table {
-  width: 100%;
-  font-size: 12px;
-  border-collapse: collapse;
-}
-.admin-table th,
-.admin-table td {
-  text-align: left;
-  padding: 16px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.admin-table th {
-  color: var(--muted-foreground);
-}
-.status {
-  display: inline-block;
-  background: var(--secondary);
-  padding: 4px 10px;
-  border-radius: 30px;
-  font-size: 11px;
-}
-.timeline {
-  border-left: 1px solid var(--border);
-  margin-left: 8px;
-  padding-left: 24px;
-}
-.timeline div {
-  margin: 24px 0;
-  position: relative;
-}
-.timeline div::before {
-  content: "";
-  position: absolute;
-  left: -29px;
-  top: 8px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--link);
 }
 @supports not (backdrop-filter: blur(1px)) {
   .glass {
@@ -1435,16 +1323,6 @@ label textarea {
   .solid-panel {
     padding: 20px;
   }
-  .selection-row {
-    gap: 10px;
-  }
-  .selection {
-    padding: 14px;
-    font-size: 12px;
-  }
-  .selection.selected {
-    padding: 13px;
-  }
   .drawer-content {
     padding: 24px 20px;
     border-radius: 16px 0 0 16px;
@@ -1467,12 +1345,6 @@ label textarea {
   }
   .page-product .two-column {
     margin-top: 20px;
-  }
-  .admin-table {
-    min-width: 750px;
-  }
-  .admin-tabs {
-    flex-wrap: wrap;
   }
 }
 @media print {

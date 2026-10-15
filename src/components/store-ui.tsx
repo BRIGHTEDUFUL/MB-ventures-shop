@@ -184,7 +184,7 @@ export function CartLines() {
                 max={availableStock > 0 ? availableStock : 1}
               />
               {overStock && (
-                <p className="mt-1 text-xs text-orange-500" role="alert">
+                <p className="mt-1 text-xs text-offer" role="alert">
                   Only {availableStock} left
                 </p>
               )}
@@ -257,10 +257,15 @@ export function PageError() {
     </div>
   );
 }
-export function PageNotFound() {
+/**
+ * Shared by the product route and the `/$page` catch-all: a not-found inside
+ * the shop chrome, with the one action that always applies. `title` names
+ * what went missing — a product, or a page.
+ */
+export function PageNotFound({ title = "Product not found" }: { title?: string }) {
   return (
     <div className="page-content wrap">
-      <h1 className="page-title">Product not found</h1>
+      <h1 className="page-title">{title}</h1>
       <Button asChild className="mt-6">
         <Link to="/catalogue" search={{ category: "", q: "" }}>
           Shop the catalogue

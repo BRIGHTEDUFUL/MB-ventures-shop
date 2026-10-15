@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/catalogue")({
     ),
   component: Catalogue,
   errorComponent: PageError,
-  notFoundComponent: PageNotFound,
+  notFoundComponent: () => <PageNotFound title="Page not found" />,
 });
 function Catalogue() {
   const {
@@ -122,7 +122,22 @@ function Catalogue() {
   );
   return (
     <div className="page-content wrap">
-      <p className="breadcrumbs">Home / Shop / {search.category || "All products"}</p>
+      {/* One trail shape everywhere: Home and parent pages are links, the page
+          you are on is plain text. The category shows its display name, the
+          same one the h1 uses, not its id. */}
+      <p className="breadcrumbs">
+        <Link to="/" className="flex min-h-10 items-center px-1.5 -mx-1.5">
+          Home
+        </Link>
+        <span>/</span>
+        <span>Shop</span>
+        {search.category && (
+          <>
+            <span>/</span>
+            <span>{categories.find((c) => c.id === search.category)?.name ?? search.category}</span>
+          </>
+        )}
+      </p>
       <h1 className="page-title">{title}</h1>
       <p className="page-lead">
         Desks, chairs and everyday technology for your workspace in Ghana.

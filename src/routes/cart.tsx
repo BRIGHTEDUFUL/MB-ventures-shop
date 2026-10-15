@@ -39,7 +39,7 @@ function CartPage() {
             <p className="my-5 text-xs text-muted-foreground">
               Delivery calculated at checkout. Payments are always confirmed by our shop team.
             </p>
-            <p className="mb-4 rounded-lg border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
+            <p className="notice mb-4">
               Placing an order needs an MB Ventures GH account — it is how we link the order to you
               for tracking. Your cart stays right here while you sign in or register.
             </p>

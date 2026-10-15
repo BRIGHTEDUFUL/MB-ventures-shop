@@ -34,12 +34,12 @@ export const Route = createFileRoute("/product/$slug")({
   },
   component: ProductPage,
   errorComponent: PageError,
-  notFoundComponent: PageNotFound,
+  notFoundComponent: () => <PageNotFound />,
 });
 function ProductPage() {
   const { slug } = Route.useParams(),
     {
-      data: { products, settings },
+      data: { products, settings, categories },
     } = useSuspenseQuery(storeQuery);
   const p = products.find((p) => p.id === slug),
     cart = useCart(),
@@ -105,7 +105,14 @@ function ProductPage() {
   const whatsapp = whatsappHref(settings, `Hello, I would like to ask about ${p.name}.`);
   return (
     <div className="page-content wrap page-product">
+      {/* One trail shape everywhere: Home and parent pages are links, the page
+          you are on is plain text. The category shows its display name rather
+          than its id. */}
       <div className="breadcrumbs">
+        <Link to="/" className="flex min-h-10 items-center px-1.5 -mx-1.5">
+          Home
+        </Link>
+        <span>/</span>
         <Link
           to="/catalogue"
           search={{ category: "", q: "" }}
@@ -119,7 +126,7 @@ function ProductPage() {
           search={{ category: p.category, q: "" }}
           className="flex min-h-10 items-center px-1.5 -mx-1.5"
         >
-          {p.category}
+          {categories.find((c) => c.id === p.category)?.name ?? p.category}
         </Link>
         <span>/</span>
         <span>{p.name}</span>

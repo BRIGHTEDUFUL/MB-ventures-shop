@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
   loader: ({ context }) => context.queryClient.ensureQueryData(storeQuery),
   component: Index,
   errorComponent: PageError,
-  notFoundComponent: PageNotFound,
+  notFoundComponent: () => <PageNotFound />,
 });
 function Index() {
   const {

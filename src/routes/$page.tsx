@@ -26,7 +26,8 @@ export const Route = createFileRoute("/$page")({
       "Information from MB Ventures GH, Abelenkpe, Accra.",
     ),
   component: Content,
-  notFoundComponent: PageNotFound,
+  // The catch-all misses on a *page*, not a product — name it accordingly.
+  notFoundComponent: () => <PageNotFound title="Page not found" />,
 });
 function Content() {
   const { page } = Route.useParams(),

@@ -5,6 +5,55 @@ still open is listed under **Open**.
 
 ---
 
+## UI consistency audit — shared vocabulary, not-found screens, one breadcrumb shape (15 October 2026)
+
+**Status:** Complete — all quality gates green (tsc, lint, 228 unit tests,
+prettier, build, 35 e2e). Mobile audit clean apart from the pre-existing 9px
+bottom-tab labels (deliberate, from the sitewide mobile pass).
+
+### What was found
+
+- **Three breadcrumb shapes.** The product page linked its parents with
+  phone-sized tap targets, checkout had a bare `Cart / Checkout`, and the
+  catalogue printed `Home / Shop / <category-id>` as dead text — "Home" was not
+  a link, and the raw category id showed where the h1 showed the display name.
+- **Two hand-rolled "not found" treatments.** The root screens in `__root.tsx`
+  re-created shadcn's Button classes by hand and used `min-h-screen` *inside*
+  the site shell, stacking a full viewport under the header and pushing the
+  footer a screen below the message. The catch-all `/$page` route also said
+  "Product not found" for a missing *page*.
+- **Two different ad-hoc notice boxes** in cart and checkout where the design
+  system already defines `.notice`.
+- **Off-token colours:** an orange-500 cart over-stock warning and emerald-600
+  staff WhatsApp pills, bypassing `--offer`/`--success` (and their dark-mode
+  mixes).
+- **~80 lines of dead CSS** from the Supabase-era UI (`.selection*`,
+  `.checkout-step`, `.step-number`, `.progress-track`, `.error-text`,
+  `.content-reading`, `.admin-tabs`, `.admin-table`, `.status`, `.timeline`),
+  none referenced anywhere in the repo — a second, unused vocabulary sitting
+  next to the live one.
+
+### What was done
+
+- **One breadcrumb shape everywhere:** Home and parent pages are links with the
+  established `min-h-10` tap targets, the current page is plain text, and both
+  catalogue and product crumbs show the category's display name. `.breadcrumbs`
+  gained `align-items: center` so the 40px links and the plain spans share one
+  line (verified in the production CSS bundle — the Lightning-CSS caveat in the
+  mobile pass applies to `.breadcrumbs a` rules, not to this one).
+- **`__root.tsx` error screens rebuilt on the system:** `.page-content wrap`
+  scaffolding, the real `Button` component (default + outline), "Go home" plus
+  "Shop the catalogue" like the route-level not-found, and `Link` navigation.
+- **`PageNotFound` takes a `title`:** the product route keeps "Product not
+  found"; `/$page` and the catalogue pass "Page not found".
+- **`.notice` adopted** for the cart sign-in note and the checkout
+  orders-closed note; the ad-hoc boxes are gone.
+- **Token colours:** cart over-stock warning → `text-offer`; staff WhatsApp
+  reply pill → `bg-success/15 text-success` (same pattern as StatusPill /
+  PaymentPill, dark mode included).
+
+---
+
 ## E2E coverage for options + checkout receipt race fix (15 October 2026)
 
 **Status:** Complete — all quality gates green.
