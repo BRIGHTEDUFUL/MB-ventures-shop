@@ -1,0 +1,7 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    "Fragile name-splitting in staff order view — item.name.replace(` — ${item.variant_name}`, \"\") will silently truncate any product whose own name contains the literal string ` — `. No current product has this pattern, making it safe for now, but it is a latent correctness hazard. To eliminate it, store product_name as a separate field on order items in orders.place, or accept the constraint that product names must never contain ` — `."
+  ],
+  "reviewDoc": "c:\\Users\\NHANA_K_OTTO\\Desktop\\circle-shop-express-main\\.agents\\tasks\\gap-fixes-review.md"
+}
