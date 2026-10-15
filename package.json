@@ -16,7 +16,8 @@
     "test:e2e": "playwright test e2e/storefront.spec.ts e2e/mobile.spec.ts",
     "test:e2e:live": "node scripts/run-live-e2e.mjs",
     "convex:codegen": "convex codegen",
-    "convex:deploy": "convex deploy"
+    "convex:deploy": "convex deploy --env-file .env.prod.local",
+    "deploy:pack": "node scripts/pack-deploy.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",
