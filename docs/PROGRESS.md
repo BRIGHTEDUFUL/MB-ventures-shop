@@ -5,6 +5,61 @@ still open is listed under **Open**.
 
 ---
 
+## Staff & admin panel sign-in fix + full deployment (15 October 2026)
+
+**Status:** Complete — live on `https://mbventuresgh.com`.
+
+### Problem
+
+After a successful sign-in, staff and admin accounts were not opening the `/staff`
+panel. Two root causes were found and fixed:
+
+1. **SSR hydration mismatch** — `isAdminUnlocked()` reads `sessionStorage`, which
+   is unavailable during server-side rendering. Calling it directly in the render
+   body caused the server to emit "Access restricted" HTML. On hydration the
+   locked screen persisted, even for legitimately unlocked admins. Affected
+   `staff.tsx`, `account.tsx`, and `admin/emails.tsx`.
+
+2. **Admin accounts silently signed out at `/account`** — the `useEffect` in
+   `account.tsx` called `signOut()` when an admin landed on `/account` without
+   the sessionStorage unlock, showing a cryptic error. Admins had no clear path
+   forward.
+
+### Fixes applied
+
+- **`src/routes/staff.tsx`** — replaced direct `isAdminUnlocked()` render call
+  with a lazy `useState(() => typeof window !== "undefined" ? isAdminUnlocked() : false)`
+  initializer + `useEffect` re-check on role change. SSR always gets `false`;
+  client gets the real value on first paint with no flash. Added "Go to
+  administrator portal" button on the locked screen so admins are never stranded.
+
+- **`src/routes/account.tsx`** — same lazy initializer for `adminUnlocked`.
+  Replaced the `signOut()` path for admins arriving at `/account` with a redirect
+  to `/admin-hub/mbvg-admin-2026` with an explanatory toast. Removed `signOut`
+  from the navigation `useEffect` dependency array.
+
+- **`src/routes/admin/emails.tsx`** — applied the same `useState + useEffect`
+  SSR-safe pattern (was calling `isAdminUnlocked()` directly in the render body).
+
+### Deployments
+
+- Convex backend deployed to `prod:necessary-newt-861` with fresh deploy key.
+- All four production role grants re-confirmed (`manager`, `admin`, `attendant`,
+  `staff` @ `mbventuresgh.com`).
+- Frontend deployed to Hostinger via MCP (`hosting_deploy-js-application`):
+  archive built from `git archive HEAD`, uploaded, built on-server in 31.7s.
+- Hostinger Node.js env vars updated to include `WEB3FORMS_ACCESS_KEY`,
+  `EMAIL_REPLY_TO`, and `ADMIN_ALERT_EMAIL`.
+
+### Sign-in URLs
+
+| Role  | URL |
+|-------|-----|
+| Staff | `https://mbventuresgh.com/account` |
+| Admin | `https://mbventuresgh.com/admin-hub/mbvg-admin-2026` |
+
+---
+
 ## Mobile menu drawer & responsive header UX redesign (13 October 2026)
 
 **Status:** Complete & validated across Vitest & Playwright test suites.

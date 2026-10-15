@@ -36,13 +36,9 @@ staff default when set — no `.env*` file sets it today, so the default stands.
 
 Storefront: `https://mbventuresgh.com`.
 
-> **Domain cutover — accounts provisioned (13 Oct 2026), site cutover pending.**
-> The four `@mbventuresgh.com` logins below now **exist on production**
-> (`prod:necessary-newt-861`) — created via `node scripts/create-new-accounts.mjs`
-> and verified end-to-end (signup → role grant → sign-in). The legacy
-> `@mbventuresghana.com` accounts are still active and keep the old domain
-> working until the cutover revokes their `user_roles` rows
-> (`docs/DOMAIN-MIGRATION.md` §6).
+> **Live as of 15 Oct 2026.** All four `@mbventuresgh.com` accounts are active
+> on production with correct roles. The legacy `@mbventuresghana.com` accounts
+> remain until the domain cutover revokes them (`docs/DOMAIN-MIGRATION.md` §6).
 
 | Email                        | Role    | Password                         | Notes                                     |
 | ---------------------------- | ------- | -------------------------------- | ----------------------------------------- |

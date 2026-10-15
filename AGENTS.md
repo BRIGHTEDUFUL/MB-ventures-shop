@@ -345,15 +345,23 @@ Targets `prod:necessary-newt-861`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` �
 
 ### Frontend production deploy
 
-Automatic — GitHub Actions (`.github/workflows/deploy-hostinger.yml`) on every push to `main`.
+Deployed via **Hostinger MCP** (`hosting_deploy-js-application`): pack source
+with `node scripts/pack-deploy.mjs` (creates `deploy.zip` via `git archive HEAD`),
+then upload and trigger a server-side build through the MCP tool. The server runs
+`npm run build` with the environment variables set in the Hostinger control panel,
+publishes `.output`, and restarts the Node.js process.
 
-> **New Hostinger account:** the workflow's `HOSTINGER_*` GitHub secrets **do
-> not exist yet** (verified 13 Oct 2026 — `gh secret list` empty, so the VPS
-> deploy step skips and pushes currently deploy _nothing_). Create them for
-> the new account's VPS (new IP, credentials and
-> `HOSTINGER_PATH=/var/www/mbventuresgh`) before the first deploy of
-> `mbventuresgh.com` — then `workflow_dispatch` the Deploy workflow (or push
-> to `main`) to publish. Steps: `docs/DOMAIN-MIGRATION.md` §5.4.
+GitHub Actions (`.github/workflows/deploy-hostinger.yml`) also deploys on every
+push to `main` — but the `HOSTINGER_*` secrets are not configured in the repo,
+so the SSH deploy step skips. Use the MCP method above for frontend deploys until
+the secrets are added.
+
+> **Manual deploy (Hostinger MCP — recommended until GitHub secrets are set up):**
+> ```powershell
+> node scripts/pack-deploy.mjs   # creates deploy.zip
+> # Then use Hostinger MCP tool: hosting_deploy-js-application
+> # domain: mbventuresgh.com, archivePath: <absolute path to deploy.zip>
+> ```
 
 ### Full production deploy (both layers)
 
