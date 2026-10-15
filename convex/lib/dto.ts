@@ -116,6 +116,10 @@ export type OrderItem = {
   price: number;
   quantity: number;
   image_key: string;
+  /** The canonical variant key (from `variantKey()`). Present only when the order line is for a specific variant. */
+  variant_key?: string;
+  /** Human-readable variant label (e.g. "Black / Large"). Present only when `variant_key` is set. */
+  variant_name?: string;
 };
 
 export type Order = {

@@ -98,7 +98,7 @@ export function Quantity({
 }) {
   const ceiling = max !== undefined ? Math.min(max, 50) : 50;
   return (
-    <div className="quantity">
+    <div className="quantity" role="group" aria-label="Quantity">
       <Button
         variant="ghost"
         aria-label="Decrease quantity"
@@ -183,7 +183,7 @@ export function CartLines() {
                 max={availableStock > 0 ? availableStock : 1}
               />
               {overStock && (
-                <p className="mt-1 text-xs text-amber-600" role="alert">
+                <p className="mt-1 text-xs text-orange-500" role="alert">
                   Only {availableStock} left
                 </p>
               )}

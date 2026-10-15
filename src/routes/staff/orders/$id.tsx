@@ -193,8 +193,15 @@ function OrderView({
                       params={{ slug: item.id }}
                       className="block truncate font-medium hover:underline"
                     >
-                      {item.name}
+                      {/* Show only the product name, not the compound "Product — Variant" string.
+                          For variant orders, item.variant_name carries the option label separately. */}
+                      {item.variant_name
+                        ? item.name.replace(` — ${item.variant_name}`, "")
+                        : item.name}
                     </Link>
+                    {item.variant_name && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{item.variant_name}</p>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {money(item.price, true)} × {item.quantity}
                     </span>

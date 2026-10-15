@@ -53,7 +53,7 @@ export function VariantPicker({
               // A hidden variant is as unbuyable as one that does not exist —
               // orders.place refuses both — so both render disabled, and the
               // label says which of the two the shopper is looking at.
-              const enabled = match !== null && match.visible;
+              const enabled = match !== null && match.visible && match.stock > 0;
               const availability =
                 match === null || !match.visible
                   ? "unavailable"
