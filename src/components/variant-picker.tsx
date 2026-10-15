@@ -39,7 +39,7 @@ export function VariantPicker({
   // row jumps up on products without options, making the page feel inconsistent
   // when navigating between products.
   if (axes.length === 0 || variants.length === 0) {
-    return <div className="mt-7" aria-hidden />;
+    return <div className="mt-7" />;
   }
 
   const axisNames = axes.map((axis) => axis.name);
