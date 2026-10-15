@@ -125,6 +125,23 @@ export const place = mutation({
         });
       }
 
+      // Guard: if this product sells in multiple versions, the order line must
+      // name one of them. A tampered cart (or a future API caller) that skips
+      // the picker would otherwise charge the base price and bypass per-variant
+      // stock checks, which is both commercially wrong and a stock-integrity
+      // violation. We only look for visible variants so a product whose sole
+      // visible variant was just removed degrades gracefully to the base product.
+      if (variant === null) {
+        const hasVisibleVariants = await ctx.db
+          .query("product_variants")
+          .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
+          .filter((q) => q.eq(q.field("visible"), true))
+          .first();
+        if (hasVisibleVariants !== null) {
+          throw new ConvexError({ message: "Please select an option before ordering." });
+        }
+      }
+
       const price = variant?.price ?? product.price;
       const available = variant === null ? product.stock : variant.stock;
       if (available < line.quantity) {
