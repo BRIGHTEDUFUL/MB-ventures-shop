@@ -23,6 +23,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as TrackRouteImport } from './routes/track'
+import { Route as AdminHubTokenRouteImport } from './routes/admin-hub.$token'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
 import { Route as AuthSigninRouteImport } from './routes/auth/signin'
@@ -111,6 +112,11 @@ const StaffRoute = StaffRouteImport.update({
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
   path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminHubTokenRoute = AdminHubTokenRouteImport.update({
+  id: '/admin-hub/$token',
+  path: '/admin-hub/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
+  '/admin-hub/$token': typeof AdminHubTokenRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/track': typeof TrackRoute
+  '/admin-hub/$token': typeof AdminHubTokenRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/staff': typeof StaffRouteWithChildren
   '/track': typeof TrackRoute
+  '/admin-hub/$token': typeof AdminHubTokenRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/track'
+    | '/admin-hub/$token'
     | '/admin/emails'
     | '/auth/signin'
     | '/auth/signup'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/track'
+    | '/admin-hub/$token'
     | '/admin/emails'
     | '/auth/signin'
     | '/auth/signup'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/staff'
     | '/track'
+    | '/admin-hub/$token'
     | '/admin/emails'
     | '/auth/signin'
     | '/auth/signup'
@@ -436,6 +448,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StaffRoute: typeof StaffRouteWithChildren
   TrackRoute: typeof TrackRoute
+  AdminHubTokenRoute: typeof AdminHubTokenRoute
   AdminEmailsRoute: typeof AdminEmailsRoute
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
@@ -542,6 +555,13 @@ declare module '@tanstack/react-router' {
       path: '/track'
       fullPath: '/track'
       preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-hub/$token': {
+      id: '/admin-hub/$token'
+      path: '/admin-hub/$token'
+      fullPath: '/admin-hub/$token'
+      preLoaderRoute: typeof AdminHubTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -729,6 +749,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StaffRoute: StaffRouteWithChildren,
   TrackRoute: TrackRoute,
+  AdminHubTokenRoute: AdminHubTokenRoute,
   AdminEmailsRoute: AdminEmailsRoute,
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,

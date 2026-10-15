@@ -10,11 +10,14 @@
 - **Frontend:** TanStack Start SSR → Hostinger VPS via GitHub Actions
 - **Auth:** Email + password only (Convex Auth). No OAuth.
 - **Email:** Web3Forms. No Resend.
+- **Tests:** 216 Vitest (15 files) + 32 Playwright e2e checks
 
-## The one rule to remember
+## The rules to remember
 
-> All stock changes go through `applyStockChange` in `convex/lib/stock.ts`.
-> Everything else follows from `AGENTS.md`.
+> 1. All stock changes go through `applyStockChange` in `convex/lib/stock.ts`.
+> 2. All staff function access goes through `requirePermission` in `convex/lib/permissions.ts`.
+> 3. Variant key format (`variantKey()` in `convex/lib/variants.ts`) must never change.
+> 4. Everything else follows from `AGENTS.md`.
 
 ## Before you start any task
 
@@ -25,7 +28,12 @@
 ## Before you finish any task
 
 ```sh
-npx tsc --noEmit && npm run lint && npm test && npm run build
+npx tsc --noEmit; npm run lint; npm test; npm run build
 ```
 
 All must pass. Then push — GitHub Actions handles the rest.
+
+## Windows PowerShell
+
+- Use `;` not `&&` to chain commands
+- Escape JSON args: `'{\"email\":\"x@y.com\"}'` not `'{"email":"x@y.com"}'`

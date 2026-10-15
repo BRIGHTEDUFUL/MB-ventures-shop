@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sheet";
 import { useSession } from "@/lib/use-session";
 import { cn } from "@/lib/utils";
+import { lockAdmin } from "@/lib/admin-token";
 
 type NavItem = {
   to: string;
@@ -197,6 +198,7 @@ export function StaffShell({ role, children }: { role: "admin" | "staff"; childr
             variant="outline"
             size="sm"
             onClick={async () => {
+              lockAdmin();
               await signOut();
               void navigate({ to: "/account" });
             }}

@@ -53,7 +53,9 @@ Storefront: `https://mbventuresgh.com`.
 | `e2e.staff@example.com`      | `admin` | `E2eStaff!2026`                  | E2E test admin account                    |
 | `smoke-prod@example.com`     | `admin` | unknown                          |                                           |
 
-Sign in at `/account` (or `/login`, `/auth/signin`). When signed in with staff or admin privileges, the account page shows a direct **Store staff hub** button linking to `/staff` (and `/admin` automatically redirects to `/staff`).
+Staff sign in at `/account` (or via the footer **Staff access** link). When signed in with staff privileges, `/account` shows the **Open the store hub** card linking to `/staff`.
+
+**Admin authentication is strictly gated**: admin accounts cannot sign in via `/account` or the footer staff link. Admins must authenticate through the private administrator URL: `/admin-hub/mbvg-admin-2026` (which unlocks the session in `sessionStorage` and routes to `/staff`). Direct unauthorized attempts on `/staff` or public login display an access restriction notice.
 
 To provision additional staff/admin accounts:
 

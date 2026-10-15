@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, QueryState, Stat } from "@/components/staff/bits";
 import { StaffShell } from "@/components/staff/shell";
+import { isAdminUnlocked } from "@/lib/admin-token";
 
 /**
  * Email operations console.
@@ -63,25 +64,14 @@ function EmailsPage() {
   if (loading || (session && role.isPending)) {
     return <div className="page-content wrap">Checking access…</div>;
   }
-  if (!session) {
-    return (
-      <Gate title="Emails" message="Sign in with your admin account to review the delivery log.">
-        <Button asChild>
-          <Link to="/account" search={{ next: "/admin/emails" }}>
-            Sign in
-          </Link>
-        </Button>
-      </Gate>
-    );
-  }
-  if (role.data !== "admin") {
+  if (!session || role.data !== "admin" || !isAdminUnlocked()) {
     return (
       <Gate
         title="Emails"
-        message="This console is limited to store admins. Ask the store owner to grant access."
+        message="This console is limited to authorized store administrators using their private entry URL."
       >
         <Button asChild variant="outline">
-          <Link to="/staff">Back to the store hub</Link>
+          <Link to="/">Back to store</Link>
         </Button>
       </Gate>
     );

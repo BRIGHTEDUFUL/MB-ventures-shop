@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { pageHead } from "@/lib/store";
 import { AuthFrame } from "@/components/auth-frame";
 import { StaffShell } from "@/components/staff/shell";
+import { isAdminUnlocked, lockAdmin } from "@/lib/admin-token";
 
 export const Route = createFileRoute("/staff")({
   head: () =>
@@ -21,6 +22,11 @@ export const Route = createFileRoute("/staff")({
 /**
  * Access gate for the whole hub: sign-in first, then a `user_roles` check
  * (server-side `requireStaff` / `requireAdmin` remain the real boundary).
+ *
+ * Staff accounts proceed normally after signing in.
+ * Admin accounts additionally require the sessionStorage unlock set by
+ * /admin-hub/<token> — without it they see a locked screen with no hint.
+ *
  * Children only mount once the shell renders, so their queries never run
  * for visitors without access.
  */
@@ -93,7 +99,7 @@ function StaffLayout() {
               window.location.href = "/account?next=/staff";
             }}
           >
-            Sign out & switch account
+            Sign out &amp; switch account
           </Button>
           <Button asChild variant="outline">
             <Link to="/account">Go to account</Link>
@@ -106,6 +112,34 @@ function StaffLayout() {
       </AuthFrame>
     );
   }
+
+  // Admin accounts require the sessionStorage token set by /admin-hub/<token>.
+  // Staff accounts skip this check entirely — their flow is unchanged.
+  if (role.data === "admin" && !isAdminUnlocked()) {
+    return (
+      <AuthFrame
+        title="Access restricted"
+        lead="Admin authentication is not available from this link. Please use your private administrator access URL."
+      >
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              lockAdmin();
+              await signOut();
+              window.location.href = "/";
+            }}
+          >
+            Sign out
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/account">Go to account</Link>
+          </Button>
+        </div>
+      </AuthFrame>
+    );
+  }
+
   return (
     <StaffShell role={role.data}>
       <Outlet />
