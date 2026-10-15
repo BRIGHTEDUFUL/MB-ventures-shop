@@ -5,6 +5,55 @@ still open is listed under **Open**.
 
 ---
 
+## Hostinger account reconnection + cutover docs reconciliation (15 October 2026)
+
+**Status:** Complete — MCP reauthenticated to the new account; docs match reality.
+
+### What was found
+
+- The connected Hostinger MCP API token belonged to the **old** account (which
+  owns `mbventuresghana.com`, not `mbventuresgh.com`) — every `hosting_*` MCP
+  call for the live domain failed with "No website found" / DNS 403.
+- The domain cutover had in fact **already completed** on 15 Oct 2026: the new
+  Hostinger account (client `1023530876`, user `u963034723`) hosts
+  `mbventuresgh.com` as a managed Node.js site with `completed` builds, and the
+  live site returns 200 with correct canonicals. The repo docs still described
+  the cutover as pending.
+- Convex production (`prod:necessary-newt-861`) verified healthy: deploy key
+  authenticates, `store:get` returns live catalogue data, `SITE_URL` already
+  flipped to `https://mbventuresgh.com` (the runbook's §6 pending command —
+  already executed).
+- GitHub Actions still has **zero secrets** (`gh secret list` empty) — CI
+  deploys skip; frontend deploys remain manual via Hostinger MCP.
+
+### What was done
+
+1. Signed into hPanel (new account) via the in-app browser; confirmed the
+   account owns exactly one domain: `mbventuresgh.com`.
+2. Generated an hPanel API token (Account → API, 1-month expiry) and verified
+   it directly against `developers.hostinger.com/api/hosting/v1/websites` —
+   returns the `mbventuresgh.com` nodejs site.
+3. Replaced `HOSTINGER_API_TOKEN` in `~/.config/opencode/opencode.jsonc`
+   (global opencode MCP config — not in the repo) with the new-account token.
+   Requires an OpenCode restart for the MCP server to pick it up; until then
+   the MCP tools still target the old account.
+4. Updated stale docs to the verified reality:
+   - `AGENTS.md` §1 cutover banner → COMPLETE with account facts; §2 CI/CD
+     row; §5 frontend-deploy section (new account details, build polling);
+     §9 legacy-account note.
+   - `docs/DOMAIN-MIGRATION.md` status header → 🟢 CUTOVER COMPLETE with
+     verification evidence; intro paragraph; §4 current-vs-target; §5 marked
+     executed via managed hosting; §6 `SITE_URL` flip marked done.
+
+### Open
+
+- **GitHub Actions secrets** still missing (`HOSTINGER_*`, optional
+  `CONVEX_DEPLOY_KEY`) — CI deploys stay skipped until added (§5.4).
+- **Hostinger MCP restart** needed in OpenCode to bind the new token.
+- **Old-domain sunset** (§7: 301 redirect, Search Console) not started.
+
+---
+
 ## Staff & admin panel sign-in fix + full deployment (15 October 2026)
 
 **Status:** Complete — live on `https://mbventuresgh.com`.

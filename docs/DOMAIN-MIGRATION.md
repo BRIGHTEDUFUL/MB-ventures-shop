@@ -1,22 +1,28 @@
 # Domain migration — mbventuresghana.com → mbventuresgh.com
 
-**Status:** 🟡 Pushed to `origin/main` (13 Oct 2026) — CI green, **no deploy**
-(Actions has no secrets; both deploy steps skipped); new-Hostinger §5–§9 pending
-**Target:** `https://mbventuresgh.com` on a **new Hostinger account**
+**Status:** 🟢 **CUTOVER COMPLETE (verified 15 Oct 2026)** — production serves
+`https://mbventuresgh.com` from the new Hostinger account (client `1023530876`,
+hosting user `u963034723`, Node.js site). Verified: hPanel domain portfolio
+shows `mbventuresgh.com` as the only domain; `hosting_websites_list` returns
+the site (`is_enabled: true`); build history shows `completed` builds on
+15 Oct 2026 (latest 15:37 UTC, `deploy.zip`, nitro, Node 20, `.output`);
+`https://mbventuresgh.com` returns 200 with the correct title and
+`mbventuresgh.com` canonical/og URLs. **GitHub Actions still has no secrets**
+(`gh secret list` empty), so CI deploys remain skipped — frontend deploys run
+via Hostinger MCP (`hosting_deploy-js-application`); the MCP token for the new
+account is configured in `~/.config/opencode/opencode.jsonc` (never commit it).
+**Target:** `https://mbventuresgh.com` on a **new Hostinger account** — ACHIEVED
 **Backend:** unchanged — Convex `prod:necessary-newt-861` / `dev:stoic-elephant-714`
 
 This runbook is the single source of truth for the domain move. The repository
 targets the new domain end-to-end and the four `@mbventuresgh.com` staff/admin
-accounts are already live on the backend (§6). On 13 Oct 2026 `main` was pushed
-to `origin` (user-directed): CI passed, but **no deploy happened** — the
-repository has zero GitHub Actions secrets (`gh secret list` empty), so the
-Convex backend step and the VPS SSH step both skipped, verified from the run
-annotations ("HOSTINGER_HOST secret is not configured - skipping the VPS
-deploy step"). Adding the six `HOSTINGER_*` secrets for the new VPS (§5.4) is
-therefore the only missing input: once they exist, a `workflow_dispatch` of
-the Deploy workflow — or any push to `main` — publishes the current version to
-`mbventuresgh.com`. The remaining cutover steps are §5, §6 (pending item),
-§7–§9.
+accounts are live on the backend (§6). On 13 Oct 2026 `main` was pushed to
+`origin` (user-directed): CI passed but deployed nothing — the repository has
+zero GitHub Actions secrets (`gh secret list` empty), so the Convex backend
+step and the VPS SSH step both skipped. The cutover itself was then completed
+out-of-band (15 Oct 2026) via Hostinger managed Node.js hosting on the new
+account — details in the status header. §6's `SITE_URL` flip was also executed
+(verified: `npx convex env get SITE_URL` → `https://mbventuresgh.com`).
 
 ---
 
@@ -84,16 +90,21 @@ Targeted hand-edits on top of the swap:
 
 - **Repo (this working tree):** fully targets `mbventuresgh.com`. A production
   build served locally emits `https://mbventuresgh.com/...` canonical/og URLs.
-- **Live production (until cutover):** still `mbventuresghana.com` on the old
-  Hostinger VPS, still served by the same Convex backend. Both staff-login
-  sets work on that backend — the legacy `@mbventuresghana.com` accounts and
-  the new `@mbventuresgh.com` accounts (§6). Everything keeps working — the
-  repo change is inert until a deploy happens.
-- **Risk window:** pushing to `main` today would deploy the _new domain
-  strings_ to the _old_ server (wrong canonicals on the old site). Either
-  complete §5–§6 first, or accept a short-lived inconsistency.
+- **Live production (verified 15 Oct 2026):** `mbventuresgh.com` serves from the
+  new Hostinger account — managed Node.js hosting (client `1023530876`, user
+  `u963034723`), not the manual VPS layout §5 originally planned. The same
+  Convex backend (`prod:necessary-newt-861`) serves it. The `@mbventuresgh.com`
+  staff logins are the primary accounts; legacy `@mbventuresghana.com` accounts
+  remain on the backend but are obsolete.
+- **Risk window:** closed — repo strings and live domain now match.
 
-## 5. Cutover runbook (deploy-time — NOT executed)
+## 5. Cutover runbook (deploy-time — EXECUTED via managed Node.js hosting)
+
+> **Note:** the actual cutover used Hostinger's managed Node.js hosting
+> (`hosting_deploy-js-application` builds from `deploy.zip`) instead of the
+> manual VPS + nginx + PM2 steps below. The steps are kept for reference; only
+> §5.4 (GitHub secrets) remains unexecuted — CI still has no secrets and
+> deploys are done via the Hostinger MCP.
 
 ### 5.1 New Hostinger account
 
@@ -197,15 +208,15 @@ Provisioned with `node scripts/create-new-accounts.mjs` (safe to re-run). The
 legacy `@mbventuresghana.com` accounts still work — revoke their `user_roles`
 rows from `/staff` → Team once the new logins are confirmed on the new domain.
 
-### ⏳ PENDING at cutover — email/link origin (one command)
+### ✅ DONE at cutover — email/link origin (verified 15 Oct 2026)
 
 ```powershell
 npx convex env set SITE_URL https://mbventuresgh.com --env-file .env.prod.local
 ```
 
-Deliberately **not** run yet: `SITE_URL` builds the links inside live emails
-(order confirmations, password resets), and the old domain still serves the
-store — flipping it early would ship links to a site that does not exist yet.
+**Executed.** Verified: `npx convex env get SITE_URL` returns
+`https://mbventuresgh.com`. Live emails now build links against the new
+domain.
 
 Everything else on the backend is already correct and needs no change:
 `EMAIL_REPLY_TO` / `ADMIN_ALERT_EMAIL` stay `info@mbventuresghana.com`,

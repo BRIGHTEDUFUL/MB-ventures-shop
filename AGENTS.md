@@ -16,27 +16,27 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 - **Ordering is LIVE.** 11 real products are in the database with real stock (10 units each).
 - **Demo products** (10) are hidden (`visible: false, status: "draft"`) but preserved — never delete them.
 - **Currency:** Ghana cedis (GH₵).
-- **Domain cutover PENDING (12 Oct 2026).** The repo now targets
-  `mbventuresgh.com` on a new Hostinger account, but production still serves
-  `mbventuresghana.com` from the old server until the cutover runbook in
-  `docs/DOMAIN-MIGRATION.md` is executed. The site URL changed; the contact /
-  reply-to address `info@mbventuresghana.com` did not. Do NOT push to `main`
-  before cutover unless a deploy to the old server is intended.
+- **Domain cutover COMPLETE (verified 15 Oct 2026).** Production serves
+  `https://mbventuresgh.com` from the **new Hostinger account** (client
+  `1023530876`, hosting user `u963034723`, Node.js site, latest build
+  `completed` 15 Oct 2026). The old `mbventuresghana.com` account is retired
+  for hosting; the contact / reply-to address `info@mbventuresghana.com` is
+  intentionally unchanged. See `docs/DOMAIN-MIGRATION.md` for the record.
 
 ---
 
 ## 2. Tech stack
 
-| Layer       | Choice                                                               |
-| ----------- | -------------------------------------------------------------------- |
-| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                  |
-| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono  |
-| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions |
-| Auth        | Convex Auth · email + password only · no OAuth · no email verify     |
-| Client data | TanStack Query via `@convex-dev/react-query`                         |
-| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set              |
-| Tests       | Vitest (216 tests, 15 files) + Playwright (32 e2e checks)            |
-| CI/CD       | GitHub Actions → Hostinger VPS (Node/PM2)                            |
+| Layer       | Choice                                                                              |
+| ----------- | ----------------------------------------------------------------------------------- |
+| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                                 |
+| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono                 |
+| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions                |
+| Auth        | Convex Auth · email + password only · no OAuth · no email verify                    |
+| Client data | TanStack Query via `@convex-dev/react-query`                                        |
+| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                             |
+| Tests       | Vitest (216 tests, 15 files) + Playwright (32 e2e checks)                           |
+| CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips) |
 
 ---
 
@@ -345,11 +345,18 @@ Targets `prod:necessary-newt-861`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` �
 
 ### Frontend production deploy
 
+Deploys target the **new Hostinger account** (verified 15 Oct 2026): client
+`1023530876`, hosting user `u963034723`, Node.js site `mbventuresgh.com`
+(root `/home/u963034723/domains/mbventuresgh.com/public_html`, nitro app,
+Node 20, output `.output`). The Hostinger MCP token for this account lives in
+`~/.config/opencode/opencode.jsonc` (never commit it).
+
 Deployed via **Hostinger MCP** (`hosting_deploy-js-application`): pack source
 with `node scripts/pack-deploy.mjs` (creates `deploy.zip` via `git archive HEAD`),
 then upload and trigger a server-side build through the MCP tool. The server runs
 `npm run build` with the environment variables set in the Hostinger control panel,
-publishes `.output`, and restarts the Node.js process.
+publishes `.output`, and restarts the Node.js process. Poll
+`hosting_list-js-deployments` until the build state is `completed`.
 
 GitHub Actions (`.github/workflows/deploy-hostinger.yml`) also deploys on every
 push to `main` — but the `HOSTINGER_*` secrets are not configured in the repo,
@@ -481,9 +488,9 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 
 > These four accounts are **live on production** (provisioned 13 Oct 2026 via
 > `node scripts/create-new-accounts.mjs`, each verified signup → grant →
-> sign-in). The legacy `@mbventuresghana.com` accounts remain active until the
-> domain cutover revokes them — see `docs/DOMAIN-MIGRATION.md` §6 and
-> `docs/TEST-ACCOUNTS.md`.
+> sign-in). Cutover is complete (15 Oct 2026), so these `@mbventuresgh.com`
+> logins are the primary accounts; the legacy `@mbventuresghana.com` accounts
+> are obsolete — see `docs/DOMAIN-MIGRATION.md` §6 and `docs/TEST-ACCOUNTS.md`.
 
 Full credentials and recovery steps: `docs/TEST-ACCOUNTS.md` and `docs/PRODUCTION-CREDENTIALS.md`.
 Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.
