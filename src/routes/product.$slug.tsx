@@ -48,35 +48,42 @@ function ProductPage() {
     [zone, setZone] = useState("central"),
     [gallery, setGallery] = useState(0),
     [zoom, setZoom] = useState(false),
-    // Axis name → chosen value. Empty until the product's options seed it.
+    // Axis name → chosen value. Seeded from the first visible variant on load.
     [chosen, setChosen] = useState<Record<string, string>>({});
+
+  // Hoist axes and variants above the early return so hooks can reference them
+  // safely. When p is null these default to empty arrays — no runtime error.
+  const axes = p?.axes ?? [],
+    variants = p?.variants ?? [];
+
   // Reset axis selection and quantity when navigating between products.
   // TanStack Router reuses the same component instance for different slugs, so
   // without an explicit reset the previous product's choices survive in state.
   // Keyed on slug: fires once per product, not on every re-render.
+  // Seeds chosen from the first visible variant so the picker is never blank.
   useEffect(() => {
-    setChosen({});
+    const firstVisible = variants.find((v) => v.visible);
+    setChosen(firstVisible?.options ?? {});
     setQuantity(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
   if (!p) return <PageNotFound />;
-  const axes = p.axes ?? [],
-    variants = p.variants ?? [],
-    // The route component is reused when the slug changes, so a selection made
-    // on another product can arrive here. Whenever it does not describe this
-    // product's axes we fall back to its first buyable option, which is what
-    // makes the page usable the moment it opens.
-    selectedOptions =
-      axes.length > 0 && axes.every((axis) => axis.values.includes(chosen[axis.name] ?? ""))
-        ? chosen
-        : (variants.find((v) => v.visible)?.options ?? variants[0]?.options ?? {}),
-    selectedVariant = variants.find(
-      (v) =>
-        v.key ===
-        variantKey(
-          selectedOptions,
-          axes.map((axis) => axis.name),
-        ),
-    );
+
+  // Merge chosen over first-variant defaults so any axis the user has
+  // explicitly clicked is respected, and axes not yet touched fall back to the
+  // first visible variant's value. Fully determined on first render.
+  const defaultOptions = variants.find((v) => v.visible)?.options ?? variants[0]?.options ?? {};
+  const selectedOptions = axes.length > 0 ? { ...defaultOptions, ...chosen } : defaultOptions;
+
+  const selectedVariant = variants.find(
+    (v) =>
+      v.key ===
+      variantKey(
+        selectedOptions,
+        axes.map((axis) => axis.name),
+      ),
+  );
   // With options on offer the *option* decides price, stock and SKU. A product
   // without them keeps exactly the numbers this page has always shown.
   const price = selectedVariant?.price ?? p.price,
@@ -193,9 +200,7 @@ function ProductPage() {
           <VariantPicker
             product={p}
             selected={selectedOptions}
-            // Merge onto the resolved options rather than the raw state, so an
-            // axis that was never touched stays answered after a click.
-            onSelect={(axis, value) => setChosen({ ...selectedOptions, [axis]: value })}
+            onSelect={(axis, value) => setChosen((prev) => ({ ...prev, [axis]: value }))}
           />
           <div className="mt-7 flex gap-4">
             <Quantity value={effectiveQty} onChange={setQuantity} max={stock > 0 ? stock : 1} />
