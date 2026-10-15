@@ -35,7 +35,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Auth        | Convex Auth · email + password only · no OAuth · no email verify                    |
 | Client data | TanStack Query via `@convex-dev/react-query`                                        |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                             |
-| Tests       | Vitest (216 tests, 15 files) + Playwright (32 e2e checks)                           |
+| Tests       | Vitest (228 tests, 15 files) + Playwright (35 read-only + 10 live checks)           |
 | CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips) |
 
 ---
@@ -188,9 +188,10 @@ scripts/
   pack-deploy.mjs              Build artifact packaging
 
 e2e/
-  storefront.spec.ts      Head, outline, SEO, sitemap, robots checks
+  storefront.spec.ts      Head, outline, SEO, sitemap, robots, badges, contact checks
   mobile.spec.ts          320/360/390/414 overflow matrix, tap targets, form fields
-  purchase.spec.ts        Full purchase flow + staff operations e2e
+  purchase.spec.ts        Full purchase flow + staff operations e2e (live-gated)
+  variants.spec.ts        Product options journey: editor, picker, order, inventory (live-gated)
   helpers.ts              Shared Playwright helpers
 
 .github/workflows/
@@ -416,16 +417,16 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 216/216 across 15 test files
+npm test                  # 228/228 across 15 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
-npm run test:e2e          # 32/32 Playwright checks
+npm run test:e2e          # 35/35 Playwright checks (read-only)
 ```
 
-Optional (places a real order in dev — opt-in only):
+Optional (writes a real order + option fixture to dev — opt-in only, self-cleaning):
 
 ```sh
-npm run test:e2e:live
+npm run test:e2e:live     # 10/10 live journey checks (purchase + options)
 ```
 
 Optional (needs a dev server or a live URL; run it whenever layout, CSS or

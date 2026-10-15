@@ -5,6 +5,47 @@ still open is listed under **Open**.
 
 ---
 
+## E2E coverage for options + checkout receipt race fix (15 October 2026)
+
+**Status:** Complete — all quality gates green.
+
+### What was found
+
+- The live runner (`scripts/run-live-e2e.mjs`) hardcoded `e2e/purchase.spec.ts`,
+  so any new live spec was silently skipped.
+- **Checkout race:** after a successful `orders.place`, `cart.clear()` fired the
+  empty-cart effect on `/checkout`, which raced the jump to `/confirmation`
+  with a jump to `/cart`. The order landed, but the shopper saw an empty cart
+  instead of their receipt reference (reproduced in a live run).
+- The e2e suite had no coverage for the product-options feature (picker chips,
+  per-variant price/stock, staff options editor, per-option inventory).
+
+### What was done
+
+- `src/routes/checkout.tsx` — `placed` state: once an order lands, the
+  empty-cart effect steps aside so the receipt always wins.
+- `e2e/variants.spec.ts` (new, live-gated `E2E_LIVE=1`) — full options journey
+  on dev: staff gives the hidden `gaming-desk` demo product Black/White (editor
+  create path, **no write-off confirm** on build/rebuild, aggregate 3+2=5
+  read-only), shopper buys `Black / XL` on the two-axis mouse-pad fixture
+  (White/XL correctly disabled, GH₵ 250 variant price through cart, review and
+  receipt), staff sees the option on the order and per-option inventory (1 on
+  hand, total 9), cancel hands the unit back (2 on hand), and a sweep proves no
+  run order is left open.
+- `e2e/storefront.spec.ts` — always-on checks: every catalogue card badge is in
+  the closed wording/tone set, the footer's tel: link dials exactly the number
+  it displays, and (when the dev options fixture exists) a chip's disabled
+  state must mirror its availability label.
+- `scripts/run-live-e2e.mjs` — runs both live specs.
+
+### Verified
+
+`npx tsc --noEmit` 0 errors · `npm run lint` 0 errors · `npm test` 228/228 ·
+`npx prettier --check .` clean · `npm run build` ok · `npm run test:e2e`
+35/35 · `npm run test:e2e:live` 10/10 (purchase 4 + options 6, dev deployment).
+
+---
+
 ## Hostinger account reconnection + cutover docs reconciliation (15 October 2026)
 
 **Status:** Complete — MCP reauthenticated to the new account; docs match reality.

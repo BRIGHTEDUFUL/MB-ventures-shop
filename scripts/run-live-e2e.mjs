@@ -1,5 +1,5 @@
 /**
- * Cross-platform runner for the live purchase journey.
+ * Cross-platform runner for the live journeys (purchase + product options).
  *
  * `E2E_LIVE=1` has no portable spelling in an npm script (PowerShell, cmd and
  * bash each disagree), and Playwright reads that flag in its worker process,
@@ -17,7 +17,7 @@ const cli = require.resolve("@playwright/test/cli");
 
 const child = spawn(
   process.execPath,
-  [cli, "test", "e2e/purchase.spec.ts", ...process.argv.slice(2)],
+  [cli, "test", "e2e/purchase.spec.ts", "e2e/variants.spec.ts", ...process.argv.slice(2)],
   { stdio: "inherit", env: { ...process.env, E2E_LIVE: "1" } },
 );
 

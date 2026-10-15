@@ -63,6 +63,8 @@ function Checkout() {
     [step, setStep] = useState(() => (draft["step"] === 2 ? 2 : 1)),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
+    // True from the moment an order lands — see the empty-cart effect below.
+    [placed, setPlaced] = useState(false),
     [form, setForm] = useState<CheckoutForm>(() => {
       const fields = { ...draft };
       delete fields["step"];
@@ -93,7 +95,12 @@ function Checkout() {
   // /cart, which shows the empty state and the way back to the catalogue. The
   // one-second grace keeps a momentary post-sign-up auth flip from bouncing
   // the shopper: a genuine sign-out still redirects, just a beat later.
+  // `placed` steps out of the way once an order is through: clearing the cart
+  // makes it empty, and this effect would otherwise race the jump to the
+  // receipt with a jump to /cart — the order lands, but the shopper never
+  // sees the reference that proves it.
   useEffect(() => {
+    if (placed) return;
     if (cart.ready && cart.lines.length === 0) {
       navigate({ to: "/cart" });
       return;
@@ -101,7 +108,7 @@ function Checkout() {
     if (loading || session) return;
     const id = setTimeout(() => navigate({ to: "/account", search: { next: "/checkout" } }), 1_000);
     return () => clearTimeout(id);
-  }, [cart.ready, cart.lines.length, loading, session, navigate]);
+  }, [placed, cart.ready, cart.lines.length, loading, session, navigate]);
 
   if (loading || !data) return <div className="page-content wrap">Loading checkout…</div>;
   if (!session) return <div className="page-content wrap">Taking you to sign in…</div>;
@@ -132,6 +139,9 @@ function Checkout() {
       });
       sessionStorage.setItem("mb-receipt", JSON.stringify(order));
       sessionStorage.removeItem(DRAFT_KEY);
+      // Flag before clearing: the emptied cart must not bounce the shopper to
+      // /cart on the very render that should carry them to the receipt.
+      setPlaced(true);
       cart.clear();
       navigate({ to: "/confirmation", search: { ref: order.reference } });
     } catch (e) {
