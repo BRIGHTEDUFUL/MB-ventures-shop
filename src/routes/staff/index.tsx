@@ -221,6 +221,14 @@ function Dashboard() {
       </Panel>
 
       {/* Charts ---------------------------------------------------------- */}
+      {/* One alert for the whole section: each chart reads the same query,
+          and on failure four panels claiming to be "counting" forever would
+          be the lie this dashboard exists to avoid. */}
+      {trends.isError && (
+        <p role="alert" className="mt-8 text-sm">
+          This week's numbers could not load. Reload the page to try again.
+        </p>
+      )}
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel
           className="lg:col-span-2"
@@ -229,7 +237,7 @@ function Dashboard() {
         >
           {t ? (
             <TillTape daily={t.daily} />
-          ) : (
+          ) : trends.isError ? null : (
             <p className="text-sm text-muted-foreground">Counting the till…</p>
           )}
         </Panel>
@@ -237,7 +245,7 @@ function Dashboard() {
         <Panel title="Order pipeline" description="Where every order currently sits.">
           {t ? (
             <PipelineChart statuses={t.statuses} />
-          ) : (
+          ) : trends.isError ? null : (
             <p className="text-sm text-muted-foreground">Counting orders…</p>
           )}
         </Panel>
@@ -245,7 +253,7 @@ function Dashboard() {
         <Panel title="Pickup or delivery" description="How customers are choosing to collect.">
           {t ? (
             <FulfilmentSplit fulfilment={t.fulfilment} />
-          ) : (
+          ) : trends.isError ? null : (
             <p className="text-sm text-muted-foreground">Counting orders…</p>
           )}
         </Panel>
@@ -257,7 +265,7 @@ function Dashboard() {
         >
           {t ? (
             <TopSellers products={t.top_products} />
-          ) : (
+          ) : trends.isError ? null : (
             <p className="text-sm text-muted-foreground">Counting sales…</p>
           )}
         </Panel>

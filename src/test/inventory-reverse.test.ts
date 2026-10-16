@@ -121,6 +121,42 @@ describe("inventory.reverse — corrections without rewriting history", () => {
     expect((await readDesk(env))?.stock).toBe(50);
   });
 
+  it("refuses a product-level reversal once the product sells in options", async () => {
+    const env = await setup();
+    // A product-level row, written back when the desk had no options at all…
+    await env.staff.mutation(api.inventory.adjust, {
+      product_id: "standing-desk",
+      delta: -5,
+      reason: "Counted wrong",
+    });
+    const [legacy] = await movements(env);
+    expect(legacy?.variant_key ?? null).toBeNull();
+
+    // …and then the shop gave it options, which re-derived stock from them.
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        { key: "black", name: "Black", options: { Colour: "Black" }, stock: 10, visible: true },
+      ],
+    });
+
+    const error = await capture(
+      env.staff.mutation(api.inventory.reverse, { movement_id: legacy!._id }),
+    );
+    expect(messageOf(error)).toMatch(/sells in options/);
+
+    // No reversal row, and the options' count is exactly where it was.
+    expect((await movements(env)).some((row) => row.movement_type === "reversal")).toBe(false);
+    const variant = await env.t.run((ctx) =>
+      ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", "standing-desk"))
+        .unique(),
+    );
+    expect(variant?.stock).toBe(10);
+    expect((await readDesk(env))?.stock).toBe(10);
+  });
+
   it("refuses to reverse an order reservation — cancel the order instead", async () => {
     const env = await setup();
     const orderId = await env.t.run(async (ctx) => {

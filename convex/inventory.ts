@@ -43,6 +43,9 @@ export const adjust = mutation({
     if (reason.length > LIMITS.reason) {
       throw new ConvexError({ message: `Keep the reason under ${LIMITS.reason} characters.` });
     }
+    if (args.note !== undefined && args.note.trim().length > 200) {
+      throw new ConvexError({ message: "Keep the note under 200 characters." });
+    }
     const source: MovementSource = "attendant";
     const movement_type: MovementType = args.movement_type ?? "adjustment";
 
@@ -243,6 +246,24 @@ export const reverse = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", original.product_slug))
       .first();
     if (product === null) throw new ConvexError({ message: "Product not found." });
+
+    // A reversal must land where the original landed. A product-level row
+    // (no option recorded) written before this product sold in options would,
+    // undone today, write a product-level total and detach it from what the
+    // options add up to — the exact drift `adjust` and `count` refuse. Such a
+    // row predates the options; it cannot be replayed without corrupting them.
+    if (!original.variant_key) {
+      const hasOptions = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
+        .first();
+      if (hasOptions !== null) {
+        throw new ConvexError({
+          message:
+            "This product sells in options — that product-level movement predates them, so undoing it would corrupt the option counts. Adjust the option itself instead.",
+        });
+      }
+    }
 
     const result = await applyStockChange(ctx, {
       slug: original.product_slug,

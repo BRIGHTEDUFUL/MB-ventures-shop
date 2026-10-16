@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useConvexMutation } from "@convex-dev/react-query";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../convex/_generated/api";
-import { pageHead } from "@/lib/store";
+import { errorMessage, pageHead } from "@/lib/store";
 import { EmptyState, QueryState } from "@/components/staff/bits";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -80,8 +80,8 @@ function MessagesPage() {
     try {
       await markRead({ id });
       toast.success("Message marked as read");
-    } catch {
-      toast.error("Failed to update status");
+    } catch (err) {
+      toast.error(errorMessage(err, "That message could not be marked as read."));
     }
   };
 
@@ -89,8 +89,8 @@ function MessagesPage() {
     try {
       await markReplied({ id });
       toast.success("Message marked as replied");
-    } catch {
-      toast.error("Failed to update status");
+    } catch (err) {
+      toast.error(errorMessage(err, "That message could not be marked as replied."));
     }
   };
 
@@ -100,7 +100,7 @@ function MessagesPage() {
         <div>
           <h2 className="page-title flex items-center gap-2.5">
             <MessageSquare className="h-6 w-6 text-foreground" />
-            Customer Inquiries
+            Customer inquiries
             {(unreadCountQuery.data ?? 0) > 0 ? (
               <span className="rounded-full bg-offer/20 px-2.5 py-0.5 text-xs font-semibold text-offer">
                 {unreadCountQuery.data} unread

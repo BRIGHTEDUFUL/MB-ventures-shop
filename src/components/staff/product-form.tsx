@@ -390,9 +390,10 @@ export function ProductForm({
         </p>
       </div>
 
-      {/* Options are attached to an existing product — a brand-new one has no
-          slug to hang them from until it has been saved once. */}
-      {d.id !== "" ? (
+      {/* Options hang off a row that already exists — a brand-new product has
+          no slug until its first save, whatever the Link field says, so the
+          editor is offered only once the product is real. */}
+      {!isNew ? (
         <div>
           <h3 className="mb-2 font-semibold">Options</h3>
           <VariantEditor slug={d.id} basePrice={Number(d.price) || 0} />

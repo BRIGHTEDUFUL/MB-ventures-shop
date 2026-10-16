@@ -149,7 +149,7 @@ describe("stats.overview", () => {
   it("splits verified listings from samples and flags empty shelves", async () => {
     const env = await setup();
     await restoreClock();
-    await env.t.run(async (ctx) => {
+    const productCount = await env.t.run(async (ctx) => {
       const products = await ctx.db.query("products").collect();
       // Start from a healthy catalogue, then make exactly three exceptions —
       // the seed ships every demo product at zero stock, so there is no
@@ -158,12 +158,18 @@ describe("stats.overview", () => {
       if (products[0]) await ctx.db.patch(products[0]._id, { stock: 12 });
       if (products[1]) await ctx.db.patch(products[1]._id, { stock: 0 });
       if (products[2]) await ctx.db.patch(products[2]._id, { stock: 3 });
-      if (products[3]) await ctx.db.patch(products[3]._id, { verified: false });
+      // A sample the shop still lists: on the storefront, awaiting verification.
+      if (products[3]) await ctx.db.patch(products[3]._id, { verified: false, visible: true });
+      // A listing the shop has pulled from sale — still in the table, but
+      // counted nowhere below. If a hidden row ever leaks into `total` or
+      // `samples`, these expectations break.
+      if (products[4]) await ctx.db.patch(products[4]._id, { visible: false, verified: false });
+      return products.length;
     });
 
     const overview = await env.staff.query(api.stats.overview, {});
 
-    expect(overview.products.total).toBeGreaterThan(0);
+    expect(overview.products.total).toBe(productCount - 1);
     expect(overview.products.verified).toBe(overview.products.total - 1);
     expect(overview.products.samples).toBe(1);
     expect(overview.products.out_of_stock).toBe(1);

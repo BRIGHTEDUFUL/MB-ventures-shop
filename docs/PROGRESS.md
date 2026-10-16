@@ -5,6 +5,101 @@ still open is listed under **Open**.
 
 ---
 
+## Full-stack inventory & management audit — 63 verified findings fixed (16 October 2026)
+
+**Status:** Complete — all quality gates green (tsc, lint, **245 unit tests**,
+prettier, build, 36 read-only e2e, mobile audit CLEAN on 14 routes × 3 widths).
+
+### What was asked
+
+A read-only audit of the inventory and management stack "full stack" — the
+Convex backend _and_ the staff frontend — with every finding verified against
+the code before touching it (two parallel audits: 31 backend findings, 32
+frontend).
+
+### Backend fixes (all in `convex/`)
+
+- **Visibility unified** — extracted `isListed()` into `convex/lib/dto.ts`
+  (`visible ?? status === "active" ?? verified`) and reused it in
+  `productDTO`, the `orders.place` guard and `stats.overview`, so the
+  dashboard can never disagree with the catalogue about which products count.
+- **`orders.place`** refuses unlisted/unverified products; `staffUpdate` note
+  capped at 500 chars (validated before the patch).
+- **`users.ts`** — the unauthenticated `listAllUsers` PII dump was **deleted**;
+  `allUsers` now searches _before_ limiting; `team` exposes `overrides`;
+  `deleteUser` also cleans `saved_addresses` (auth rows are untouchable —
+  documented in a comment); `setPermission`'s activity message uses the
+  catalogue labels.
+- **`catalogue.ts`** — `deleteProduct` refuses to delete products with open
+  orders (paginated scan) and scrubs the featured singleton; `bulkUpdate`
+  dedupes ids, refuses stock edits on options products and bumps `version` on
+  the else-branch patch; `saveVariants` caps every free-text field.
+- **`inventory.ts`** — `adjust` note capped at 200; `reverse` refuses
+  product-level legacy movements on products that now have variants.
+- **`stats.ts`** — take-caps removed: `overview`/`trends` paginate through
+  **every** order (`allOrders()`), so the dashboard never silently truncates
+  at 500/1000.
+- **`lib/rules.ts`** — canonical payment-status error message.
+
+### Permission system — shared catalogue + a real Team UI
+
+- **`convex/lib/permission-catalog.ts` (new, pure)** — `PERMISSION_CATALOG`,
+  `PERMISSION_KEYS_IN_ORDER`, `defaultPermissions()`, `groupedPermissions()`
+  and `PERMISSION_KEYS` were extracted out of `convex/lib/permissions.ts`
+  (which imports `@convex-dev/auth/server` and therefore cannot be bundled for
+  the browser). `permissions.ts` re-exports them, so every existing backend
+  import path keeps working, and the Team screen imports the pure module
+  directly — following the `variants.ts` pattern.
+- **`src/routes/staff/team.tsx`** — each roster row (admins only) gains a
+  **Permissions** button opening a full permission matrix: every permission,
+  grouped, drawn as role default + this person's own overrides, with the
+  effective value ticked, a `· changed` marker and a per-permission `reset`.
+  Writes go through `users.setPermission` (`granted: boolean | null`).
+  **Your own panel is read-only** — the backend allows a self-edit (the CLI
+  stays the escape hatch) but a sole admin must not be able to click
+  themselves out of `team.manage`.
+
+### Frontend fixes (`src/routes/staff/…`, `src/components/staff/…`)
+
+- `inventory` — counted-mode empty-input guard + `e.g. N` placeholders;
+  `customization` — no role-reveal flash while the role query is pending or
+  errored; `products` — shared `pageHead` + selection resets when
+  search/show/category change; `staff/index` — trends query error alert and
+  the four chart fallbacks respect `isError`.
+- `activity` — ACTION_LABEL gaps filled (inventory.count/reverse,
+  settings.delivery, role.permission, user.update/delete, email.suppress);
+  `messages` — catches rendered through `errorMessage`; `admin/emails` —
+  suppression failures toast and `isError` guards the empty state; `health` —
+  each fix row now links to the right destination (`FIX_TARGET`).
+- `bits.tsx` — `STATUS_LABEL`/`PAYMENT_LABEL` maps; the order-detail selects
+  show capitalized labels instead of raw lowercase values. The maps live in
+  `src/lib/store.ts` (not the component file) so `react-refresh` stays at the
+  documented 7 warnings.
+- `styles.css` — the mobile bottom-nav labels were **9px** (below the audit's
+  12px floor): raised to 12px with horizontal padding trimmed to fit 375px,
+  and labels drop to icon-only below 360px where five labelled items cannot
+  fit a 264px bar. Mobile audit is CLEAN on all 14 routes × 3 widths.
+
+### Deliberate skips (recorded, not forgotten)
+
+- **`contact.ts` permission-key migration** — it still uses `requireStaff`
+  rather than a fine-grained permission; low-risk follow-up.
+- **Auth-row cleanup in `deleteUser`** — Convex Auth owns `authAccounts`/
+  `authSessions`; leaving them is safe and documented inline.
+- **`stock.ts` error-message cosmetics** (finding #24) — contextual copy is
+  fine; not worth the test churn.
+
+### Tests
+
+**245/245 across 16 files** (+11): hidden-product refusal in `place`,
+`staffUpdate` note cap, `reverse` options guard, `saveVariants` string caps,
+`team` overrides exposure, `allUsers` search-past-limit, `deleteUser` leaves
+no role/address, `bulkUpdate` dedupe + version + options guard,
+`deleteProduct` held-order refusal + featured scrub, and the `isListed`
+stats rework.
+
+---
+
 ## Variant photo gallery — option colours drive the photos, arrows step through (15 October 2026)
 
 **Status:** Complete — all quality gates green (tsc, lint, 234 unit tests,

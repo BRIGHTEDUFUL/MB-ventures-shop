@@ -273,6 +273,22 @@ describe("orders.place — authoritative checkout", () => {
     expect(await inventoryLog(env)).toHaveLength(0);
   });
 
+  it("refuses a product the shop has hidden from sale", async () => {
+    const env = await setup();
+    // Hidden and draft products leave every listing; the same rule holds in
+    // checkout, so a crafted cart cannot buy something pulled from sale.
+    await patchProduct(env, "standing-desk", { visible: false });
+
+    await expectConvexError(
+      env.customer.mutation(api.orders.place, checkout()),
+      /An item is not available/,
+    );
+
+    expect(await ordersIn(env)).toHaveLength(0);
+    expect((await readProduct(env, "standing-desk")).stock).toBe(50);
+    expect(await inventoryLog(env)).toHaveLength(0);
+  });
+
   it("refuses to oversell the last unit", async () => {
     const env = await setup();
     await patchProduct(env, "standing-desk", { stock: 1 });
@@ -493,6 +509,27 @@ describe("orders.staffUpdate — staff permissions and transitions", () => {
       /Confirm payment before completing/,
     );
     expect((await readOrder(env, order.id))?.status).toBe("processing");
+  });
+
+  it("caps the free-text note a transition may carry", async () => {
+    const env = await setup();
+    const order = await placeOrder(env);
+
+    await expectConvexError(
+      env.staff.mutation(api.orders.staffUpdate, {
+        id: order.id,
+        status: "processing",
+        payment: "confirmed",
+        note: "x".repeat(501),
+      }),
+      /Keep the note under 500/,
+    );
+
+    // Refused before anything moved — same status, same history as before.
+    const unchanged = await readOrder(env, order.id);
+    expect(unchanged?.status).toBe("received");
+    expect(unchanged?.payment_status).toBe("pending");
+    expect(await orderHistory(env, order.id)).toHaveLength(1);
   });
 
   it("keeps 'ready' off delivery orders", async () => {

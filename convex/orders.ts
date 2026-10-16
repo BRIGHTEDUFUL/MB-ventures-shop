@@ -5,6 +5,7 @@ import { requireUser } from "./lib/auth";
 import { requirePermission } from "./lib/permissions";
 import {
   historyDTO,
+  isListed,
   orderDTO,
   receiptDTO,
   type HistoryEntry,
@@ -102,7 +103,10 @@ export const place = mutation({
         .query("products")
         .withIndex("by_slug", (q) => q.eq("slug", line.id))
         .unique();
-      if (product === null || !product.verified) {
+      // The storefront filters hidden and draft products out of every listing,
+      // so checkout refuses them too — a crafted cart cannot buy something the
+      // shop has pulled from sale.
+      if (product === null || !product.verified || !isListed(product)) {
         throw new ConvexError({ message: "An item is not available. Please check your cart." });
       }
 
@@ -363,6 +367,9 @@ export const staffUpdate = mutation({
 
     const problem = validateStatusChange(order, args.status, args.payment);
     if (problem !== null) throw new ConvexError({ message: problem });
+    const note = (args.note ?? "").trim();
+    if (note.length > 500)
+      throw new ConvexError({ message: "Keep the note under 500 characters." });
 
     const previousStatus = order.status;
     const previousPayment = order.payment_status;
@@ -454,7 +461,6 @@ export const staffUpdate = mutation({
       payment_status: args.payment,
       ...(nextStockState !== undefined ? { stock_state: nextStockState } : {}),
     });
-    const note = (args.note ?? "").trim();
     await ctx.db.insert("order_history", {
       order_id: orderId,
       status: args.status,

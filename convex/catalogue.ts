@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import type { Cursor } from "convex/server";
 import { mutation, query } from "./_generated/server";
 import { logActivity } from "./lib/activity";
 import type { ProductMaster } from "./lib/dto";
@@ -325,29 +326,30 @@ export const deleteProduct = mutation({
       .first();
     if (product === null) return { ok: true };
 
-    // Bounded: only the newest orders can still hold stock (they are all
-    // opened within the retention window we show staff), and open orders are
-    // exactly the ones that matter here.
-    const open = await ctx.db
-      .query("orders")
-      .order("desc")
-      .take(500)
-      .then((rows) =>
-        rows.filter(
-          (o) => o.status !== "cancelled" && o.items.some((line) => line.id === product.slug),
-        ),
-      );
-    if (open.length > 0) {
+    // Every order is checked — not just the newest page: an older order still
+    // holding units would lose its restock if the product went, and a silent
+    // take-cap is exactly how that gets missed. Orders walk newest-first in
+    // pages until the table is exhausted; only references are kept.
+    let heldTotal = 0;
+    const held: string[] = [];
+    let cursor: Cursor | null = null;
+    for (;;) {
+      const page = await ctx.db.query("orders").order("desc").paginate({ cursor, numItems: 500 });
+      for (const o of page.page) {
+        if (o.status !== "cancelled" && o.items.some((line) => line.id === product.slug)) {
+          heldTotal += 1;
+          if (held.length < 3) held.push(o.reference);
+        }
+      }
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+    if (heldTotal > 0) {
       fail(
         "STATE_CONFLICT",
-        `“${product.name}” is still held by ${open.length} open order${
-          open.length === 1 ? "" : "s"
-        } (${open
-          .slice(0, 3)
-          .map((o) => o.reference)
-          .join(
-            ", ",
-          )}). Cancel those orders first, or mark the product as a sample instead — cancelling an order whose product is gone cannot return its stock.`,
+        `“${product.name}” is still held by ${heldTotal} open order${
+          heldTotal === 1 ? "" : "s"
+        } (${held.join(", ")}${heldTotal > held.length ? ", …" : ""}). Cancel those orders first, or mark the product as a sample instead — cancelling an order whose product is gone cannot return its stock.`,
       );
     }
 
@@ -362,9 +364,13 @@ export const deleteProduct = mutation({
 
     await ctx.db.delete(product._id);
 
+    // Featured picks are scrubbed too, so the homepage never points at a
+    // product that no longer exists. The settings row is the `singleton` key —
+    // the same row `getSettings` reads (this one stays null-tolerant so a
+    // missing settings row cannot roll the whole deletion back).
     const settings = await ctx.db
       .query("store_settings")
-      .withIndex("by_key", (q) => q.eq("key", "site"))
+      .withIndex("by_key", (q) => q.eq("key", "singleton"))
       .first();
     if (settings !== null && settings.featured_ids.includes(product.slug)) {
       await ctx.db.patch(settings._id, {
@@ -430,7 +436,10 @@ export const bulkUpdate = mutation({
   },
   handler: async (ctx, args) => {
     const actorId = await requirePermission(ctx, "catalogue.bulk");
-    if (args.ids.length === 0 || args.ids.length > 200) {
+    // Deduped before anything else: one row per product, so a repeated id
+    // cannot run the same price move or stock set twice.
+    const ids = [...new Set(args.ids.map((id) => id.trim()))].filter((id) => id !== "");
+    if (ids.length === 0 || ids.length > 200) {
       throw new ConvexError({ message: "Select between 1 and 200 products." });
     }
     const c = args.changes;
@@ -459,7 +468,7 @@ export const bulkUpdate = mutation({
 
     let updated = 0;
     let clearedSales = 0;
-    for (const id of args.ids) {
+    for (const id of ids) {
       const product = await ctx.db
         .query("products")
         .withIndex("by_slug", (q) => q.eq("slug", id))
@@ -497,6 +506,20 @@ export const bulkUpdate = mutation({
       // A bulk count below what open orders already hold is refused rather
       // than quietly overselling.
       if (c.stock !== undefined) {
+        // A product that sells in options keeps its stock as the derived sum
+        // of its options — a bulk "set the total" would detach that number
+        // from what the options add up to, exactly the drift
+        // `inventory.adjust` and `inventory.count` refuse. Same rule here,
+        // naming the product so staff knows which one to open instead.
+        const hasOptions = await ctx.db
+          .query("product_variants")
+          .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
+          .first();
+        if (hasOptions !== null) {
+          throw new ConvexError({
+            message: `“${product.name}” sells in options — set stock per option on its product page, not on the total.`,
+          });
+        }
         await applyStockChange(ctx, {
           slug: product.slug,
           command: { kind: "set_on_hand", value: c.stock },
@@ -511,7 +534,12 @@ export const bulkUpdate = mutation({
           // moved the number. Double-submit is stopped by the busy button.
         });
       } else {
-        await ctx.db.patch(product._id, patch);
+        // Same stale-editor contract as `saveProduct`: every write bumps
+        // `version`, so an editor holding the old number is told to reload
+        // rather than silently overwriting this change. (The stock branch
+        // gets its bump inside `applyStockChange`, which applies this patch
+        // atomically with the count.)
+        await ctx.db.patch(product._id, { ...patch, version: (product.version ?? 0) + 1 });
       }
       updated += 1;
     }
@@ -828,6 +856,39 @@ export const saveVariants = mutation({
         fail("VALIDATION_FAILED", `“${label}” is listed twice — each combination appears once.`);
       }
       submittedSignatures.add(signature);
+
+      // String caps mirror `VARIANT_LIMITS` (documented as "shared by the
+      // mutation and the form" — the counts were always enforced here, the
+      // lengths only in the browser). These strings land verbatim in orders,
+      // receipts and the ledger, so the server checks them too.
+      if (row.name.trim().length > VARIANT_LIMITS.name) {
+        fail(
+          "VALIDATION_FAILED",
+          `An option name is limited to ${VARIANT_LIMITS.name} characters.`,
+        );
+      }
+      if (key.length > 200) {
+        // Canonical keys are slugified values joined (≤ 4 × 40 + separators
+        // ≈ 166), so anything near 200 is a crafted payload, not a label.
+        fail("VALIDATION_FAILED", "That option's link name is too long.");
+      }
+      for (const [axis, value] of Object.entries(row.options)) {
+        if (axis.trim() === "") {
+          fail("VALIDATION_FAILED", "Every option needs a kind — e.g. “Colour”.");
+        }
+        if (axis.length > VARIANT_LIMITS.axisName) {
+          fail(
+            "VALIDATION_FAILED",
+            `An option kind is limited to ${VARIANT_LIMITS.axisName} characters — “${axis.slice(0, 24)}…” is too long.`,
+          );
+        }
+        if (value.length > VARIANT_LIMITS.valueName) {
+          fail(
+            "VALIDATION_FAILED",
+            `An option value is limited to ${VARIANT_LIMITS.valueName} characters — “${value.slice(0, 24)}…” is too long.`,
+          );
+        }
+      }
 
       if (!Number.isInteger(row.stock) || row.stock < 0) {
         fail("VALIDATION_FAILED", `Stock for “${label}” must be a whole number of 0 or more.`);

@@ -5,7 +5,14 @@ import { useConvexMutation } from "@convex-dev/react-query";
 import { ArrowLeft } from "lucide-react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../../convex/_generated/api";
-import { errorMessage, money, pageHead, type Order } from "@/lib/store";
+import {
+  errorMessage,
+  money,
+  pageHead,
+  PAYMENT_LABEL,
+  STATUS_LABEL,
+  type Order,
+} from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Panel, PaymentPill, StatusPill } from "@/components/staff/bits";
 import { images } from "@/lib/store-images";
@@ -28,7 +35,7 @@ const statusOptions = (o: Order) =>
   [
     "received",
     "processing",
-    ...(o.fulfillment === "pickup" ? ["ready"] : ["dispatched"]),
+    ...(o.fulfillment === "pickup" ? (["ready"] as const) : (["dispatched"] as const)),
     "completed",
     "cancelled",
   ] as const;
@@ -285,7 +292,7 @@ function OrderView({
                 >
                   {statusOptions(order).map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {STATUS_LABEL[s]}
                     </option>
                   ))}
                 </select>
@@ -296,9 +303,9 @@ function OrderView({
                   value={payment}
                   onChange={(e) => setPayment(e.target.value as Order["payment_status"])}
                 >
-                  {["pending", "confirmed", "rejected"].map((s) => (
+                  {(["pending", "confirmed", "rejected"] as const).map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {PAYMENT_LABEL[s]}
                     </option>
                   ))}
                 </select>

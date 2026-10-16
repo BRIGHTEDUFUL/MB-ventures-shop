@@ -89,9 +89,21 @@ function InventoryPage() {
     const target = variantKey === undefined ? slug : `${slug}:${variantKey}`;
     const raw = document.getElementById(`delta-${target}`) as HTMLInputElement | null;
     const reasonEl = document.getElementById(`reason-${slug}`) as HTMLSelectElement | null;
-    const value = Number(raw?.value);
+    const text = raw?.value.trim() ?? "";
     const reason = reasonEl?.value ?? "";
     const type: ReasonType = REASONS.find((r) => r.label === reason)?.type ?? "adjustment";
+
+    // An untouched box reads `""`, which `Number()` would turn into 0 — and in
+    // counted mode 0 is a legal count, so one absent keystroke would silently
+    // wipe the shelf. Refuse the empty box before any conversion; the box's
+    // grey placeholder shows the current count as a hint, it is not a value.
+    if (text === "") {
+      toast.error(
+        mode === "counted" ? "Enter the number you counted." : "Enter the change (e.g. 12 or -3).",
+      );
+      return;
+    }
+    const value = Number(text);
 
     // One key per tap: the client reuses it if Convex retries the same call,
     // so a flaky connection still produces exactly one movement (D6).
@@ -254,8 +266,10 @@ function InventoryPage() {
                               step="1"
                               min={mode === "counted" ? 0 : undefined}
                               placeholder={
+                                // "e.g." keeps the hint of the system count without the empty
+                                // box reading as a pre-filled, ready-to-save number.
                                 mode === "counted"
-                                  ? String(v.stock)
+                                  ? `e.g. ${v.stock}`
                                   : v.stock === 0
                                     ? "+12"
                                     : "12 / -3"
@@ -295,7 +309,7 @@ function InventoryPage() {
                       step="1"
                       min={mode === "counted" ? 0 : undefined}
                       placeholder={
-                        mode === "counted" ? String(p.stock) : p.stock === 0 ? "+12" : "12 / -3"
+                        mode === "counted" ? `e.g. ${p.stock}` : p.stock === 0 ? "+12" : "12 / -3"
                       }
                     />
                   </label>

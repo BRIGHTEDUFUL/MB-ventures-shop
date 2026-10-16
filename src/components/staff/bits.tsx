@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Order } from "@/lib/store";
+import { PAYMENT_LABEL, STATUS_LABEL, type Order } from "@/lib/store";
 
 /** Card container shared by every hub page (matches the store's panel look). */
 export function Panel({
@@ -146,11 +146,11 @@ export function StatusPill({ status }: { status: Order["status"] }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
         STATUS_STYLE[status],
       )}
     >
-      {status}
+      {STATUS_LABEL[status]}
     </span>
   );
 }
@@ -159,11 +159,11 @@ export function PaymentPill({ payment }: { payment: Order["payment_status"] }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
         PAYMENT_STYLE[payment],
       )}
     >
-      {payment}
+      {PAYMENT_LABEL[payment]}
     </span>
   );
 }

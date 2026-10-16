@@ -35,7 +35,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Auth        | Convex Auth · email + password only · no OAuth · no email verify                    |
 | Client data | TanStack Query via `@convex-dev/react-query`                                        |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                             |
-| Tests       | Vitest (234 tests, 16 files) + Playwright (36 read-only + 11 live checks)           |
+| Tests       | Vitest (245 tests, 16 files) + Playwright (36 read-only + 11 live checks)           |
 | CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips) |
 
 ---
@@ -75,7 +75,8 @@ convex/
   lib/
     stock.ts              applyStockChange — THE only way to mutate stock
     auth.ts               currentUserId, requireUser, requireStaff, requireAdmin, isStaff, getRole
-    permissions.ts        requirePermission, PERMISSION_CATALOGUE — fine-grained per-action gates
+    permissions.ts        requirePermission — fine-grained per-action guards
+    permission-catalog.ts PERMISSION_CATALOG, defaults, grouping — pure data, browser-safe
     dto.ts                productDTO, categoryDTO, settingsDTO, orderDTO, receiptDTO, historyDTO,
                           Variant, OptionAxis, ProductMaster types
     rules.ts              Pure business rules shared by mutations and UI (fees, validation, phone)
@@ -268,6 +269,14 @@ team.view, team.manage,
 emails.admin, emails.note
 ```
 
+The **catalogue data** (label, group, floor per key, default sets, grouping
+helper) lives in `convex/lib/permission-catalog.ts` — a pure module with no
+Convex/auth imports, so the browser can bundle it. `convex/lib/permissions.ts`
+re-exports it (existing backend imports unchanged) and keeps only the guards,
+which need `@convex-dev/auth/server`. The `/staff → Team` screen renders the
+full matrix from the pure module; admins tick/reset each permission, and your
+own row stays read-only (the CLI `users:setPermission` is the escape hatch).
+
 ### 4e. Image keys
 
 Images are referenced by a **string key**, not a URL. Key resolution is in
@@ -424,7 +433,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 234/234 across 16 test files
+npm test                  # 245/245 across 16 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 36/36 Playwright checks (read-only)

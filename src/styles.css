@@ -1273,12 +1273,28 @@ label textarea {
     flex-direction: column;
     gap: 3px;
     align-items: center;
-    padding: 7px 13px;
+    padding: 7px 11px;
     background: transparent;
     border: 0;
     height: 50px;
-    font-size: 9px;
+    /* 12px: comfortably readable, and the floor the mobile audit's "tiny
+       text" check holds every label to. The padding gives a little back so
+       five items still fit a 375px phone without wrapping. */
+    font-size: 12px;
     border-radius: 25px;
+  }
+  /* Five labelled items cannot fit the narrowest phones (320px gives each
+     label ~53px of a 264px bar). Icons alone there — still 45px-wide,
+     50px-tall targets, and the labels return the moment there is room. */
+  @media (max-width: 359px) {
+    .mobile-nav a,
+    .mobile-nav button {
+      padding: 7px 13px;
+    }
+    .mobile-nav a span,
+    .mobile-nav button span {
+      display: none;
+    }
   }
   .mobile-nav svg {
     width: 19px;

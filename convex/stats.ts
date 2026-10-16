@@ -1,8 +1,9 @@
-import { query } from "./_generated/server";
+import type { Cursor } from "convex/server";
+import { query, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./lib/permissions";
 import { recentActivity, type ActivityEntry } from "./lib/activity";
-import { orderDTO, type Order } from "./lib/dto";
+import { isListed, orderDTO, type Order } from "./lib/dto";
 import { round2 } from "./lib/rules";
 
 /** Below this count a verified listing deserves a restock. */
@@ -45,6 +46,25 @@ export type Overview = {
 };
 
 /**
+ * Every order, newest first, with no silent page cap.
+ *
+ * The dashboard quotes "total orders", today's takings and the payment queue
+ * from this one list — a `take()` would quietly stop counting at 500 (or
+ * 1000) and make those numbers wrong the day the shop passes them. Pages walk
+ * until the table ends; only aggregates leave this function.
+ */
+async function allOrders(ctx: QueryCtx): Promise<Doc<"orders">[]> {
+  const rows: Doc<"orders">[] = [];
+  let cursor: Cursor | null = null;
+  for (;;) {
+    const page = await ctx.db.query("orders").order("desc").paginate({ cursor, numItems: 500 });
+    rows.push(...page.page);
+    if (page.isDone) return rows;
+    cursor = page.continueCursor;
+  }
+}
+
+/**
  * One round trip for the dashboard: today's takings, payment queue, stock
  * warnings, sample listings awaiting verification, plus recent orders/activity.
  */
@@ -52,12 +72,16 @@ export const overview = query({
   args: {},
   handler: async (ctx): Promise<Overview> => {
     await requirePermission(ctx, "reports.view");
-    const [orders, products, categories, activity] = await Promise.all([
-      ctx.db.query("orders").order("desc").take(500),
+    const [orders, allProducts, categories, activity] = await Promise.all([
+      allOrders(ctx),
       ctx.db.query("products").collect(),
       ctx.db.query("categories").collect(),
       recentActivity(ctx, 8),
     ]);
+    // The dashboard counts what the storefront lists. Hidden demo rows are not
+    // stock on the shelf, not samples awaiting verification and not alarms to
+    // answer for — the same `isListed` rule the catalogue and checkout use.
+    const products = allProducts.filter(isListed);
 
     // Accra is GMT+0, so a UTC midnight boundary matches the shop's day.
     const dayStart = new Date();
@@ -116,7 +140,7 @@ export const trends = query({
   args: {},
   handler: async (ctx): Promise<Trends> => {
     await requirePermission(ctx, "reports.view");
-    const orders = await ctx.db.query("orders").order("desc").take(1000);
+    const orders = await allOrders(ctx);
 
     const startOfToday = new Date();
     startOfToday.setUTCHours(0, 0, 0, 0);

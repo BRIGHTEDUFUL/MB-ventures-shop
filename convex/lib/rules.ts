@@ -216,7 +216,7 @@ export function validateStatusChange(
     return "This order is closed.";
   }
   if (!ORDER_STATUSES.includes(newStatus)) return "Invalid status.";
-  if (!PAYMENT_STATUSES.includes(newPayment)) return "Invalid status.";
+  if (!PAYMENT_STATUSES.includes(newPayment)) return "Invalid payment status.";
   if (newStatus === "ready" && order.fulfillment !== "pickup") {
     return "Status does not match fulfillment.";
   }

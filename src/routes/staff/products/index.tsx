@@ -1,26 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useConvexMutation } from "@convex-dev/react-query";
 import { Plus } from "lucide-react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../../convex/_generated/api";
-import { errorMessage, money, storeQuery, type Product } from "@/lib/store";
+import { errorMessage, money, pageHead, storeQuery, type Product } from "@/lib/store";
 import { images } from "@/lib/store-images";
 import { Button } from "@/components/ui/button";
 import { EmptyState, QueryState } from "@/components/staff/bits";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/products/")({
-  head: () => pageHeadLocal(),
+  head: () =>
+    pageHead(
+      "Products",
+      "Keep names, prices, photos and stock true to the shop — one product at a time or in bulk.",
+    ),
   component: ProductsList,
 });
-
-function pageHeadLocal() {
-  return {
-    meta: [{ title: "Products | MB Ventures GH" }],
-  };
-}
 
 type BulkKind = "verified" | "sample" | "category" | "price_percent" | "price_amount" | "stock";
 
@@ -39,6 +37,13 @@ function ProductsList() {
 
   const products = useMemo(() => store.data?.products ?? [], [store.data]);
   const categories = useMemo(() => store.data?.categories ?? [], [store.data]);
+
+  // A selection must never act on rows the screen no longer shows: change any
+  // filter and the checkboxes reset, so a bulk action can only ever touch the
+  // products you can actually see ticked.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [search, show, category]);
 
   const list = useMemo(
     () =>

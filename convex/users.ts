@@ -82,6 +82,12 @@ export type TeamMember = {
   email: string;
   phone: string;
   role: "admin" | "staff";
+  /**
+   * Per-person permission flips away from the role's defaults — `true` grants
+   * one, `false` revokes one, an absent key means "whatever the role says".
+   * The Team screen draws each toggle from this and marks the changed ones.
+   */
+  overrides: Partial<Record<PermissionKey, boolean>>;
 };
 
 /** Everyone with shop access (staff see the roster; only admins may edit it). */
@@ -100,6 +106,7 @@ export const team = query({
           email: user.email?.trim() ?? "",
           phone: user.phone?.trim() ?? "",
           role: roleRow.role,
+          overrides: { ...(roleRow.overrides ?? {}) } as Partial<Record<PermissionKey, boolean>>,
         } satisfies TeamMember;
       }),
     );
@@ -242,13 +249,16 @@ export const setPermission = mutation({
 
     const target = await ctx.db.get(userId);
     const who = target?.email?.trim() || target?.name?.trim() || "a team member";
+    // The catalogue's labels read as verb phrases ("adjust stock"), so the
+    // feed entry reads like a sentence rather than a machine key.
+    const spec = PERMISSION_CATALOG[args.permission];
     await logActivity(
       ctx,
       actorId,
       "role.permission",
       args.granted === null
-        ? `Reset the “${args.permission}” permission for ${who} to the role default.`
-        : `${args.granted ? "Granted" : "Removed"} the “${args.permission}” permission for ${who}.`,
+        ? `Reset “${spec.label}” for ${who} to their role default.`
+        : `${args.granted ? "Granted" : "Removed"} “${spec.label}” for ${who}.`,
     );
     return { ok: true };
   },
@@ -289,18 +299,6 @@ export const grantStaff = internalMutation({
 
     await ctx.db.insert("user_roles", { user_id: user._id, role });
     return { ok: true, role };
-  },
-});
-
-export const listAllUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
-    const roles = await ctx.db.query("user_roles").collect();
-    return {
-      users: users.map((u) => ({ id: u._id, email: u.email, name: u.name, phone: u.phone })),
-      roles: roles.map((r) => ({ id: r._id, user_id: r.user_id, role: r.role })),
-    };
   },
 });
 
@@ -467,6 +465,19 @@ export const deleteUser = mutation({
       await ctx.db.delete(roleRow._id);
     }
 
+    // Everything else that hangs off this person goes too — a deleted account
+    // must not leave saved addresses (name, address, phone) sitting around.
+    // The Convex Auth tables (`authAccounts`, `authSessions`) are owned by the
+    // auth framework and cannot be typed here; sign-in already fails for them
+    // because the user row they point at is gone.
+    const addresses = await ctx.db
+      .query("saved_addresses")
+      .withIndex("by_user", (q) => q.eq("user_id", userId))
+      .collect();
+    for (const address of addresses) {
+      await ctx.db.delete(address._id);
+    }
+
     // Delete the user account
     await ctx.db.delete(userId);
 
@@ -491,15 +502,18 @@ export const allUsers = query({
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 200);
     const search = (args.search ?? "").trim().toLowerCase();
 
-    let users = await ctx.db.query("users").take(limit);
-
-    // Filter by search term if provided
-    if (search !== "") {
-      users = users.filter((user) => {
-        const haystack = `${user.email ?? ""} ${user.name ?? ""} ${user.phone ?? ""}`.toLowerCase();
-        return haystack.includes(search);
-      });
-    }
+    // Search runs before the limit: taking the first N rows first would hide
+    // every match beyond them, so a search could return nothing while a
+    // matching customer sits at row N+1.
+    const all = await ctx.db.query("users").collect();
+    const matched =
+      search === ""
+        ? all
+        : all.filter((user) => {
+            const haystack = `${user.email ?? ""} ${user.name ?? ""} ${user.phone ?? ""}`;
+            return haystack.toLowerCase().includes(search);
+          });
+    const users = matched.slice(0, limit);
 
     const usersWithRoles = await Promise.all(
       users.map(async (user) => {

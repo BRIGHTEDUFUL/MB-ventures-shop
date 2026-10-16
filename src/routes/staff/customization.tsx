@@ -100,7 +100,9 @@ function CustomizationPage() {
         {tab === "delivery" && <DeliverySettings settings={settings} />}
       </div>
 
-      {!role.isPending && (
+      {/* On error the alert below speaks alone — showing "signed in as staff"
+          alongside it would be a guess about a role that never loaded. */}
+      {!role.isPending && !role.isError && (
         <p className="mt-8 text-xs text-muted-foreground">
           Signed in as {role.data === "admin" ? "an admin" : "staff"} — delivery fees and all
           storefront copy are yours to edit.

@@ -372,7 +372,7 @@ function EmailsConsole() {
                   toast.success("Recipient suppressed.");
                 })
                 .catch((error: unknown) =>
-                  setNotice(errorMessage(error, "Could not suppress that address.")),
+                  toast.error(errorMessage(error, "Could not suppress that address.")),
                 );
             }}
           >
@@ -385,7 +385,7 @@ function EmailsConsole() {
             error={suppressed.isError}
             label="The suppression list"
           />
-          {suppressed.isPending ? null : suppressed.data?.length ? (
+          {suppressed.isPending || suppressed.isError ? null : suppressed.data?.length ? (
             <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
               {suppressed.data.map((row) => (
                 <li key={row.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
@@ -402,7 +402,7 @@ function EmailsConsole() {
                       void removeSuppression({ id: row.id })
                         .then(() => toast.success("Delivery to that address is allowed again."))
                         .catch((error: unknown) =>
-                          setNotice(errorMessage(error, "Could not remove that entry.")),
+                          toast.error(errorMessage(error, "Could not remove that entry.")),
                         );
                     }}
                   >

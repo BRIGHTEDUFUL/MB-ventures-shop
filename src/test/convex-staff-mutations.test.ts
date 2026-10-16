@@ -4,6 +4,7 @@ import type { FunctionArgs } from "convex/server";
 import { ConvexError } from "convex/values";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
+import type { Doc } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
 
 /**
@@ -270,6 +271,116 @@ describe("catalogue — product tools stay behind the staff gate", () => {
     );
     expect((await readProduct(env, "standing-desk")).price).toBe(2400);
     expect(await activity(env)).toHaveLength(0);
+  });
+
+  it("refuses a bulk stock set on a product that sells in options", async () => {
+    const env = await setup();
+    // Options make the product's own number a derived sum — a bulk "set the
+    // total" would detach it from what the options add up to.
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        { key: "black", name: "Black", options: { Colour: "Black" }, stock: 10, visible: true },
+      ],
+    });
+
+    await expectConvexError(
+      env.staff.mutation(api.catalogue.bulkUpdate, {
+        ids: ["standing-desk"],
+        changes: { stock: 99 },
+      }),
+      /sells in options/,
+    );
+
+    expect((await readProduct(env, "standing-desk")).stock).toBe(10);
+    const variants = await env.t.run((ctx) =>
+      ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", "standing-desk"))
+        .collect(),
+    );
+    expect(variants.map((row) => row.stock)).toEqual([10]);
+  });
+
+  it("applies a duplicated id once and bumps the editor version", async () => {
+    const env = await setup();
+    const before = (await readProduct(env, "standing-desk")).version ?? 0;
+
+    const result = await env.staff.mutation(api.catalogue.bulkUpdate, {
+      ids: ["standing-desk", "standing-desk", "standing-desk"],
+      changes: { price_amount: 10 },
+    });
+
+    // One row per product: the price moved +10 exactly once…
+    expect(result.updated).toBe(1);
+    expect((await readProduct(env, "standing-desk")).price).toBe(2410);
+    // …and the write carried the same version bump every other save does, so
+    // an editor holding the old number is told to reload instead of clobbering.
+    expect((await readProduct(env, "standing-desk")).version).toBe(before + 1);
+  });
+
+  it("refuses to delete a product an open order still holds", async () => {
+    const env = await setup();
+    await env.t.run(async (ctx) => {
+      const buyerId = await ctx.db.insert("users", { name: "Ama", email: "buyer@example.com" });
+      await ctx.db.insert("orders", {
+        reference: "MB-HELDDESK0000001",
+        user_id: buyerId,
+        customer_name: "Ama",
+        email: "buyer@example.com",
+        phone: "0240000000",
+        address: "Abelenkpe, Accra",
+        fulfillment: "delivery",
+        zone: "central",
+        payment_method: "cod",
+        payment_status: "pending",
+        status: "received",
+        subtotal: 100,
+        delivery_fee: 30,
+        total: 130,
+        items: [
+          {
+            id: "standing-desk",
+            name: "Electric sit-stand desk",
+            price: 100,
+            quantity: 1,
+            image_key: "desk",
+          },
+        ],
+      } as Doc<"orders">);
+    });
+
+    await expectConvexError(
+      env.admin.mutation(api.catalogue.deleteProduct, { id: "standing-desk" }),
+      /still held by 1 open order/,
+    );
+    expect((await readProduct(env, "standing-desk")).stock).toBe(50);
+  });
+
+  it("scrubs the homepage pick when its product is deleted", async () => {
+    const env = await setup();
+    await env.t.run(async (ctx) => {
+      const settings = await ctx.db
+        .query("store_settings")
+        .withIndex("by_key", (q) => q.eq("key", "singleton"))
+        .unique();
+      if (settings === null) throw new Error("settings row missing");
+      await ctx.db.patch(settings._id, { featured_ids: ["standing-desk", "gaming-desk"] });
+    });
+
+    await env.admin.mutation(api.catalogue.deleteProduct, { id: "standing-desk" });
+
+    const settings = await readSettings(env);
+    // The featured spot points at the singleton row — the same one every
+    // other reader uses. The deleted slug is gone; the other pick survives.
+    expect(settings?.featured_ids).toEqual(["gaming-desk"]);
+    const gone = await env.t.run((ctx) =>
+      ctx.db
+        .query("products")
+        .withIndex("by_slug", (q) => q.eq("slug", "standing-desk"))
+        .first(),
+    );
+    expect(gone).toBeNull();
   });
 });
 

@@ -3,6 +3,7 @@ import { convexQueryOptions } from "./convex";
 import { api } from "../../convex/_generated/api";
 
 // Legacy Supabase row shapes, now served by Convex (`convex/lib/dto.ts`).
+import type { Order } from "../../convex/lib/dto";
 export type {
   Product,
   Settings,
@@ -33,6 +34,27 @@ export {
 
 export const money = (n: number, decimals = false) =>
   `GH₵ ${n.toLocaleString("en-GH", { minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: 2 })}`;
+
+/**
+ * The one written form of each order state — the staff pills and the
+ * transition selects read from here together, so a dropdown never offers a
+ * raw lowercase value the pills beside it would never show. Shared vocabulary
+ * rather than a component, which is also why it lives in `store.ts`.
+ */
+export const STATUS_LABEL: Record<Order["status"], string> = {
+  received: "Received",
+  processing: "Processing",
+  ready: "Ready",
+  dispatched: "Dispatched",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const PAYMENT_LABEL: Record<Order["payment_status"], string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  rejected: "Rejected",
+};
 
 /** Checkout form state — the payload sent to `orders.place` (plus the item list). */
 export type CheckoutForm = {

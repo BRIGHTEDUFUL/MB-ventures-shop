@@ -137,4 +137,65 @@ describe("permissions — role defaults and per-person overrides", () => {
     );
     expect(messageOf(error)).toMatch(/Admin access required/);
   });
+
+  it("hands the Team screen each member's overrides, not just their role", async () => {
+    const env = await setup();
+    await env.admin.mutation(api.users.setPermission, {
+      user_id: env.staffId,
+      permission: "inventory.adjust",
+      granted: false,
+    });
+
+    const team = await env.staff.query(api.users.team, {});
+    const kofi = team.find((member) => member.id === env.staffId);
+    expect(kofi?.role).toBe("staff");
+    expect(kofi?.overrides).toEqual({ "inventory.adjust": false });
+
+    // No flips recorded reads as an empty map — "whatever the role says".
+    const akua = team.find((member) => member.id === env.adminId);
+    expect(akua?.overrides).toEqual({});
+  });
+});
+
+describe("accounts — lookups and deletion leave nothing behind", () => {
+  it("finds a customer by search even when they sit past the row limit", async () => {
+    const env = await setup();
+    await env.t.run(async (ctx) => {
+      for (let i = 0; i < 60; i++) {
+        await ctx.db.insert("users", { name: `Shopper ${i}`, email: `shopper${i}@example.com` });
+      }
+      // Inserted last: a take-then-filter implementation could never see it.
+      await ctx.db.insert("users", { name: "Late Find", email: "late.find@example.com" });
+    });
+
+    const found = await env.admin.query(api.users.allUsers, { search: "late.find" });
+    expect(found.map((user) => user.email)).toContain("late.find@example.com");
+
+    // The limit still bounds the result set when nothing is being searched.
+    const listed = await env.admin.query(api.users.allUsers, { limit: 10 });
+    expect(listed).toHaveLength(10);
+  });
+
+  it("leaves no role or saved address behind when an account is deleted", async () => {
+    const env = await setup();
+    await env.t.run(async (ctx) => {
+      await ctx.db.insert("saved_addresses", {
+        user_id: env.customerId,
+        name: "Ama Mensah",
+        address: "12 Abelenkpe Taxi Rank Road, Accra",
+        phone: "0240000000",
+      });
+    });
+
+    await env.admin.mutation(api.users.deleteUser, { user_id: env.customerId });
+
+    const left = await env.t.run(async (ctx) => ({
+      users: await ctx.db.query("users").collect(),
+      addresses: await ctx.db.query("saved_addresses").collect(),
+      roles: await ctx.db.query("user_roles").collect(),
+    }));
+    expect(left.users.some((user) => user._id === env.customerId)).toBe(false);
+    expect(left.roles.some((role) => role.user_id === env.customerId)).toBe(false);
+    expect(left.addresses).toHaveLength(0);
+  });
 });

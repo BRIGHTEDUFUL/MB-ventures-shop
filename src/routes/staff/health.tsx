@@ -27,6 +27,28 @@ const TONE: Record<(typeof SEVERITY_ORDER)[number], string> = {
   low: "bg-muted text-muted-foreground",
 };
 
+/**
+ * Where each finding gets fixed. Everything not named here is a product-copy
+ * or listing problem, so it opens the product list — but a stock, order or
+ * category finding must land on the screen that can actually answer it.
+ */
+const FIX_TARGET: Record<
+  string,
+  {
+    to: "/staff/inventory" | "/staff/orders" | "/staff/categories" | "/staff/products";
+    label: string;
+  }
+> = {
+  negative_stock: { to: "/staff/inventory", label: "Open inventory" },
+  verified_out_of_stock: { to: "/staff/inventory", label: "Open inventory" },
+  order_missing_product: { to: "/staff/orders", label: "Open orders" },
+  hidden_category_products: { to: "/staff/categories", label: "Open categories" },
+};
+
+/** The screen a finding is fixed on — product copy by default, named cases above. */
+const fixTarget = (code: string) =>
+  FIX_TARGET[code] ?? { to: "/staff/products" as const, label: "Open products" };
+
 function HealthPage() {
   const report = useQuery({
     ...convexQueryOptions(api.health.report, {}),
@@ -136,7 +158,9 @@ function HealthPage() {
                       )}
                       <div className="mt-3">
                         <Button variant="outline" size="sm" asChild>
-                          <Link to="/staff/inventory">Open inventory</Link>
+                          <Link to={fixTarget(finding.code).to}>
+                            {fixTarget(finding.code).label}
+                          </Link>
                         </Button>
                       </div>
                     </li>

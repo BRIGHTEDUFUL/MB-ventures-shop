@@ -19,11 +19,18 @@ const ACTION_LABEL: Record<string, string> = {
   "category.update": "Category",
   "category.delete": "Category",
   "inventory.adjust": "Stock",
+  "inventory.count": "Stock",
+  "inventory.reverse": "Stock",
   "settings.update": "Settings",
   "settings.finance": "Money",
+  "settings.delivery": "Delivery",
   "role.grant": "Team",
   "role.change": "Team",
   "role.revoke": "Team",
+  "role.permission": "Permissions",
+  "user.update": "Account",
+  "user.delete": "Team",
+  "email.suppress": "Email",
   "email.unsuppress": "Email",
 };
 

@@ -25,67 +25,22 @@ type Ctx = QueryCtx | MutationCtx;
  * accidentally ship with a wider door than the screen behind it.
  */
 
-/** How sensitive a permission is: does it need `admin`, or is `staff` enough? */
-type Floor = "staff" | "admin";
+// The catalogue itself is pure data in `permission-catalog.ts` — this file
+// keeps only the guards, which need `@convex-dev/auth/server` and cannot be
+// bundled for the browser. The Team screen imports the pure module directly;
+// the re-export below keeps every existing backend import path working.
+import {
+  PERMISSION_CATALOG,
+  PERMISSION_KEYS_IN_ORDER,
+  defaultPermissions,
+} from "./permission-catalog";
 
-type PermissionSpec = {
-  /** Human phrase used in the denial message, e.g. "adjust stock". */
-  label: string;
-  /** Group shown in the permission matrix. */
-  group: string;
-  /** The lowest role that has this permission without an override. */
-  floor: Floor;
-};
-
-/**
- * The catalogue. `floor: "staff"` means attendants get it by default and only
- * an explicit override takes it away; `floor: "admin"` means it stays with the
- * owner unless an override grants it.
- *
- * The floors are not invented here — they mirror the `requireStaff` /
- * `requireAdmin` guards that these functions had before, so converting a call
- * site changes *how* the door is decided, never *who* walks through it.
- */
-export const PERMISSION_CATALOG: Record<PermissionKey, PermissionSpec> = {
-  "catalogue.view": { label: "view the catalogue", group: "Catalogue", floor: "staff" },
-  "catalogue.edit": { label: "create and edit products", group: "Catalogue", floor: "staff" },
-  "catalogue.delete": { label: "delete products", group: "Catalogue", floor: "staff" },
-  "catalogue.bulk": { label: "bulk-edit products", group: "Catalogue", floor: "staff" },
-  "catalogue.categories": { label: "manage categories", group: "Catalogue", floor: "staff" },
-  "catalogue.settings": {
-    label: "change storefront settings",
-    group: "Catalogue",
-    floor: "staff",
-  },
-  "catalogue.delivery": { label: "change delivery fees", group: "Catalogue", floor: "staff" },
-  "inventory.view": { label: "view stock and movements", group: "Inventory", floor: "staff" },
-  "inventory.adjust": { label: "adjust stock", group: "Inventory", floor: "staff" },
-  "inventory.stocktake": { label: "apply a stocktake", group: "Inventory", floor: "staff" },
-  "inventory.health": {
-    label: "run the data-health report",
-    group: "Inventory",
-    floor: "staff",
-  },
-  "orders.view": { label: "view orders", group: "Orders", floor: "staff" },
-  "orders.update": { label: "update orders", group: "Orders", floor: "staff" },
-  "reports.view": { label: "view reports", group: "Reporting", floor: "staff" },
-  "activity.view": { label: "view the activity feed", group: "Reporting", floor: "staff" },
-  "uploads.create": { label: "upload product photos", group: "Media", floor: "staff" },
-  "team.view": { label: "see who has access", group: "Team", floor: "staff" },
-  "team.manage": { label: "grant or revoke access", group: "Team", floor: "admin" },
-  "emails.admin": { label: "manage email configuration", group: "Email", floor: "admin" },
-  "emails.note": { label: "clear an email attention flag", group: "Email", floor: "staff" },
-};
-
-/** Every permission in the catalogue, in a stable order for the UI. */
-export const PERMISSION_KEYS_IN_ORDER = Object.keys(PERMISSION_CATALOG) as PermissionKey[];
-
-/** Permissions a role holds before per-user overrides are applied. */
-export function defaultPermissions(role: "admin" | "staff"): PermissionKey[] {
-  return PERMISSION_KEYS_IN_ORDER.filter((key) =>
-    role === "admin" ? true : PERMISSION_CATALOG[key].floor === "staff",
-  );
-}
+export {
+  PERMISSION_CATALOG,
+  PERMISSION_KEYS_IN_ORDER,
+  defaultPermissions,
+  groupedPermissions,
+} from "./permission-catalog";
 
 export type EffectivePermissions = {
   userId: Id<"users">;

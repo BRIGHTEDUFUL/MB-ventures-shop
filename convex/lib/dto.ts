@@ -214,6 +214,20 @@ function findColourAxis(options: Record<string, string>): string {
 }
 
 /**
+ * The storefront's visibility rule — the single source of truth for "is this
+ * product listed?". The catalogue, homepage, sitemap and product page all ask
+ * `productDTO` for `visible`; checkout and the dashboard ask this predicate,
+ * so a hidden product can be neither bought nor counted as stock on the shelf.
+ *
+ * `visible` wins when set; otherwise an explicit `status` decides; otherwise
+ * legacy rows fall back to `verified` (an unverified sample stays unlisted).
+ */
+export const isListed = (
+  product: Pick<Doc<"products">, "visible" | "status" | "verified">,
+): boolean =>
+  (product.visible ?? (product.status ? product.status === "active" : product.verified)) !== false;
+
+/**
  * `variants` is optional so every existing call site keeps working; when a
  * product has them, the axes are derived here from the same rows, which is why
  * an axis can never name a value no variant carries.
@@ -231,7 +245,7 @@ export const productDTO = (product: Doc<"products">, variants: Variant[] = []): 
   image_key: product.image_key,
   gallery: product.gallery,
   verified: product.verified,
-  visible: product.visible ?? (product.status ? product.status === "active" : product.verified),
+  visible: isListed(product),
   ...(variants.length > 0
     ? {
         variants,

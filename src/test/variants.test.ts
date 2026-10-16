@@ -323,6 +323,37 @@ describe("catalogue.saveVariants — options become the unit of stock", () => {
     expect(messageOf(error)).toMatch(/listed twice/);
   });
 
+  it("enforces the shared string limits server-side, not just in the form", async () => {
+    const env = await setup();
+
+    const longValue = await capture(
+      env.staff.mutation(api.catalogue.saveVariants, {
+        slug: "standing-desk",
+        variants: [{ ...BLACK_WHITE[0]!, options: { Colour: "x".repeat(41) } }],
+      }),
+    );
+    expect(messageOf(longValue)).toMatch(/option value is limited to 40/);
+
+    const longKind = await capture(
+      env.staff.mutation(api.catalogue.saveVariants, {
+        slug: "standing-desk",
+        variants: [{ ...BLACK_WHITE[0]!, options: { ["k".repeat(41)]: "Black" } }],
+      }),
+    );
+    expect(messageOf(longKind)).toMatch(/option kind is limited to 40/);
+
+    const longName = await capture(
+      env.staff.mutation(api.catalogue.saveVariants, {
+        slug: "standing-desk",
+        variants: [{ ...BLACK_WHITE[0]!, name: "n".repeat(121) }],
+      }),
+    );
+    expect(messageOf(longName)).toMatch(/option name is limited to 120/);
+
+    // Nothing was written by any of the three.
+    expect(await variantsOf(env)).toHaveLength(0);
+  });
+
   it("refuses a variant SKU already taken by another product", async () => {
     const env = await setup();
     await env.t.run(async (ctx) => {
