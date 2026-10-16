@@ -45,6 +45,7 @@ import type * as lib_activity from "../lib/activity.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_dto from "../lib/dto.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as lib_permission_catalog from "../lib/permission_catalog.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_rules from "../lib/rules.js";
 import type * as lib_settings from "../lib/settings.js";
@@ -102,6 +103,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/dto": typeof lib_dto;
   "lib/errors": typeof lib_errors;
+  "lib/permission_catalog": typeof lib_permission_catalog;
   "lib/permissions": typeof lib_permissions;
   "lib/rules": typeof lib_rules;
   "lib/settings": typeof lib_settings;

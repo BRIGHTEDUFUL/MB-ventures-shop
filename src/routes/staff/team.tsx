@@ -14,7 +14,7 @@ import {
   PERMISSION_CATALOG,
   defaultPermissions,
   groupedPermissions,
-} from "../../../convex/lib/permission-catalog";
+} from "../../../convex/lib/permission_catalog";
 import type { PermissionKey } from "../../../convex/schema";
 
 export const Route = createFileRoute("/staff/team")({
@@ -235,7 +235,7 @@ type MatrixMember = {
 
 /**
  * One member's permission matrix — the full catalogue from
- * `convex/lib/permission-catalog.ts` (pure data, the same file the backend
+ * `convex/lib/permission_catalog.ts` (pure data, the same file the backend
  * guards read), drawn as role defaults plus this person's own exceptions.
  * A tick marked “changed” is an override; its “reset” returns that one
  * permission to the role default.

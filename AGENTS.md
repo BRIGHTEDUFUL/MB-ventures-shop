@@ -76,7 +76,7 @@ convex/
     stock.ts              applyStockChange — THE only way to mutate stock
     auth.ts               currentUserId, requireUser, requireStaff, requireAdmin, isStaff, getRole
     permissions.ts        requirePermission — fine-grained per-action guards
-    permission-catalog.ts PERMISSION_CATALOG, defaults, grouping — pure data, browser-safe
+    permission_catalog.ts PERMISSION_CATALOG, defaults, grouping — pure data, browser-safe
     dto.ts                productDTO, categoryDTO, settingsDTO, orderDTO, receiptDTO, historyDTO,
                           Variant, OptionAxis, ProductMaster types
     rules.ts              Pure business rules shared by mutations and UI (fees, validation, phone)
@@ -270,7 +270,7 @@ emails.admin, emails.note
 ```
 
 The **catalogue data** (label, group, floor per key, default sets, grouping
-helper) lives in `convex/lib/permission-catalog.ts` — a pure module with no
+helper) lives in `convex/lib/permission_catalog.ts` — a pure module with no
 Convex/auth imports, so the browser can bundle it. `convex/lib/permissions.ts`
 re-exports it (existing backend imports unchanged) and keeps only the guards,
 which need `@convex-dev/auth/server`. The `/staff → Team` screen renders the

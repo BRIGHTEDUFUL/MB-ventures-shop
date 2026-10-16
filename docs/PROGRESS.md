@@ -43,7 +43,7 @@ frontend).
 
 ### Permission system — shared catalogue + a real Team UI
 
-- **`convex/lib/permission-catalog.ts` (new, pure)** — `PERMISSION_CATALOG`,
+- **`convex/lib/permission_catalog.ts` (new, pure)** — `PERMISSION_CATALOG`,
   `PERMISSION_KEYS_IN_ORDER`, `defaultPermissions()`, `groupedPermissions()`
   and `PERMISSION_KEYS` were extracted out of `convex/lib/permissions.ts`
   (which imports `@convex-dev/auth/server` and therefore cannot be bundled for

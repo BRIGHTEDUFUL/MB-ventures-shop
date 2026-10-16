@@ -25,7 +25,7 @@ type Ctx = QueryCtx | MutationCtx;
  * accidentally ship with a wider door than the screen behind it.
  */
 
-// The catalogue itself is pure data in `permission-catalog.ts` — this file
+// The catalogue itself is pure data in `permission_catalog.ts` — this file
 // keeps only the guards, which need `@convex-dev/auth/server` and cannot be
 // bundled for the browser. The Team screen imports the pure module directly;
 // the re-export below keeps every existing backend import path working.
@@ -33,14 +33,14 @@ import {
   PERMISSION_CATALOG,
   PERMISSION_KEYS_IN_ORDER,
   defaultPermissions,
-} from "./permission-catalog";
+} from "./permission_catalog";
 
 export {
   PERMISSION_CATALOG,
   PERMISSION_KEYS_IN_ORDER,
   defaultPermissions,
   groupedPermissions,
-} from "./permission-catalog";
+} from "./permission_catalog";
 
 export type EffectivePermissions = {
   userId: Id<"users">;
