@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
+import { applyStockChange } from "../../convex/lib/stock";
 
 /**
  * The staff/admin half of the mutation coverage: `inventory.adjust`, the
@@ -106,6 +107,36 @@ const readSettings = (env: Env) => env.t.run((ctx) => ctx.db.query("store_settin
 const movements = (env: Env) => env.t.run((ctx) => ctx.db.query("inventory_history").collect());
 
 const activity = (env: Env) => env.t.run((ctx) => ctx.db.query("activity_log").collect());
+
+/** Puts an open hold on a product the way `orders.place` does — no checkout plumbing. */
+async function holdUnits(env: Env, slug: string, quantity: number): Promise<void> {
+  await env.t.run((ctx) =>
+    applyStockChange(ctx, {
+      slug,
+      command: { kind: "reserve", quantity },
+      movement_type: "reserve",
+      source: "checkout",
+      reason: "Open order holding stock (test)",
+    }),
+  );
+}
+
+/** The seeded desk as the staff editor submits it, with the number the form shows. */
+const deskSave = (stock: number): FunctionArgs<typeof api.catalogue.saveProduct> => ({
+  isNew: false,
+  id: "standing-desk",
+  name: "Electric sit-stand desk",
+  brand: "IKEA",
+  category: "desks",
+  price: 2400,
+  original_price: null,
+  stock,
+  description: "A desk that rises with the day, sold in colours.",
+  image_key: "desk",
+  gallery: [],
+  specs: {},
+  verified: false,
+});
 
 /** A valid `saveSettings` payload built from the current settings row. */
 type SaveSettingsArgs = FunctionArgs<typeof api.catalogue.saveSettings>;
@@ -237,6 +268,48 @@ describe("inventory.adjust — audited stock corrections", () => {
     await expectConvexError(env.t.query(api.inventory.history, {}), /Please sign in to continue/);
     await expectConvexError(env.customer.query(api.inventory.history, {}), /Staff access required/);
     expect(await env.staff.query(api.inventory.history, {})).toHaveLength(0);
+  });
+});
+
+describe("catalogue stock counts stay honest while an order holds units", () => {
+  it("re-saving the number the form shows never eats the held units", async () => {
+    const env = await setup();
+    await holdUnits(env, "standing-desk", 2); // 48 sellable, 2 promised
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 48, reserved: 2 });
+
+    await env.staff.mutation(api.catalogue.saveProduct, deskSave(48));
+    // The "unchanged" save: before the sellable→shelf conversion the holds
+    // were subtracted a second time and the shelf lost two units.
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 48, reserved: 2 });
+
+    // Raising the sellable count moves the shelf by exactly the same amount —
+    // the promise stays promised on top of it.
+    await env.staff.mutation(api.catalogue.saveProduct, deskSave(55));
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 55, reserved: 2 });
+  });
+
+  it("marking a held product out of stock zeroes what shoppers can order", async () => {
+    const env = await setup();
+    await holdUnits(env, "standing-desk", 2);
+
+    await env.staff.mutation(api.catalogue.saveProduct, deskSave(0));
+
+    // 0 sellable → the card reads Out of stock and nobody can order it —
+    // while the 2 units open orders hold survive for them to ship. Before the
+    // conversion this was refused outright as a count below zero.
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 0, reserved: 2 });
+  });
+
+  it("a bulk set speaks the same sellable number and keeps the holds", async () => {
+    const env = await setup();
+    await holdUnits(env, "standing-desk", 2);
+
+    await env.staff.mutation(api.catalogue.bulkUpdate, {
+      ids: ["standing-desk"],
+      changes: { stock: 0 },
+    });
+
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 0, reserved: 2 });
   });
 });
 

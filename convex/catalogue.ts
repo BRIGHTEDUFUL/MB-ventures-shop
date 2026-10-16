@@ -268,11 +268,18 @@ export const saveProduct = mutation({
         firstOption === null
           ? {
               slug,
-              command: { kind: "set_on_hand", value: args.stock },
+              // The form shows what is still *sellable* — `products.stock`,
+              // free of holds — while `set_on_hand` counts the shelf, which
+              // also holds every unit an open order has promised. Adding the
+              // holds back is what keeps saving the number you saw from
+              // silently eating those units (or, at zero, tripping the
+              // below-hold guard): sellable + promised = physically there.
+              // Same conversion the option branch below already performs.
+              command: { kind: "set_on_hand", value: args.stock + (existing.reserved ?? 0) },
               movement_type: "adjustment",
               source: "product",
               reason:
-                existing.stock === args.stock && (existing.reserved ?? 0) === 0
+                existing.stock === args.stock
                   ? "Stock confirmed on the product form"
                   : "Stock edited on the product form",
               actor_id: actorId,
@@ -501,10 +508,11 @@ export const bulkUpdate = mutation({
       if (c.verified !== undefined) patch.verified = c.verified;
       if (c.category !== undefined) patch.category = c.category;
 
-      // Stock never takes the direct path: the count goes through the single
+      // Stock never takes the direct path: the number goes through the single
       // writer so reservations are respected and a movement row is written.
-      // A bulk count below what open orders already hold is refused rather
-      // than quietly overselling.
+      // The list shows what is still sellable, so this product's holds are
+      // added back before the shelf count is set — the same conversion
+      // `saveProduct` performs (see there): sellable + promised = on hand.
       if (c.stock !== undefined) {
         // A product that sells in options keeps its stock as the derived sum
         // of its options — a bulk "set the total" would detach that number
@@ -522,7 +530,7 @@ export const bulkUpdate = mutation({
         }
         await applyStockChange(ctx, {
           slug: product.slug,
-          command: { kind: "set_on_hand", value: c.stock },
+          command: { kind: "set_on_hand", value: c.stock + (product.reserved ?? 0) },
           movement_type: "adjustment",
           source: "bulk",
           reason: "Bulk stock set",
@@ -1063,7 +1071,10 @@ export const saveVariants = mutation({
         await applyStockChange(ctx, {
           slug,
           variant_key: key,
-          command: { kind: "set_on_hand", value: input.stock },
+          // The editor's number is this option's *sellable* count (the grid
+          // shows the same free figure) — add the option's own holds back for
+          // the shelf count, exactly as saveProduct does for a plain product.
+          command: { kind: "set_on_hand", value: input.stock + (row.reserved ?? 0) },
           movement_type: "adjustment",
           source: "product",
           reason:

@@ -22,6 +22,8 @@ type Draft = {
   price: string;
   original_price: string;
   stock: string;
+  /** The explicit shelf choice: "in" sells (with `stock`), "out" saves 0. */
+  availability: "in" | "out";
   description: string;
   image_key: string;
   gallery: string[];
@@ -43,7 +45,11 @@ const toDraft = (p?: Product, m?: ProductMaster | null): Draft => ({
   category: p?.category ?? "",
   price: p ? String(p.price) : "",
   original_price: p?.original_price != null ? String(p.original_price) : "",
-  stock: p ? String(p.stock) : "0",
+  // New products start empty on both counts: the attendant picks In stock and
+  // types a real quantity, rather than the old silent `0` shipping an item as
+  // Out of stock without anyone meaning it.
+  stock: p ? String(p.stock) : "",
+  availability: p ? (p.stock > 0 ? "in" : "out") : "in",
   description: p?.description ?? "",
   image_key: p?.image_key ?? "",
   gallery: p?.gallery ?? [],
@@ -86,6 +92,9 @@ export function ProductForm({
   const saveProduct = useConvexMutation(api.catalogue.saveProduct);
   const deleteProduct = useConvexMutation(api.catalogue.deleteProduct);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
+  // One source for both the radios and their colour: green when the shelf can
+  // sell it, red when it cannot. Options products derive it from the total.
+  const inStock = sellsInOptions ? Number(d.stock) > 0 : d.availability === "in";
 
   const addPhotos = async (files: FileList | null, main: boolean) => {
     if (!files?.length) return;
@@ -108,8 +117,10 @@ export function ProductForm({
 
   const save = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
+    // "Out of stock" saves zero whatever the box still holds, so flipping the
+    // choice back never loses the quantity that was typed before.
     const price = Number(d.price),
-      stock = Number(d.stock),
+      stock = !sellsInOptions && d.availability === "out" ? 0 : Number(d.stock),
       orig = d.original_price ? Number(d.original_price) : null,
       cost = d.cost_price.trim() === "" ? null : Number(d.cost_price),
       reorderPoint = d.reorder_point.trim() === "" ? null : Number(d.reorder_point),
@@ -129,6 +140,16 @@ export function ProductForm({
     if (reorderQty !== null && (!Number.isInteger(reorderQty) || reorderQty < 0)) {
       toast.error("Reorder quantity must be a whole number of zero or more.");
       return;
+    }
+    if (!sellsInOptions && d.availability === "in") {
+      if (d.stock.trim() === "") {
+        toast.error("Enter how many are in stock — or choose Out of stock.");
+        return;
+      }
+      if (stock < 1) {
+        toast.error("In stock needs a quantity of at least 1 — or choose Out of stock.");
+        return;
+      }
     }
     if (!Number.isInteger(stock) || stock < 0) {
       toast.error("Stock must be a whole number.");
@@ -299,30 +320,79 @@ export function ProductForm({
       <div>
         <h3 className="mb-2 font-semibold">Stock &amp; codes</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label>
-            Available to sell
-            {sellsInOptions ? (
-              // Options carry the real counts; this number is the derived sum.
-              // Read-only on purpose: a hand-typed total would detach it from
-              // what the options add up to, which is exactly how the storefront
-              // once showed the wrong stock. The Options panel owns the counts.
-              <>
-                <input readOnly aria-readonly value={d.stock} className="opacity-60" />
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  Total across your options — change each count in the Options panel below.
-                </span>
-              </>
-            ) : (
+          <div className="sm:col-span-2">
+            <p className="mb-1.5">Availability</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <label
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${
+                  inStock
+                    ? "border-success/40 bg-success/10 text-success"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="availability"
+                  checked={inStock}
+                  disabled={sellsInOptions}
+                  onChange={() => set("availability", "in")}
+                />
+                In stock — for sale
+              </label>
+              <label
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${
+                  !inStock
+                    ? "border-destructive/40 bg-destructive/10 text-destructive"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="availability"
+                  checked={!inStock}
+                  disabled={sellsInOptions}
+                  onChange={() => set("availability", "out")}
+                />
+                Out of stock
+              </label>
+            </div>
+            {sellsInOptions && (
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Follows the total below — the Options panel owns the counts.
+              </span>
+            )}
+          </div>
+          {sellsInOptions ? (
+            // Options carry the real counts; this number is the derived sum.
+            // Read-only on purpose: a hand-typed total would detach it from
+            // what the options add up to, which is exactly how the storefront
+            // once showed the wrong stock. The Options panel owns the counts.
+            <label>
+              Available to sell
+              <input readOnly aria-readonly value={d.stock} className="opacity-60" />
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Total across your options — change each count in the Options panel below.
+              </span>
+            </label>
+          ) : d.availability === "in" ? (
+            <label>
+              Available to sell
               <input
                 required
                 type="number"
-                min="0"
+                min="1"
                 step="1"
+                placeholder="e.g. 10"
                 value={d.stock}
                 onChange={(e) => set("stock", e.target.value)}
               />
-            )}
-          </label>
+            </label>
+          ) : (
+            <p className="self-center text-sm text-muted-foreground">
+              Shoppers see a red <span className="font-medium">Out of stock</span> badge and cannot
+              order it. Switch back to In stock to sell it again.
+            </p>
+          )}
           <label>
             Reorder point (low-stock warning)
             <input

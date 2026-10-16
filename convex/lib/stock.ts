@@ -183,9 +183,16 @@ export function nextCounts(
       // units *above* a reservation become available.
       const stock = target - before.reserved;
       if (stock < 0) {
+        // Said from the shelf's point of view: an absolute count can only
+        // land below zero when it does not even cover the units open orders
+        // are already holding — so say what to do about that, not a pair of
+        // numbers that do not add up.
+        const promised = before.reserved;
         fail(
           "VALIDATION_FAILED",
-          `There are only ${before.reserved} units free — ${before.reserved} of the ${target} counted are already promised to open orders.`,
+          `You counted ${target} unit${target === 1 ? "" : "s"}, but ${promised} unit${
+            promised === 1 ? " is" : "s are"
+          } already promised to open orders — count at least ${promised}, or resolve those orders first.`,
         );
       }
       return { stock, reserved: before.reserved };

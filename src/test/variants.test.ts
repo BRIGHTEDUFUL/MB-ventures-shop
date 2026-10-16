@@ -1,5 +1,6 @@
 // @vitest-environment edge-runtime
 import { convexTest } from "convex-test";
+import type { FunctionArgs } from "convex/server";
 import { ConvexError } from "convex/values";
 import { describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
@@ -407,6 +408,36 @@ describe("catalogue.saveVariants — options become the unit of stock", () => {
     // Nothing moved: the product still owns its 47.
     expect((await readProduct(env))?.stock).toBe(47);
     expect(await variantsOf(env)).toHaveLength(0);
+  });
+
+  it("re-saving an option's own count while an order holds one keeps both", async () => {
+    const env = await setup();
+    await withColours(env); // Black 4 + White 3
+    await env.customer.mutation(
+      api.orders.place,
+      checkout([{ id: "standing-desk", quantity: 1, variant_key: "black" }]),
+    );
+    // The editor now shows Black as 3 sellable — the fourth unit is promised
+    // to the open order.
+    expect(await variantOf(env, "black")).toMatchObject({ stock: 3, reserved: 1 });
+
+    // Re-save exactly what the form displays. The row's sellable number plus
+    // its hold is the shelf count `set_on_hand` wants; without that
+    // conversion the hold was subtracted a second time and Black silently
+    // dropped to 2.
+    const resubmitted = BLACK_WHITE.map((row) =>
+      row.key === "black" ? { ...row, stock: 3 } : row,
+    );
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: resubmitted as unknown as FunctionArgs<
+        typeof api.catalogue.saveVariants
+      >["variants"],
+    });
+
+    expect(await variantOf(env, "black")).toMatchObject({ stock: 3, reserved: 1 });
+    expect(await variantOf(env, "white")).toMatchObject({ stock: 3, reserved: 0 });
+    expect(await readProduct(env)).toMatchObject({ stock: 6, reserved: 1 });
   });
 
   it("refuses two options that carry the same choices under different keys", async () => {

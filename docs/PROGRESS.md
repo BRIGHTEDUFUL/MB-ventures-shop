@@ -5,6 +5,59 @@ still open is listed under **Open**.
 
 ---
 
+## Product form stock — explicit In stock / Out of stock (with colours) + the sellable↔shelf fix (16 October 2026)
+
+**Status:** Complete — all quality gates green (tsc, lint, **249 unit tests**,
+prettier, build, 36 read-only e2e); the full flow verified live on dev.
+
+### What was asked
+
+Uploading a product must offer an explicit choice — **in stock (sale) with a
+quantity** or **out of stock** — it must work, and it must use the proper
+colours (green in stock / sale, red out of stock).
+
+### The form (`src/components/staff/product-form.tsx`)
+
+- New **Availability** selector in "Stock & codes": two chips —
+  **In stock — for sale** (green `success` chip when selected, reveals the
+  "Available to sell" quantity, min 1) and **Out of stock** (red
+  `destructive` chip, saves 0, with a note on what shoppers will see).
+  Storefront badges were already green/red (`stock`/`sale`/`out` tones) —
+  the form now matches them.
+- New products start **In stock with an empty required quantity** instead of
+  the old silent `stock: "0"` default, so nothing ships as Out of stock by
+  accident; edits reflect the current count. Options products show the chips
+  read-only, derived from the option total (the Options panel owns the
+  counts), keeping the `Available to sell` read-only field and its exact hint
+  that the live `variants.spec.ts` asserts.
+
+### The backend blocker this exposed (fixed)
+
+- The form shows what is **sellable** (`products.stock`, free of holds) but
+  `set_on_hand` counts the **shelf** (= sellable + units promised to open
+  orders). `saveProduct` (plain products), `bulkUpdate` and `saveVariants`
+  sent the sellable number straight through — so with any open order on a
+  product, every save **silently ate the held units**, and marking it out of
+  stock **failed outright** with the garbled "There are only 1 units free — 1
+  of the 0 counted…" message (reproduced live on dev before the fix). All
+  three now convert (`sellable + reserved = on hand`), matching the options
+  branch that already did it correctly.
+- `lib/stock.ts`'s below-hold message rewritten to say something true and
+  actionable ("You counted 0 units, but 1 unit is already promised to open
+  orders — count at least 1, or resolve those orders first.") — audit skip
+  #24, pulled in now that this flow is front and centre.
+
+### Verified end to end (dev)
+
+Out-of-stock on rock-360 (1 unit promised to an open order) → `Product
+saved`, `stock 0 / reserved 1`, catalogue shows the red **Out of stock**
+badge with add-to-cart disabled → back to In stock 9 → `stock 9 / reserved 1`
+and the card is buyable again. Four new regression tests pin the contract:
+unchanged saves never erode holds, zeroing works, bulk matches, and an
+option's re-save keeps its own hold.
+
+---
+
 ## Full-stack inventory & management audit — 63 verified findings fixed (16 October 2026)
 
 **Status:** Complete — all quality gates green (tsc, lint, **245 unit tests**,

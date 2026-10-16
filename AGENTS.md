@@ -3,7 +3,7 @@
 This file is the single source of truth for any AI IDE, agent, or collaborator
 working in this repository. Read it in full before touching `convex/` or any route file.
 
-**Last audited against the codebase: 15 October 2026.**
+**Last audited against the codebase: 16 October 2026.**
 
 ---
 
@@ -35,7 +35,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Auth        | Convex Auth · email + password only · no OAuth · no email verify                    |
 | Client data | TanStack Query via `@convex-dev/react-query`                                        |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                             |
-| Tests       | Vitest (245 tests, 16 files) + Playwright (36 read-only + 11 live checks)           |
+| Tests       | Vitest (249 tests, 16 files) + Playwright (36 read-only + 11 live checks)           |
 | CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips) |
 
 ---
@@ -226,6 +226,23 @@ await applyStockChange(ctx, {
 // NEVER do this
 await ctx.db.patch(productId, { stock: 10 });
 ```
+
+**Two counts live on every row.** `products.stock` (and `product_variants.stock`)
+is what is **sellable** — free of holds — and `reserved` is what open orders
+have promised. `set_on_hand` (and every stocktake/count) takes the **shelf**
+number instead: `sellable + reserved`. Every staff-facing screen shows the
+sellable count, so any path that feeds a staff-entered number into
+`set_on_hand` must add the holds back:
+
+```ts
+command: { kind: "set_on_hand", value: sellableEntered + (row.reserved ?? 0) }
+```
+
+`catalogue.saveProduct`, `catalogue.bulkUpdate` and `catalogue.saveVariants`
+all do this — without the conversion, saving a product that has open orders
+silently eats the held units, and "Out of stock" is refused as a count below
+zero. Regression tests live in `convex-staff-mutations.test.ts` and
+`variants.test.ts` ("stock counts stay honest while an order holds units").
 
 ### 4b. Server is authoritative on prices
 
@@ -433,7 +450,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 245/245 across 16 test files
+npm test                  # 249/249 across 16 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 36/36 Playwright checks (read-only)
