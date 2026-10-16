@@ -1,8 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { Plus, ZoomIn, X, MapPin, Truck, ShieldCheck, MessageCircle, Copy } from "lucide-react";
+import { Plus, MapPin, Truck, ShieldCheck, MessageCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/store-provider";
 import {
@@ -12,8 +11,9 @@ import {
   ProductCard,
   SectionHeading,
 } from "@/components/store-ui";
+import { ProductGallery } from "@/components/product-gallery";
 import { VariantPicker } from "@/components/variant-picker";
-import { images } from "@/lib/store-images";
+import { buildGallery, images } from "@/lib/store-images";
 import { storeQuery, pageHead, money, specs, delivery, zones, whatsappHref } from "@/lib/store";
 import { findVariantByOptions } from "../../convex/lib/variants";
 import { toast } from "sonner";
@@ -47,7 +47,6 @@ function ProductPage() {
     [quantity, setQuantity] = useState(1),
     [zone, setZone] = useState("central"),
     [gallery, setGallery] = useState(0),
-    [zoom, setZoom] = useState(false),
     // Axis name → chosen value. Seeded from the first visible variant on load.
     [chosen, setChosen] = useState<Record<string, string>>({});
 
@@ -56,23 +55,10 @@ function ProductPage() {
   const axes = p?.axes ?? [],
     variants = p?.variants ?? [];
 
-  // Reset axis selection and quantity when navigating between products.
-  // TanStack Router reuses the same component instance for different slugs, so
-  // without an explicit reset the previous product's choices survive in state.
-  // Keyed on slug: fires once per product, not on every re-render.
-  // Seeds chosen from the first visible variant so the picker is never blank.
-  useEffect(() => {
-    const firstVisible = variants.find((v) => v.visible);
-    setChosen(firstVisible?.options ?? {});
-    setQuantity(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-
-  if (!p) return <PageNotFound />;
-
   // Merge chosen over first-variant defaults so any axis the user has
   // explicitly clicked is respected, and axes not yet touched fall back to the
-  // first visible variant's value. Fully determined on first render.
+  // first visible variant's value. Fully determined on first render. Hoisted
+  // above the early return so the effects below can watch the selection.
   const defaultOptions = variants.find((v) => v.visible)?.options ?? variants[0]?.options ?? {};
   const selectedOptions = axes.length > 0 ? { ...defaultOptions, ...chosen } : defaultOptions;
 
@@ -80,6 +66,31 @@ function ProductPage() {
   // themselves — never by a recomputed key string, since stored keys are
   // opaque identifiers past orders point at.
   const selectedVariant = findVariantByOptions(variants, selectedOptions);
+
+  // Reset axis selection, quantity and the photo viewer when navigating
+  // between products. TanStack Router reuses the same component instance for
+  // different slugs, so without an explicit reset the previous product's
+  // choices survive in state. Keyed on slug: fires once per product, not on
+  // every re-render. Seeds chosen from the first visible variant so the
+  // picker is never blank.
+  useEffect(() => {
+    const firstVisible = variants.find((v) => v.visible);
+    setChosen(firstVisible?.options ?? {});
+    setQuantity(1);
+    setGallery(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  // An option with a photo of its own is what the shopper came to see:
+  // picking it jumps the viewer to the front of its set. An option without
+  // one leaves the viewer where it is — the list falls back to the product's
+  // own photos and the index clamps onto one of them.
+  useEffect(() => {
+    if (selectedVariant?.image_key) setGallery(0);
+  }, [selectedVariant?.image_key]);
+
+  if (!p) return <PageNotFound />;
+
   // With options on offer the *option* decides price, stock and SKU. A product
   // without them keeps exactly the numbers this page has always shown.
   const price = selectedVariant?.price ?? p.price,
@@ -98,7 +109,12 @@ function ProductPage() {
     // what is being charged. With options pricing themselves this used to
     // render GH₵ 250 with GH₵ 250 crossed out — a sale of nothing.
     compareAt = p.original_price !== null && p.original_price > price ? p.original_price : null;
-  const galleryImages = [images[p.image_key], ...(p.gallery ?? []).map((g) => images[g])];
+  // The chosen option's own photo leads the set, then the product's pictures.
+  const galleryImages = buildGallery(
+    p.image_key,
+    p.gallery ?? [],
+    selectedVariant?.image_key ?? null,
+  );
   // Prefers the staff-entered WhatsApp number, then the shop phone, and returns
   // null when neither is dialable — in which case we drop the link entirely
   // rather than ship a dead wa.me anchor.
@@ -133,35 +149,12 @@ function ProductPage() {
       </div>
       <div className="two-column">
         <div>
-          <div className="gallery">
-            <img src={galleryImages[gallery]} alt={`${p.name}, view ${gallery + 1}`} />
-            <Button
-              variant="outline"
-              className="absolute bottom-4 right-4 icon-control rounded-full"
-              title="Zoom image"
-              onClick={() => setZoom(true)}
-              aria-label="Zoom product image"
-            >
-              <ZoomIn />
-            </Button>
-          </div>
-          <div className="gallery-thumbs">
-            {galleryImages.map((src, i) => (
-              <Button
-                variant="ghost"
-                key={src}
-                className="h-auto p-0"
-                aria-label={`View product image ${i + 1}`}
-                onClick={() => setGallery(i)}
-              >
-                <img
-                  className={i === gallery ? "ring-2 ring-link" : ""}
-                  src={src}
-                  alt={`View ${i + 1}`}
-                />
-              </Button>
-            ))}
-          </div>
+          <ProductGallery
+            srcs={galleryImages}
+            index={gallery}
+            onIndexChange={setGallery}
+            name={p.name}
+          />
         </div>
         <div>
           <p className="eyebrow text-muted-foreground">{p.brand}</p>
@@ -339,31 +332,6 @@ function ProductPage() {
             ))}
         </div>
       </section>
-      <Dialog.Root open={zoom} onOpenChange={setZoom}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="scrim" />
-          <Dialog.Content
-            className="search-panel !top-8 !max-h-[90vh]"
-            aria-describedby={undefined}
-          >
-            <Dialog.Title className="mb-5 text-lg">{p.name}</Dialog.Title>
-            <Dialog.Close asChild>
-              <Button
-                variant="ghost"
-                className="overlay-close icon-control"
-                aria-label="Close product viewer"
-              >
-                <X />
-              </Button>
-            </Dialog.Close>
-            <img
-              src={galleryImages[gallery]}
-              alt={p.name}
-              className="max-h-[75vh] w-full object-contain"
-            />
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
     </div>
   );
 }

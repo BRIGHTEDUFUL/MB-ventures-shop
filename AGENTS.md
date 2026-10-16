@@ -35,7 +35,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Auth        | Convex Auth · email + password only · no OAuth · no email verify                    |
 | Client data | TanStack Query via `@convex-dev/react-query`                                        |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                             |
-| Tests       | Vitest (228 tests, 15 files) + Playwright (35 read-only + 10 live checks)           |
+| Tests       | Vitest (234 tests, 16 files) + Playwright (36 read-only + 11 live checks)           |
 | CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips) |
 
 ---
@@ -146,6 +146,7 @@ src/
     auth-frame.tsx        Auth form frame
     order-receipt.tsx     Printable order receipt
     variant-picker.tsx    Colour swatch + option picker for product pages
+    product-gallery.tsx   Product photo viewer (arrows, swipe, thumbs, zoom)
     staff/
       shell.tsx           Staff sidebar layout + navigation
       bits.tsx            Reusable staff UI atoms (badges, status chips)
@@ -297,6 +298,12 @@ Products can have **option axes** (Colour, Size, Type) and a flat list of
 - `COLOUR_SWATCHES` maps known colour names to hex for rendering.
 - `VARIANT_LIMITS` caps max options/axes per product.
 
+Variants can also carry **one photo each** (`product_variants.image_key`,
+set in the staff options panel). The product page's gallery puts the chosen
+option's photo first — see `buildGallery()` in `src/lib/store-images.ts` and
+`src/components/product-gallery.tsx`. An option without a photo falls back to
+the product's own photos.
+
 The `variant-picker.tsx` component renders swatches for colours and text chips
 for other axes. `variant-editor.tsx` in the staff product editor manages CRUD.
 
@@ -417,16 +424,16 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 228/228 across 15 test files
+npm test                  # 234/234 across 16 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
-npm run test:e2e          # 35/35 Playwright checks (read-only)
+npm run test:e2e          # 36/36 Playwright checks (read-only)
 ```
 
 Optional (writes a real order + option fixture to dev — opt-in only, self-cleaning):
 
 ```sh
-npm run test:e2e:live     # 10/10 live journey checks (purchase + options)
+npm run test:e2e:live     # 11/11 live journey checks (purchase + options)
 ```
 
 Optional (needs a dev server or a live URL; run it whenever layout, CSS or
@@ -634,6 +641,7 @@ see `scripts/create-new-accounts.mjs` (`spawnSync` with `shell: true` and
 
 | File                               | Coverage                                       |
 | ---------------------------------- | ---------------------------------------------- |
+| gallery.test.ts                    | buildGallery ordering, variant photo, dedupe   |
 | convex-mutations.test.ts           | orders.place, checkout, cart rollback          |
 | convex-staff-mutations.test.ts     | Staff order updates, payment, cancellation     |
 | stock-single-writer.test.ts        | applyStockChange invariant enforcement         |

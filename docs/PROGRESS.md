@@ -5,6 +5,60 @@ still open is listed under **Open**.
 
 ---
 
+## Variant photo gallery — option colours drive the photos, arrows step through (15 October 2026)
+
+**Status:** Complete — all quality gates green (tsc, lint, 234 unit tests,
+prettier, build, 36 read-only e2e). Live suite updated (one new test) and
+verified on the deploy.
+
+### What was asked
+
+Customers could not browse a product's photos properly (no way to step
+through them) and picking a colour never changed the picture — even though
+the backend has carried one photo per variant (`product_variants.image_key`)
+since the options feature shipped.
+
+### What was done
+
+- **`src/components/product-gallery.tsx` (new)** — the product page's photo
+  viewer, extracted from the route: previous/next arrows, horizontal swipe
+  (touch, `touchAction: pan-y` so vertical scroll never gets trapped), a
+  `1 / 3` counter pill mirroring the zoom button, the thumbnail strip and the
+  zoom viewer (which now steps through the same list). Controls exist only
+  when there is more than one photo.
+- **Colour → photo** — `buildGallery()` in `src/lib/store-images.ts` builds
+  the list: the chosen option's own photo first, then the product's main
+  photo and gallery, each photo once. The product page resets the viewer to
+  the option's photo when the selection changes and clamps the index when a
+  shorter list takes over; an option without a photo keeps the product's set.
+- **Staff can set the photo** — the options panel gained a per-row
+  upload/replace/remove control (`Add photo`, same wording as the product
+  form's Photos section). The row already carried `image_key` through the
+  save; now it can be filled. The panel copy explains that shoppers see the
+  photo the moment they pick that option.
+- **No backend change** — schema, `variantArg`, `saveVariants` and
+  `variantDTO` already carried `image_key` end to end; this feature is
+  frontend + staff-UI only, so no Convex deploy was needed.
+- **Guard rails** — `.gallery-thumbs` gained `overflow-x: auto` (a nine-photo
+  strip must scroll, not widen a 320px page); the viewer clamps out-of-range
+  indices; slug navigation now also resets the photo index (it used to
+  survive navigation).
+
+### Tests
+
+- `src/test/gallery.test.ts` (new, 5 tests) — ordering, variant photo first,
+  https-URL pass-through, dedupe, blank keys.
+- `src/test/variants.test.ts` — new round-trip: `saveVariants` keeps a
+  variant photo across re-saves and honours its removal.
+- `e2e/storefront.spec.ts` — read-only: a two-photo product steps through its
+  photos; a one-photo product shows no arrows.
+- `e2e/variants.spec.ts` (live) — new test: staff uploads a photo per colour
+  on the mouse pad, saves, reload proves persistence; the shopper test now
+  asserts each colour opens on its own photo, the arrows step into the
+  product's own picture, and the buy flow is unchanged.
+
+---
+
 ## UI consistency audit — shared vocabulary, not-found screens, one breadcrumb shape (15 October 2026)
 
 **Status:** Complete — all quality gates green (tsc, lint, 228 unit tests,
@@ -18,10 +72,10 @@ bottom-tab labels (deliberate, from the sitewide mobile pass).
   catalogue printed `Home / Shop / <category-id>` as dead text — "Home" was not
   a link, and the raw category id showed where the h1 showed the display name.
 - **Two hand-rolled "not found" treatments.** The root screens in `__root.tsx`
-  re-created shadcn's Button classes by hand and used `min-h-screen` *inside*
+  re-created shadcn's Button classes by hand and used `min-h-screen` _inside_
   the site shell, stacking a full viewport under the header and pushing the
   footer a screen below the message. The catch-all `/$page` route also said
-  "Product not found" for a missing *page*.
+  "Product not found" for a missing _page_.
 - **Two different ad-hoc notice boxes** in cart and checkout where the design
   system already defines `.notice`.
 - **Off-token colours:** an orange-500 cart over-stock warning and emerald-600

@@ -206,6 +206,16 @@ one movement, per line.
   cannot reach a dead end and then fail at checkout.
 - Selecting a variant updates price, stock line, SKU and the delivery estimate
   in place.
+- **Photos follow the option.** A variant's own photo (`image_key`) leads the
+  product page's gallery the moment that option is picked; an option without
+  one falls back to the product's own photos. `buildGallery`
+  (`src/lib/store-images.ts`) builds the list — option photo first, then the
+  product's main photo, then its gallery, each photo once.
+- The gallery (`src/components/product-gallery.tsx`) steps through the photos
+  with previous/next arrows, a swipe on touch screens and the thumbnail strip;
+  arrows and swipe exist only when there is more than one photo. The zoom
+  viewer steps through the same list. The index resets to the option's photo
+  when the choice changes, and clamps when a shorter list takes over.
 - "Add to cart" and "Buy now" are disabled when the selected combination is out
   of stock, and the button label names the choice ("Add Black to cart") when a
   single axis is in play.
@@ -229,7 +239,9 @@ place (`convex/lib/variants.ts`).
 - **Build combinations** button: cross-multiplies the axes into variant rows,
   preserving rows that already exist (matched by key) so re-generating never
   discards stock or a SKU someone typed.
-- Per-variant row: name (auto, editable), price override, SKU, photo, stock.
+- Per-variant row: name (auto, editable), price override, SKU, **photo**
+  (upload/replace/remove — saved with the row, shown to shoppers as that
+  option's lead image), stock.
 - Stock on this panel is written through `catalogue.saveVariants`, which routes
   each change through `applyStockChange` — the form never patches stock.
 

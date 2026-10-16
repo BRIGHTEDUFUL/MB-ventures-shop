@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { STATIC_ROUTES, collectPageProblems, productRoutes } from "./helpers";
+import { STATIC_ROUTES, collectPageProblems, productRoutes, waitForHydration } from "./helpers";
 
 test.describe("Document head", () => {
   for (const route of STATIC_ROUTES) {
@@ -134,6 +134,28 @@ test.describe("Storefront badges & contact", () => {
     // whatever number the footer displays, that is the number it must call.
     expect(href.replace(/^tel:/, "").replace(/[\s-]/g, "")).toBe(shown);
     expect(shown.length, "the shop number should be a real number").toBeGreaterThanOrEqual(9);
+  });
+
+  test("a product with several photos steps through them; a plain one shows no arrows", async ({
+    page,
+  }) => {
+    // The keyboard ships two photos, so it gets the step-through controls.
+    // Hydration first: the SSR button exists but carries no handler yet.
+    await page.goto("/product/custom-macro-mechanical-keyboard");
+    await waitForHydration(page);
+    const main = page.locator(".gallery > img").first();
+    const first = await main.getAttribute("src");
+    expect(first).toContain("custom-macro-mechanical-keyboard.webp");
+    await page.getByRole("button", { name: "Next image" }).click();
+    await expect(main).toHaveAttribute("src", /custom-macro-mechanical-keyboard-gallery\.webp/);
+    await page.getByRole("button", { name: "Previous image" }).click();
+    await expect(main).toHaveAttribute("src", first!);
+
+    // The light bar has one photo: a control that cannot do anything is noise.
+    await page.goto("/product/monitor-light-bar");
+    await waitForHydration(page);
+    await expect(page.getByRole("button", { name: "Next image" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Previous image" })).toHaveCount(0);
   });
 
   test("an options product offers only combinations it can actually sell", async ({ page }) => {

@@ -134,6 +134,38 @@ test.describe("Live options journey", () => {
     await expect(page.getByText("2 on hand", { exact: true })).toBeVisible();
   });
 
+  test("staff gives each colour its own photo", async ({ page }) => {
+    await staffSignIn(page);
+    await page.goto(`/staff/products/${PAD}`);
+    await waitForHydration(page);
+    await expect(page.getByText("4 in total")).toBeVisible({ timeout: 20_000 });
+
+    // Two different real photos, one per colour. The row only offers
+    // "Replace photo" once a photo is held, which is also the signal that
+    // the upload finished and the draft is ready to save.
+    await page
+      .getByLabel("Photo for Black / Standard")
+      .setInputFiles("public/images/products/luminous-rgb-mouse-pad.webp");
+    await expect(page.getByRole("button", { name: "Remove", exact: true })).toHaveCount(1);
+    await page
+      .getByLabel("Photo for White / Standard")
+      .setInputFiles("public/images/products/monitor-light-bar.webp");
+    await expect(page.getByRole("button", { name: "Remove", exact: true })).toHaveCount(2);
+
+    await page.getByRole("button", { name: "Save options" }).click();
+    await expect(page.getByText("Saved 4 options for this product.")).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // Reload: the backend kept both photos, and the sizes kept their stock.
+    await page.reload();
+    await waitForHydration(page);
+    await expect(page.getByRole("button", { name: "Remove", exact: true })).toHaveCount(2, {
+      timeout: 20_000,
+    });
+    await expect(page.getByLabel("Stock for Black / Standard")).toHaveValue("4");
+  });
+
   test("a shopper picks one combination out of the matrix and buys it", async ({ page }) => {
     const stamp = Date.now();
     const email = `e2e.options.${stamp}@example.com`;
@@ -147,6 +179,27 @@ test.describe("Live options journey", () => {
     await expect(colour.getByRole("button", { name: "Black, 4 in stock" })).toBeEnabled();
     await expect(size.getByRole("button", { name: "Standard, 4 in stock" })).toBeEnabled();
     await expect(page.getByText("In stock · 4 available · Black / Standard")).toBeVisible();
+
+    // 1b. The colour's own photo leads the gallery, and the arrows step from
+    //     it into the product's own pictures. (Staff gave the two Standard
+    //     colours their photos in the editor test above.)
+    const mainImage = page.locator(".gallery > img").first();
+    const blackPhoto = await mainImage.getAttribute("src");
+    expect(blackPhoto, "Black should open on its own photo").toContain("api/storage");
+    await colour.getByRole("button", { name: "White, 4 in stock" }).click();
+    await expect(mainImage, "White should show a different photo").not.toHaveAttribute(
+      "src",
+      blackPhoto!,
+    );
+    const whitePhoto = await mainImage.getAttribute("src");
+    expect(whitePhoto, "White should open on its own photo").toContain("api/storage");
+    await page.getByRole("button", { name: "Next image" }).click();
+    await expect(mainImage).toHaveAttribute("src", "/images/products/luminous-rgb-mouse-pad.webp");
+    await page.getByRole("button", { name: "Previous image" }).click();
+    await expect(mainImage).toHaveAttribute("src", whitePhoto!);
+    // Back on Black for the buy flow below.
+    await colour.getByRole("button", { name: "Black, 4 in stock" }).click();
+    await expect(mainImage).toHaveAttribute("src", blackPhoto!);
 
     // 2. Choosing XL re-resolves the Colour row against it: Black / XL exists,
     //    White / XL does not — so White grays out rather than lying in wait.

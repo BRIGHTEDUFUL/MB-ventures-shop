@@ -890,6 +890,9 @@ label textarea {
   display: flex;
   gap: 12px;
   margin-top: 16px;
+  /* A product can carry up to nine photos; on a narrow screen the strip
+     scrolls sideways instead of pushing the page's layout wider. */
+  overflow-x: auto;
 }
 .gallery-thumbs img {
   width: 72px;

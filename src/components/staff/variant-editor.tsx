@@ -5,6 +5,8 @@ import { api } from "../../../convex/_generated/api";
 import { convexQueryOptions } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
 import { errorMessage, money } from "@/lib/store";
+import { images } from "@/lib/store-images";
+import { useImageUpload } from "@/lib/upload-image";
 import { toast } from "sonner";
 import {
   VARIANT_LIMITS,
@@ -29,9 +31,11 @@ type RowDraft = {
   stock: string;
   visible: boolean;
   /**
-   * Carried through untouched. This panel does not edit them, but the save
-   * replaces the whole row, so dropping them here would silently erase a
-   * variant photo or a per-option cost every time stock was edited.
+   * The option's own photo, as an uploaded https URL or a built-in key.
+   * Editable in this panel (the storefront shows it the moment a shopper
+   * picks the option); the save replaces the whole row, so a null here
+   * after a save means staff removed it — and a per-option cost is carried
+   * through the same way, though this panel does not edit those.
    */
   image_key: string | null;
   cost_price: number | null;
@@ -70,6 +74,9 @@ export function VariantEditor({ slug, basePrice }: Props) {
   const [newAxis, setNewAxis] = useState("");
   /** Inline "add a value" boxes, keyed by axis name. */
   const [newValues, setNewValues] = useState<Record<string, string>>({});
+  /** The row whose photo is uploading right now, if any. */
+  const [uploading, setUploading] = useState<string | null>(null);
+  const uploadPhoto = useImageUpload();
 
   // Seed once per load. Deliberately *not* re-run after a save: keeping the
   // drafts in place means an unfinished edit is never thrown away by a
@@ -101,6 +108,23 @@ export function VariantEditor({ slug, basePrice }: Props) {
 
   const setRow = (key: string, patch: Partial<RowDraft>): void =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+
+  /**
+   * Upload a photo for one option and hold it on the draft — like every
+   * other field here, it reaches the storefront when "Save options" is
+   * pressed. A failed upload leaves the row's current photo untouched.
+   */
+  const setRowPhoto = async (key: string, file: File | null): Promise<void> => {
+    if (file === null) return;
+    setUploading(key);
+    try {
+      setRow(key, { image_key: await uploadPhoto(file) });
+    } catch (err) {
+      toast.error(errorMessage(err, "The photo could not be uploaded."));
+    } finally {
+      setUploading(null);
+    }
+  };
 
   const addAxis = (): void => {
     const name = newAxis.trim();
@@ -295,8 +319,9 @@ export function VariantEditor({ slug, basePrice }: Props) {
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
         A product can sell in versions — Black or White, Small or Large — and each one keeps its own
-        stock, price and SKU. The product's own stock becomes the total across them. Leave a price
-        blank to use the product price of {money(basePrice)}.
+        stock, price, SKU and photo. Give an option a photo and shoppers see it the moment they pick
+        that option. The product's own stock becomes the total across them. Leave a price blank to
+        use the product price of {money(basePrice)}.
       </p>
 
       {/* ---- axes ---- */}
@@ -474,6 +499,44 @@ export function VariantEditor({ slug, basePrice }: Props) {
                         onChange={(e) => setRow(row.key, { stock: e.target.value })}
                       />
                     </label>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {row.image_key !== null && (
+                      <img
+                        src={images[row.image_key]}
+                        alt=""
+                        className="size-16 rounded-lg object-cover"
+                      />
+                    )}
+                    <label className="text-sm">
+                      {uploading === row.key
+                        ? "Uploading…"
+                        : row.image_key !== null
+                          ? "Replace photo"
+                          : "Add photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        aria-label={`Photo for ${row.name}`}
+                        disabled={busy || uploading !== null}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          e.target.value = "";
+                          void setRowPhoto(row.key, file);
+                        }}
+                      />
+                    </label>
+                    {row.image_key !== null && uploading !== row.key && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-xs"
+                        onClick={() => setRow(row.key, { image_key: null })}
+                      >
+                        Remove
+                      </Button>
+                    )}
                   </div>
 
                   <label className="mt-3 flex min-h-[44px] items-center gap-2 text-sm">

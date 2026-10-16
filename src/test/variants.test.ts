@@ -457,6 +457,56 @@ describe("catalogue.saveVariants — options become the unit of stock", () => {
     expect(rows.map((r) => r.key)).toEqual(["black--120-x-60-cm"]);
     expect(rows[0]).toMatchObject({ stock: 4, sku: "DESK-BLK" });
   });
+
+  it("keeps an option's photo across the save — and honours its removal", async () => {
+    const env = await setup();
+    const photo = "https://necessary-newt-861.convex.cloud/api/storage/some-photo";
+    const black = {
+      key: "black",
+      name: "Black",
+      options: { Colour: "Black" },
+      price: null,
+      sku: null,
+      barcode: null,
+      cost_price: null,
+      stock: 4,
+      visible: true,
+    };
+    const white = { ...black, key: "white", name: "White", options: { Colour: "White" } };
+
+    // Staff gives Black its own photo. The storefront reads it from the row,
+    // so the save has to carry it — a lost photo is a lost sale.
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        { ...black, image_key: photo },
+        { ...white, image_key: null },
+      ],
+    });
+    expect((await variantOf(env, "black"))?.image_key).toBe(photo);
+    expect((await variantOf(env, "white"))?.image_key).toBe(null);
+
+    // A later edit of *stock* must not erase the photo: the save replaces the
+    // whole row, so the panel sends the photo back as it found it…
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        { ...black, image_key: photo, stock: 7 },
+        { ...white, image_key: null },
+      ],
+    });
+    expect(await variantOf(env, "black")).toMatchObject({ stock: 7, image_key: photo });
+
+    // …and removing it is a removal, not a resurrection.
+    await env.staff.mutation(api.catalogue.saveVariants, {
+      slug: "standing-desk",
+      variants: [
+        { ...black, image_key: null },
+        { ...white, image_key: null },
+      ],
+    });
+    expect((await variantOf(env, "black"))?.image_key).toBe(null);
+  });
 });
 
 describe("options stored under a different key order keep working", () => {

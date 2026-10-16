@@ -35,6 +35,25 @@ export const images: Record<string, string> = new Proxy(base, {
 });
 export const builtInPhotos = Object.keys(base).filter((k) => k !== "logo");
 
+/**
+ * The image list behind a product page, in display order: the chosen option's
+ * own photo first (so picking a colour lands on that colour's picture), then
+ * the product's main photo, then its extra photos. Keys and uploaded https
+ * URLs both resolve through `images`; the same picture showing up twice —
+ * a variant sharing the product's photo, say — is listed once.
+ */
+export const buildGallery = (
+  mainKey: string,
+  galleryKeys: readonly string[],
+  variantKey: string | null,
+): string[] => {
+  const resolved = [variantKey, mainKey, ...galleryKeys]
+    .filter((key): key is string => key != null && key !== "")
+    // The proxy answers every string key with a URL — TS just cannot see it.
+    .map((key) => images[key] as string);
+  return [...new Set(resolved)];
+};
+
 /** Intrinsic pixel size of every built-in photo, measured from the files in `public/images`. */
 const sizes: Record<string, readonly [number, number]> = {
   desk: [1400, 1400],
