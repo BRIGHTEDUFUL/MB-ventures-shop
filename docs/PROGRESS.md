@@ -5,6 +5,59 @@ still open is listed under **Open**.
 
 ---
 
+## Catalogue price filter hid every product above GH₵ 5,000 (17 October 2026)
+
+**Status:** Complete — all quality gates green (tsc, lint, **258 unit tests**,
+prettier, build, 36 read-only e2e); fix verified on production HTML.
+
+### What was asked
+
+Admin uploads (new AOC / ASUS / CHAHO stock) were "not showing" on the
+storefront — the circled price filter was the suspect. Investigate, fix, and
+audit related issues; guess nothing.
+
+### The bug (evidence, not guesswork)
+
+The catalogue's price filter was **hardcoded to GH₵ 5,000** in four places:
+`useState(5000)` default, `max="5000"` on the slider, and two
+`setMax(5000)` resets. Production carried `type="range" min="0" max="5000"`
+in its served HTML, so every listed product priced above it was filtered out
+on load **and unreachable by dragging** — including the circled ASUS TUF
+(6,500), plus ultrawide-curved-monitor (5,600), redmi (6,200) and the
+49-inch 165Hz monitor (10,500).
+
+### The fix (`src/routes/catalogue.tsx` + `src/lib/store.ts`)
+
+- `priceCeiling(products)` — the slider's top is now the priciest **listed**
+  product, rounded up to the next 100 (floor 1,000 for an empty shelf). No
+  constant can ever hide the catalogue from itself again.
+- `filterCatalogue(products, filter)` — the filter predicate extracted as a
+  pure, tested rule shared by the grid and the "N products" count. The filter
+  starts **fully open** (no ceiling); only a real drag narrows it, and a
+  drag-to-zero is a real bound (the old `!max ||` short-circuit treated 0 as
+  "no filter" and showed everything).
+- Related defects fixed in the same block: brand list now built from listed
+  products only (a hidden-only brand used to filter to an empty grid); the
+  page resets on brand / in-stock / on-sale / sort changes and is clamped to
+  the pages that exist (a header search could land on an empty page); "On
+  sale" requires `original_price > price` — only a genuine markdown.
+
+### Verification
+
+- New `src/test/catalogue-rules.test.ts` (9 tests) pins the contract:
+  default filter shows everything; ceiling rounds; sale/stock/search
+  predicates. Suite: **258/258 across 17 files**.
+- Production data before deploy: 42 products / 37 listed; the four
+  expensive ones sat at `max="5000"`-hidden. After deploy: catalogue HTML
+  carries `max="10500"` and all listed products pass by default.
+- Note for the shop: 19 of the 37 listed products are at **stock 0**
+  (all four expensive uploads included) and will read as red "Out of stock"
+  badges now that they are visible — several look like they were uploaded
+  on the old form whose quantity silently defaulted to 0. Quantities are
+  topped up per product in `/staff` → Products → Edit.
+
+---
+
 ## Product form stock — explicit In stock / Out of stock (with colours) + the sellable↔shelf fix (16 October 2026)
 
 **Status:** Complete — all quality gates green (tsc, lint, **249 unit tests**,

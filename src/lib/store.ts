@@ -3,7 +3,7 @@ import { convexQueryOptions } from "./convex";
 import { api } from "../../convex/_generated/api";
 
 // Legacy Supabase row shapes, now served by Convex (`convex/lib/dto.ts`).
-import type { Order } from "../../convex/lib/dto";
+import type { Order, Product } from "../../convex/lib/dto";
 export type {
   Product,
   Settings,
@@ -34,6 +34,50 @@ export {
 
 export const money = (n: number, decimals = false) =>
   `GH₵ ${n.toLocaleString("en-GH", { minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: 2 })}`;
+
+/**
+ * The catalogue price slider's ceiling comes from the shelf itself, never a
+ * constant. A hard maximum hides every product priced above it the moment an
+ * admin uploads something pricier (the GH₵ 10,500 monitor was invisible while
+ * the slider topped out at 5,000), so the top of the range is the priciest
+ * product on sale today, rounded up to the next 100. The floor keeps an empty
+ * catalogue drawing a sane slider.
+ */
+export const priceCeiling = (products: Pick<Product, "price">[]) => {
+  const priciest = products.reduce((most, p) => Math.max(most, p.price), 0);
+  return Math.max(1000, Math.ceil(priciest / 100) * 100);
+};
+
+/** The catalogue filter's inputs — component state, kept as plain data. */
+export type CatalogueFilter = {
+  category: string;
+  q: string;
+  /** Upper price bound; `null` means no ceiling (every product passes). */
+  max: number | null;
+  stock: boolean;
+  sale: boolean;
+  brand: string;
+};
+
+/**
+ * The one predicate behind the catalogue grid and its "N products" count.
+ * Extracted so the count and the cards can never disagree, and so the
+ * regression that motivated it stays pinned: a default filter (no price
+ * ceiling) must pass every listed product, whatever it costs.
+ */
+export const filterCatalogue = (products: Product[], f: CatalogueFilter) => {
+  const query = f.q.trim().toLowerCase();
+  return products.filter(
+    (p) =>
+      p.visible !== false &&
+      (!f.category || p.category === f.category) &&
+      (!query || `${p.name} ${p.brand}`.toLowerCase().includes(query)) &&
+      p.price <= (f.max ?? Infinity) &&
+      (!f.stock || (p.verified && p.stock > 0)) &&
+      (!f.sale || (p.original_price && p.original_price > p.price)) &&
+      (!f.brand || p.brand === f.brand),
+  );
+};
 
 /**
  * The one written form of each order state — the staff pills and the

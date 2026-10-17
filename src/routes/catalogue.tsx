@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { SlidersHorizontal, X, Grid2X2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard, PageError, PageNotFound } from "@/components/store-ui";
-import { storeQuery, pageHead, money } from "@/lib/store";
+import { filterCatalogue, storeQuery, pageHead, money, priceCeiling } from "@/lib/store";
 export const Route = createFileRoute("/catalogue")({
   validateSearch: (s: Record<string, unknown>) => ({
     category: typeof s["category"] === "string" ? s["category"] : "",
@@ -27,33 +27,41 @@ function Catalogue() {
       data: { products, categories: allCats },
     } = useSuspenseQuery(storeQuery),
     categories = allCats.filter((c) => c.visible),
+    // Brands come from the same shelf the grid draws from: a brand that only
+    // exists on a hidden product would filter down to an empty grid.
+    brands = [...new Set(products.filter((p) => p.visible !== false).map((p) => p.brand))].sort(),
+    // The slider's top is the priciest thing on sale, so an upload priced above
+    // an old hard maximum can never be hidden by the filter itself.
+    ceiling = priceCeiling(products.filter((p) => p.visible !== false)),
     search = Route.useSearch(),
     navigate = Route.useNavigate();
   const [sort, setSort] = useState("name"),
-    [max, setMax] = useState(5000),
+    // No ceiling by default — only a real drag narrows the price. The old
+    // hard 5,000 default silently hid the GH₵ 5,600–10,500 monitors.
+    [max, setMax] = useState<number | null>(null),
     [stock, setStock] = useState(false),
     [sale, setSale] = useState(false),
     [brand, setBrand] = useState(""),
     [open, setOpen] = useState(false),
     [page, setPage] = useState(1);
-  const filtered = products
-    .filter(
-      (p) =>
-        p.visible !== false &&
-        (!search.category || p.category === search.category) &&
-        (!search.q || `${p.name} ${p.brand}`.toLowerCase().includes(search.q.toLowerCase())) &&
-        p.price <= max &&
-        (!stock || (p.verified && p.stock > 0)) &&
-        (!sale || p.original_price) &&
-        (!brand || p.brand === brand),
-    )
-    .sort((a, b) =>
-      sort === "low"
-        ? a.price - b.price
-        : sort === "high"
-          ? b.price - a.price
-          : a.name.localeCompare(b.name),
-    );
+  const filtered = filterCatalogue(products, {
+    category: search.category,
+    q: search.q,
+    max,
+    stock,
+    sale,
+    brand,
+  }).sort((a, b) =>
+    sort === "low"
+      ? a.price - b.price
+      : sort === "high"
+        ? b.price - a.price
+        : a.name.localeCompare(b.name),
+  );
+  // Filters can shrink the list from under the current page (a header search
+  // lands here without a reset), so the page is clamped to what exists.
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 9)),
+    pageSafe = Math.min(page, pageCount);
   const title = search.q
     ? `Results for “${search.q}”`
     : categories.find((c) => c.id === search.category)?.name || "All workspace essentials";
@@ -77,13 +85,13 @@ function Catalogue() {
       </select>
       <h2>Price</h2>
       <label>
-        Up to {money(max)}
+        Up to {money(max ?? ceiling)}
         <input
           type="range"
           min="0"
-          max="5000"
+          max={ceiling}
           step="100"
-          value={max}
+          value={Math.min(max ?? ceiling, ceiling)}
           onChange={(e) => {
             setMax(Number(e.target.value));
             setPage(1);
@@ -91,29 +99,51 @@ function Catalogue() {
         />
       </label>
       <h2>Brand</h2>
-      <select aria-label="Filter brand" value={brand} onChange={(e) => setBrand(e.target.value)}>
+      <select
+        aria-label="Filter brand"
+        value={brand}
+        onChange={(e) => {
+          setPage(1);
+          setBrand(e.target.value);
+        }}
+      >
         <option value="">All brands</option>
-        {[...new Set(products.map((p) => p.brand))].map((b) => (
+        {brands.map((b) => (
           <option key={b}>{b}</option>
         ))}
       </select>
       <h2>Availability</h2>
       <label className="filter-line">
-        <input type="checkbox" checked={stock} onChange={(e) => setStock(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={stock}
+          onChange={(e) => {
+            setPage(1);
+            setStock(e.target.checked);
+          }}
+        />
         In stock only
       </label>
       <label className="filter-line">
-        <input type="checkbox" checked={sale} onChange={(e) => setSale(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={sale}
+          onChange={(e) => {
+            setPage(1);
+            setSale(e.target.checked);
+          }}
+        />
         On sale
       </label>
       <Button
         variant="link"
         className="mt-5 px-0"
         onClick={() => {
-          setMax(5000);
+          setMax(null);
           setStock(false);
           setSale(false);
           setBrand("");
+          setPage(1);
         }}
       >
         Clear filters
@@ -153,7 +183,14 @@ function Catalogue() {
             <SlidersHorizontal />
             Filters
           </Button>
-          <select aria-label="Sort products" value={sort} onChange={(e) => setSort(e.target.value)}>
+          <select
+            aria-label="Sort products"
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="name">Sort: Name</option>
             <option value="low">Price: Low to high</option>
             <option value="high">Price: High to low</option>
@@ -166,7 +203,7 @@ function Catalogue() {
         <div>
           {filtered.length ? (
             <div className="product-grid">
-              {filtered.slice((page - 1) * 9, page * 9).map((p) => (
+              {filtered.slice((pageSafe - 1) * 9, pageSafe * 9).map((p) => (
                 <ProductCard product={p} key={p.id} />
               ))}
             </div>
@@ -177,10 +214,11 @@ function Catalogue() {
                 variant="outline"
                 className="mt-5"
                 onClick={() => {
-                  setMax(5000);
+                  setMax(null);
                   setStock(false);
                   setSale(false);
                   setBrand("");
+                  setPage(1);
                   navigate({ search: { q: "", category: "" } });
                 }}
               >
@@ -190,14 +228,14 @@ function Catalogue() {
           )}
           <div className="mt-10 flex items-center justify-between border-t border-border pt-6">
             <p className="text-xs text-muted-foreground">
-              Showing {filtered.length ? (page - 1) * 9 + 1 : 0} to{" "}
-              {Math.min(page * 9, filtered.length)} of {filtered.length}
+              Showing {filtered.length ? (pageSafe - 1) * 9 + 1 : 0} to{" "}
+              {Math.min(pageSafe * 9, filtered.length)} of {filtered.length}
             </p>
             <div className="flex gap-2">
-              {Array.from({ length: Math.ceil(filtered.length / 9) }, (_, i) => (
+              {Array.from({ length: pageCount }, (_, i) => (
                 <Button
                   key={i}
-                  variant={page === i + 1 ? "default" : "outline"}
+                  variant={pageSafe === i + 1 ? "default" : "outline"}
                   className="h-11 w-11 p-0"
                   onClick={() => setPage(i + 1)}
                 >
