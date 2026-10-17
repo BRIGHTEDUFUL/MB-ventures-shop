@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { SlidersHorizontal, X, Grid2X2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard, PageError, PageNotFound } from "@/components/store-ui";
-import { filterCatalogue, storeQuery, pageHead, money, priceCeiling } from "@/lib/store";
+import { filterCatalogue, storeQuery, pageHead, money, PRICE_SLIDER_MAX } from "@/lib/store";
 export const Route = createFileRoute("/catalogue")({
   validateSearch: (s: Record<string, unknown>) => ({
     category: typeof s["category"] === "string" ? s["category"] : "",
@@ -30,14 +30,11 @@ function Catalogue() {
     // Brands come from the same shelf the grid draws from: a brand that only
     // exists on a hidden product would filter down to an empty grid.
     brands = [...new Set(products.filter((p) => p.visible !== false).map((p) => p.brand))].sort(),
-    // The slider's top is the priciest thing on sale, so an upload priced above
-    // an old hard maximum can never be hidden by the filter itself.
-    ceiling = priceCeiling(products.filter((p) => p.visible !== false)),
     search = Route.useSearch(),
     navigate = Route.useNavigate();
   const [sort, setSort] = useState("name"),
-    // No ceiling by default — only a real drag narrows the price. The old
-    // hard 5,000 default silently hid the GH₵ 5,600–10,500 monitors.
+    // No price bound by default — the filter stays wide open until the
+    // shopper drags the slider (whose top is the shop's fixed GH₵ 50,000).
     [max, setMax] = useState<number | null>(null),
     [stock, setStock] = useState(false),
     [sale, setSale] = useState(false),
@@ -85,13 +82,13 @@ function Catalogue() {
       </select>
       <h2>Price</h2>
       <label>
-        Up to {money(max ?? ceiling)}
+        Up to {money(max ?? PRICE_SLIDER_MAX)}
         <input
           type="range"
           min="0"
-          max={ceiling}
+          max={PRICE_SLIDER_MAX}
           step="100"
-          value={Math.min(max ?? ceiling, ceiling)}
+          value={Math.min(max ?? PRICE_SLIDER_MAX, PRICE_SLIDER_MAX)}
           onChange={(e) => {
             setMax(Number(e.target.value));
             setPage(1);

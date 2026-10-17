@@ -7,7 +7,7 @@ still open is listed under **Open**.
 
 ## Catalogue price filter hid every product above GH₵ 5,000 (17 October 2026)
 
-**Status:** Complete — all quality gates green (tsc, lint, **258 unit tests**,
+**Status:** Complete — all quality gates green (tsc, lint, **256 unit tests**,
 prettier, build, 36 read-only e2e); fix verified on production HTML.
 
 ### What was asked
@@ -28,12 +28,13 @@ on load **and unreachable by dragging** — including the circled ASUS TUF
 
 ### The fix (`src/routes/catalogue.tsx` + `src/lib/store.ts`)
 
-- `priceCeiling(products)` — the slider's top is now the priciest **listed**
-  product, rounded up to the next 100 (floor 1,000 for an empty shelf). No
-  constant can ever hide the catalogue from itself again.
+- `PRICE_SLIDER_MAX` — the slider's top is the shop's chosen **fixed GH₵
+  50,000** (amended the same day, per the owner). The filter itself starts
+  **fully open** (`max = null`, "Up to GH₵ 50,000" shown at rest) and only
+  narrows once the shopper drags the slider — no constant can ever hide the
+  catalogue from itself again, because the bound only exists once selected.
 - `filterCatalogue(products, filter)` — the filter predicate extracted as a
-  pure, tested rule shared by the grid and the "N products" count. The filter
-  starts **fully open** (no ceiling); only a real drag narrows it, and a
+  pure, tested rule shared by the grid and the "N products" count. A
   drag-to-zero is a real bound (the old `!max ||` short-circuit treated 0 as
   "no filter" and showed everything).
 - Related defects fixed in the same block: brand list now built from listed
@@ -44,9 +45,9 @@ on load **and unreachable by dragging** — including the circled ASUS TUF
 
 ### Verification
 
-- New `src/test/catalogue-rules.test.ts` (9 tests) pins the contract:
-  default filter shows everything; ceiling rounds; sale/stock/search
-  predicates. Suite: **258/258 across 17 files**.
+- New `src/test/catalogue-rules.test.ts` (7 tests) pins the contract:
+  default filter shows everything (even beyond the slider's 50,000 top);
+  sale/stock/search predicates. Suite: **256/256 across 17 files**.
 - Production data before deploy: 42 products / 37 listed; the four
   expensive ones sat at `max="5000"`-hidden. After deploy: catalogue HTML
   carries `max="10500"` and all listed products pass by default.

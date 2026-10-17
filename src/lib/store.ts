@@ -36,17 +36,13 @@ export const money = (n: number, decimals = false) =>
   `GH₵ ${n.toLocaleString("en-GH", { minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 /**
- * The catalogue price slider's ceiling comes from the shelf itself, never a
- * constant. A hard maximum hides every product priced above it the moment an
- * admin uploads something pricier (the GH₵ 10,500 monitor was invisible while
- * the slider topped out at 5,000), so the top of the range is the priciest
- * product on sale today, rounded up to the next 100. The floor keeps an empty
- * catalogue drawing a sane slider.
+ * The catalogue price slider's fixed top: GH₵ 50,000, by the shop's choice.
+ * The filter itself stays wide open until the shopper drags the slider —
+ * the bound only exists once someone selects it — so this number is the
+ * range's end, never a default filter. (The bug this replaces hard-coded
+ * the *filter* at 5,000, silently hiding the GH₵ 5,600–10,500 monitors.)
  */
-export const priceCeiling = (products: Pick<Product, "price">[]) => {
-  const priciest = products.reduce((most, p) => Math.max(most, p.price), 0);
-  return Math.max(1000, Math.ceil(priciest / 100) * 100);
-};
+export const PRICE_SLIDER_MAX = 50_000;
 
 /** The catalogue filter's inputs — component state, kept as plain data. */
 export type CatalogueFilter = {

@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { filterCatalogue, priceCeiling, type Product } from "../../src/lib/store";
+import { PRICE_SLIDER_MAX, filterCatalogue, type Product } from "../../src/lib/store";
 
 /**
- * Pins the catalogue filter after the "expensive uploads are invisible" bug:
- * the price filter used a hard 5,000 default and slider maximum, so every
- * product priced above it — including the circled GH₵ 6,500 ASUS TUF — was
- * hidden on load and could not be reached by dragging. Two rules keep it
- * fixed: the ceiling comes from the shelf, and the default filter hides
- * nothing.
+ * Pins the catalogue price filter's contract: the slider's top is the shop's
+ * fixed GH₵ 50,000, and the filter itself stays wide open until the shopper
+ * drags it. The bug this replaces hard-coded the *filter* at 5,000, silently
+ * hiding every pricier product (the GH₵ 6,500 ASUS TUF included) on load.
  */
 
 const product = (over: Partial<Product> & Pick<Product, "id" | "price">): Product => ({
@@ -29,18 +27,9 @@ const product = (over: Partial<Product> & Pick<Product, "id" | "price">): Produc
 /** The filter as it arrives from fresh component state — nothing narrowed. */
 const open = { category: "", q: "", max: null, stock: false, sale: false, brand: "" };
 
-describe("priceCeiling", () => {
-  it("rounds the priciest product up to the next hundred", () => {
-    const shelf = [product({ id: "cheap", price: 230 }), product({ id: "monitor", price: 10550 })];
-    expect(priceCeiling(shelf)).toBe(10600);
-  });
-
-  it("leaves a price that is already a round hundred untouched", () => {
-    expect(priceCeiling([product({ id: "desk", price: 5000 })])).toBe(5000);
-  });
-
-  it("still draws a sane slider for an empty catalogue", () => {
-    expect(priceCeiling([])).toBe(1000);
+describe("PRICE_SLIDER_MAX", () => {
+  it("is the shop's chosen slider top", () => {
+    expect(PRICE_SLIDER_MAX).toBe(50_000);
   });
 });
 
@@ -49,14 +38,16 @@ describe("filterCatalogue", () => {
     product({ id: "stand", price: 90 }),
     product({ id: "asus-tuf", price: 6500 }),
     product({ id: "curved-monitor", price: 10500 }),
+    product({ id: "beyond-the-slider", price: 60000 }),
     product({ id: "hidden-demo", price: 300, visible: false }),
   ];
 
-  it("shows every listed product by default, whatever it costs", () => {
+  it("shows every listed product by default — no filter until one is selected", () => {
     expect(filterCatalogue(shelf, open).map((p) => p.id)).toEqual([
       "stand",
       "asus-tuf",
       "curved-monitor",
+      "beyond-the-slider",
     ]);
   });
 
