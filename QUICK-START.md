@@ -2,7 +2,7 @@
 
 **Status:** ✅ Production Ready  
 **Domain:** https://mbventuresgh.com  
-**Email:** info@mbventuresghana.com
+**Email:** info@mbventuresgh.com
 
 ---
 
@@ -96,7 +96,7 @@ counter, delivery orders pay cash on arrival.
 ## 📧 Email System
 
 **Mode:** Live (sending real emails)  
-**Inbox:** info@mbventuresghana.com  
+**Inbox:** info@mbventuresgh.com  
 **Daily Limit:** 250 emails/day (production)
 
 All customer emails (order confirmations, password resets) are forwarded to your inbox. Reply directly from your email client.

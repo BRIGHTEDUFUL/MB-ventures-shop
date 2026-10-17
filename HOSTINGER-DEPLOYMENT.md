@@ -354,7 +354,7 @@ apt install -y certbot python3-certbot-nginx
 certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 
 # Follow prompts:
-# - Enter email: info@mbventuresghana.com
+# - Enter email: info@mbventuresgh.com
 # - Agree to terms: Yes
 # - Redirect HTTP to HTTPS: Yes
 
@@ -385,8 +385,8 @@ Should show:
 ```
 WEB3FORMS_ACCESS_KEY: c8395fed-...
 SITE_URL: https://mbventuresgh.com
-EMAIL_REPLY_TO: info@mbventuresghana.com
-ADMIN_ALERT_EMAIL: info@mbventuresghana.com
+EMAIL_REPLY_TO: info@mbventuresgh.com
+ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 EMAIL_DAILY_LIMIT: 250
 ```
 
@@ -438,7 +438,7 @@ Open in browser:
 2. Sign in as admin
 3. Check banner shows "Live mode" (green)
 4. Send test email
-5. Verify arrival at info@mbventuresghana.com
+5. Verify arrival at info@mbventuresgh.com
 
 ### 6. Verify Functionality
 

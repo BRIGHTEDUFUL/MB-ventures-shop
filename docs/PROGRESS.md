@@ -5,6 +5,64 @@ still open is listed under **Open**.
 
 ---
 
+## Official email moved to info@mbventuresgh.com (17 October 2026)
+
+**Status:** Complete — all quality gates green (tsc, lint, 256 unit tests,
+prettier, build, 36 read-only e2e); backend + frontend deployed, data synced.
+
+### What was asked
+
+Change the shop's official email — the visible contact address, the one the
+forms route to, and everything email-related — from `info@mbventuresghana.com`
+(the pre-cutover address kept alive only because Web3Forms forwarded to it) to
+`info@mbventuresgh.com`.
+
+### What changed
+
+- **Storefront / staff UI**: footer and `/contact` mailto fallbacks
+  (`store-shell.tsx`, `$page.tsx`) and the staff inbox's "All alerts also go
+  to …" line (`staff/messages.tsx`) now read `info@mbventuresgh.com`.
+- **Backend defaults**: seed default (`convex/seed.ts`), the pre-seed render
+  fallback (`convex/emails/queries.ts`), and the contact-handler comment.
+  `seed:syncContactEmail` now also treats the old address as stale, so
+  running it flips the live `store_settings.email` row — the one row that
+  drives the storefront footer, every email footer, and the admin-alert
+  fallback.
+- **Convex env (prod + dev)**: `EMAIL_REPLY_TO` and `ADMIN_ALERT_EMAIL` set to
+  the new address.
+- **Scripts**: `verify-production-config.mjs` hard-asserted the old address as
+  its pass condition (would have started failing) and
+  `setup-production-env.sh` wrote it into the VPS env — both updated.
+- **Templates & docs**: `.env.hostinger`, `.env.example`,
+  `.env.production.complete`, `COPY-PASTE-DEPLOYMENT.txt`, the root deploy
+  docs, `docs/EMAIL-SETUP-STATUS.md`, `PRODUCTION-CONFIG.md`,
+  `BACKEND-STATUS.md`, `SETUP-COMPLETE.md`, `HOSTINGER-SETUP-CHECKLIST.md`,
+  `TEST-ACCOUNTS.md` (password-recovery step), `roadmap.md`, AGENTS.md §1/§8,
+  and the inverted guardrail in `docs/DOMAIN-MIGRATION.md` §11 plus a
+  superseded-note at its top. Dated history (this file, the cutover log,
+  `.agents/tasks/`) stays intact; test fixtures moved to the new domain too —
+  no old-domain strings remain outside historical records.
+
+### The Web3Forms constraint (the one account-side step)
+
+Web3Forms delivers **every** message — customer and admin alike — to the one
+inbox bound to the access key, regardless of the `to`/`replyto` payload
+(`convex/emails/transport.ts` header). Code + env point everything at the new
+address, but physical delivery follows the key: the Web3Forms dashboard's
+receiving address must be switched to `info@mbventuresgh.com` (or a fresh key
+minted for it). Until that happens mail keeps arriving at the old inbox.
+`docs/EMAIL.md` §7 now documents the procedure.
+
+### Verification
+
+- Gates: tsc 0 · lint 0 errors · prettier clean · 256/256 unit tests · build
+  ok · e2e 36/36.
+- Convex prod redeployed; `store:get` returns the new email; footer and
+  `/contact` serve `mailto:info@mbventuresgh.com`; Hostinger build completed;
+  `suppressedEmails` confirmed not to contain the new address.
+
+---
+
 ## Catalogue price filter hid every product above GH₵ 5,000 (17 October 2026)
 
 **Status:** Complete — all quality gates green (tsc, lint, **256 unit tests**,

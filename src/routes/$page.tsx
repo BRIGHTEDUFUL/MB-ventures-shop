@@ -144,8 +144,8 @@ function Content() {
                   <br />
                 </>
               )}
-              <a className="underline" href={`mailto:${s?.email || "info@mbventuresghana.com"}`}>
-                {s?.email || "info@mbventuresghana.com"}
+              <a className="underline" href={`mailto:${s?.email || "info@mbventuresgh.com"}`}>
+                {s?.email || "info@mbventuresgh.com"}
               </a>
             </p>
             <ContactForm />

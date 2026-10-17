@@ -37,7 +37,7 @@ staff default when set — no `.env*` file sets it today, so the default stands.
 Storefront: `https://mbventuresgh.com`.
 
 > **Live as of 15 Oct 2026.** All four `@mbventuresgh.com` accounts are active
-> on production with correct roles. The legacy `@mbventuresghana.com` accounts
+> on production with correct roles. The legacy `@mbventuresgh.com` accounts
 > remain until the domain cutover revokes them (`docs/DOMAIN-MIGRATION.md` §6).
 
 | Email                        | Role    | Password                         | Notes                                     |
@@ -93,7 +93,7 @@ back:
 - **Reset it.** Use "forgot password" in the app for the address in question.
   The mail really sends (Web3Forms is live), and because the relay forwards
   every submission to the single inbox bound to the access key, the reset link
-  arrives in **`info@mbventuresghana.com`** regardless of the `to` address.
+  arrives in **`info@mbventuresgh.com`** regardless of the `to` address.
   Auth mail is limited to 5 per recipient per hour; duplicate requests inside
   60 seconds are deduped.
 - **Make a new one.** Sign up a fresh address, then `users:grantStaff` it (§2).

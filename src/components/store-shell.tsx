@@ -631,8 +631,8 @@ export function StoreFooter() {
               Chat on WhatsApp
             </a>
           )}
-          <a href={`mailto:${s?.email || "info@mbventuresghana.com"}`}>
-            {s?.email || "info@mbventuresghana.com"}
+          <a href={`mailto:${s?.email || "info@mbventuresgh.com"}`}>
+            {s?.email || "info@mbventuresgh.com"}
           </a>
           <Link to="/$page" params={{ page: "contact" }}>
             Contact the shop <ArrowRight className="ml-1 inline size-3" />

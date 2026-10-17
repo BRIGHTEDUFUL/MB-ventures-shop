@@ -26,14 +26,14 @@ The following items that were previously "blocked on external information" are n
 | **Development** | `dev:stoic-elephant-714`  | ✅ Live mode                           |
 |                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
 |                 | Site URL                  | `http://localhost:5173`                |
-|                 | Reply-to                  | `info@mbventuresghana.com`             |
-|                 | Admin alerts              | `info@mbventuresghana.com`             |
+|                 | Reply-to                  | `info@mbventuresgh.com`                |
+|                 | Admin alerts              | `info@mbventuresgh.com`                |
 |                 | Daily limit               | 100 emails                             |
 | **Production**  | `prod:necessary-newt-861` | ✅ Live mode                           |
 |                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
 |                 | Site URL                  | `https://mbventuresgh.com`             |
-|                 | Reply-to                  | `info@mbventuresghana.com`             |
-|                 | Admin alerts              | `info@mbventuresghana.com`             |
+|                 | Reply-to                  | `info@mbventuresgh.com`                |
+|                 | Admin alerts              | `info@mbventuresgh.com`                |
 |                 | Daily limit               | 250 emails                             |
 
 **Email templates ready:**
@@ -156,7 +156,7 @@ node scripts/verify-production-config.mjs
 
 All contact information is properly set throughout the application:
 
-**Email:** `info@mbventuresghana.com`  
+**Email:** `info@mbventuresgh.com`  
 **Phone:** `0249564442`  
 **Address:** Abelenkpe taxi rank, Accra, Ghana  
 **Hours:** Monday to Saturday, 8:00 AM to 6:00 PM  
@@ -285,7 +285,7 @@ Before announcing to customers:
 - [ ] Search works
 - [ ] Add to cart works
 - [ ] Checkout flow completes (test order)
-- [ ] Email confirmations arrive at `info@mbventuresghana.com`
+- [ ] Email confirmations arrive at `info@mbventuresgh.com`
 - [ ] Staff can sign in at `/staff`
 - [ ] Admin panel accessible at `/admin`
 - [ ] Email admin panel shows "Live mode"

@@ -8,7 +8,7 @@ import { execSync } from "child_process";
 
 console.log("🏭 Production Configuration Verification\n");
 console.log("Domain: https://mbventuresgh.com");
-console.log("Email: info@mbventuresghana.com");
+console.log("Email: info@mbventuresgh.com");
 console.log("Deployment: prod:necessary-newt-861\n");
 console.log("=".repeat(60));
 
@@ -63,14 +63,14 @@ const checks = [
   },
   {
     name: "Reply-to email",
-    condition: results.EMAIL_REPLY_TO === "info@mbventuresghana.com",
-    expected: "info@mbventuresghana.com",
+    condition: results.EMAIL_REPLY_TO === "info@mbventuresgh.com",
+    expected: "info@mbventuresgh.com",
     actual: results.EMAIL_REPLY_TO,
   },
   {
     name: "Admin alert email",
-    condition: results.ADMIN_ALERT_EMAIL === "info@mbventuresghana.com",
-    expected: "info@mbventuresghana.com",
+    condition: results.ADMIN_ALERT_EMAIL === "info@mbventuresgh.com",
+    expected: "info@mbventuresgh.com",
     actual: results.ADMIN_ALERT_EMAIL,
   },
   {
@@ -124,7 +124,7 @@ if (allSet && allChecksPassed) {
   console.log("\n🎉 Production Configuration: COMPLETE\n");
   console.log("✅ All environment variables set correctly");
   console.log("✅ Domain configured: https://mbventuresgh.com");
-  console.log("✅ Email configured: info@mbventuresghana.com");
+  console.log("✅ Email configured: info@mbventuresgh.com");
   console.log("✅ Web3Forms key set for email delivery");
   console.log("✅ Email system ready for live operation\n");
 

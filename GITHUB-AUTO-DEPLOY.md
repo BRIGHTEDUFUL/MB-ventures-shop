@@ -277,7 +277,7 @@ curl http://localhost:3000
 1. **Generate key locally:**
 
    ```bash
-   ssh-keygen -t rsa -b 4096 -C "deploy@mbventuresghana.com"
+   ssh-keygen -t rsa -b 4096 -C "deploy@mbventuresgh.com"
    ```
 
 2. **Add public key to Hostinger:**

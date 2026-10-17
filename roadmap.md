@@ -49,8 +49,8 @@
 - ✅ **Email**: Web3Forms access key configured (`c8395fed-e25e-4350-a914-df8e592f5920`)
   - Development: Live mode enabled at `dev:stoic-elephant-714`
   - Production: Fully configured at `prod:necessary-newt-861`
-  - Reply-to: `info@mbventuresghana.com`
-  - Admin alerts: `info@mbventuresghana.com`
+  - Reply-to: `info@mbventuresgh.com`
+  - Admin alerts: `info@mbventuresgh.com`
   - Daily limit: 250 emails/day (production)
   - See `docs/EMAIL-SETUP-STATUS.md` and `docs/PRODUCTION-CONFIG.md`
 - ✅ **Production domain**: `https://mbventuresgh.com` configured

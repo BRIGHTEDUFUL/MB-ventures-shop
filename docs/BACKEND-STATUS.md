@@ -26,8 +26,8 @@
 
 ```
 ✓ WEB3FORMS_ACCESS_KEY: c8395fed-e25e-4350-a914-df8e592f5920
-✓ EMAIL_REPLY_TO: info@mbventuresghana.com
-✓ ADMIN_ALERT_EMAIL: info@mbventuresghana.com
+✓ EMAIL_REPLY_TO: info@mbventuresgh.com
+✓ ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 ✓ EMAIL_DAILY_LIMIT: 100
 ✓ SITE_URL: http://localhost:5173
 ✓ JWKS: Configured (auth JWT verification keys)
@@ -38,8 +38,8 @@
 
 ```
 ✓ WEB3FORMS_ACCESS_KEY: c8395fed-e25e-4350-a914-df8e592f5920
-✓ EMAIL_REPLY_TO: info@mbventuresghana.com
-✓ ADMIN_ALERT_EMAIL: info@mbventuresghana.com
+✓ EMAIL_REPLY_TO: info@mbventuresgh.com
+✓ ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 ✓ EMAIL_DAILY_LIMIT: 250 (higher for production)
 ✓ SITE_URL: https://mbventuresgh.com
 ✓ JWKS: Configured (separate production keys)
@@ -67,7 +67,7 @@
 - Per-sender rate limiting (5 messages/hour)
 - Daily quota enforcement (100 dev, 250 prod)
 - Deduplication by message content hash
-- Reply-to configured: info@mbventuresghana.com
+- Reply-to configured: info@mbventuresgh.com
 
 ### Authentication (Convex Auth)
 
@@ -373,7 +373,7 @@
 2. Implemented form relay model (plain text only)
 3. Added retry logic with backoff
 4. Configured production email limits (250/day)
-5. Set reply-to: info@mbventuresghana.com
+5. Set reply-to: info@mbventuresgh.com
 
 ### Inventory System (2025-01-08)
 

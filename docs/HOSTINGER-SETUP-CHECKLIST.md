@@ -96,8 +96,8 @@ cat .env.local
 - ✓ `VITE_SITE_URL=https://mbventuresgh.com`
 - ✓ `NODE_ENV=production`
 - ✓ `WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920`
-- ✓ `EMAIL_REPLY_TO=info@mbventuresghana.com`
-- ✓ `ADMIN_ALERT_EMAIL=info@mbventuresghana.com`
+- ✓ `EMAIL_REPLY_TO=info@mbventuresgh.com`
+- ✓ `ADMIN_ALERT_EMAIL=info@mbventuresgh.com`
 - ✓ `EMAIL_DAILY_LIMIT=250`
 
 **Status:** ⏸️ Waiting for completion
@@ -401,7 +401,7 @@ npx convex run users:grantStaff '{\"email\":\"staff@mbventuresgh.com\"}' --prod
 **Set:**
 
 - [x] Store name: MB Ventures GH
-- [x] Contact email: info@mbventuresghana.com
+- [x] Contact email: info@mbventuresgh.com
 - [x] Contact phone: +233 XX XXX XXXX
 - [x] Store description
 - [x] Announcement bar (optional)
@@ -499,7 +499,7 @@ staff record receipt in `/staff` → Orders.
 - [x] Order confirmation email (customer)
 - [x] Admin alert email (shop)
 - [x] Order status update emails
-- [x] Verify emails arrive at info@mbventuresghana.com
+- [x] Verify emails arrive at info@mbventuresgh.com
 
 **Status:** ⏸️ Waiting for testing
 
@@ -641,7 +641,7 @@ systemctl start fail2ban
 **Email System:**
 
 - Web3Forms dashboard (if available)
-- Admin emails: info@mbventuresghana.com
+- Admin emails: info@mbventuresgh.com
 
 ---
 

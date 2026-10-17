@@ -19,7 +19,7 @@ export async function renderContext(ctx: QueryCtx): Promise<RenderContext> {
     address: "Abelenkpe taxi rank, Accra, Ghana",
     hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
     phone: "0249654442",
-    email: "info@mbventuresghana.com",
+    email: "info@mbventuresgh.com",
   };
   try {
     const settings = await getSettings(ctx);

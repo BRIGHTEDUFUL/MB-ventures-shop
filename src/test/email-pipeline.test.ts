@@ -479,7 +479,7 @@ describe("contact form", () => {
         await ctx.db.insert("emailLogs", {
           template: "admin-contact-message",
           category: "contact",
-          to: "info@mbventuresghana.com",
+          to: "info@mbventuresgh.com",
           subject: "Contact form: Delivery to Tema",
           status: "sent",
           mode: "dry-run",

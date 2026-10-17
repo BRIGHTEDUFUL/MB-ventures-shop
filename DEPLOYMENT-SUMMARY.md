@@ -117,8 +117,8 @@ VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
-EMAIL_REPLY_TO=info@mbventuresghana.com
-ADMIN_ALERT_EMAIL=info@mbventuresghana.com
+EMAIL_REPLY_TO=info@mbventuresgh.com
+ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 ```
 
@@ -346,7 +346,7 @@ free -m
 6. **SSL Renewal:** Certbot auto-renews; check with `certbot renew --dry-run`
 
 7. **Support Contacts:**
-   - Email: info@mbventuresghana.com
+   - Email: info@mbventuresgh.com
    - Convex dashboard for backend issues
    - PM2 logs for frontend issues
 

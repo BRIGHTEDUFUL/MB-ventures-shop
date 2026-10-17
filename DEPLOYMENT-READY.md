@@ -13,7 +13,7 @@ All previously blocked items are now **COMPLETE**:
 
 - **Web3Forms Key:** Set for dev and production
 - **Mode:** Live (not dry-run)
-- **Email:** info@mbventuresghana.com
+- **Email:** info@mbventuresgh.com
 - **Status:** All 12 templates sending real emails
 - **Verification:** Run `node scripts/verify-email-config.mjs`
 
@@ -61,16 +61,16 @@ Prod: prod:necessary-newt-861       ✅ Fully configured
 Development:
   Access Key:    c8395fed-... (set)
   Site URL:      http://localhost:5173
-  Reply-to:      info@mbventuresghana.com
-  Admin Alerts:  info@mbventuresghana.com
+  Reply-to:      info@mbventuresgh.com
+  Admin Alerts:  info@mbventuresgh.com
   Daily Limit:   100 emails
   Status:        🟢 Live Mode
 
 Production:
   Access Key:    c8395fed-... (set)
   Site URL:      https://mbventuresgh.com
-  Reply-to:      info@mbventuresghana.com
-  Admin Alerts:  info@mbventuresghana.com
+  Reply-to:      info@mbventuresgh.com
+  Admin Alerts:  info@mbventuresgh.com
   Daily Limit:   250 emails
   Status:        🟢 Live Mode
 ```
@@ -166,7 +166,7 @@ Before announcing to customers:
 
 - [ ] Admin panel shows "Live mode" (not dry-run)
 - [ ] Test email sends successfully
-- [ ] Emails arrive at `info@mbventuresghana.com`
+- [ ] Emails arrive at `info@mbventuresgh.com`
 - [ ] Email links point to `mbventuresgh.com`
 - [ ] Password reset email works
 - [ ] Contact form sends
@@ -203,7 +203,7 @@ Before announcing to customers:
 
 **Daily:**
 
-- Check `info@mbventuresghana.com` for customer emails
+- Check `info@mbventuresgh.com` for customer emails
 - Monitor order activity via `/staff`
 - Respond to contact form submissions
 
@@ -291,7 +291,7 @@ All systems are configured and tested. The storefront is ready to accept real or
 **Next Action:** Deploy following the 6 steps above, then enable ordering.
 
 **Support:** All documentation is in `docs/` directory  
-**Contact:** info@mbventuresghana.com  
+**Contact:** info@mbventuresgh.com  
 **Domain:** https://mbventuresgh.com
 
 ---

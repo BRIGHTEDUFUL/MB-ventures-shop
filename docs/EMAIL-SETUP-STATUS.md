@@ -12,8 +12,8 @@ The email system is now configured for **live operation**. All required environm
 | Variable                  | Status                         | Value                                  |
 | ------------------------- | ------------------------------ | -------------------------------------- |
 | `WEB3FORMS_ACCESS_KEY`    | ✅ Set                         | `c8395fed-e25e-4350-a914-df8e592f5920` |
-| `EMAIL_REPLY_TO`          | ✅ Set                         | `info@mbventuresghana.com`             |
-| `ADMIN_ALERT_EMAIL`       | ✅ Set                         | `info@mbventuresghana.com`             |
+| `EMAIL_REPLY_TO`          | ✅ Set                         | `info@mbventuresgh.com`                |
+| `ADMIN_ALERT_EMAIL`       | ✅ Set                         | `info@mbventuresgh.com`                |
 | `EMAIL_DAILY_LIMIT`       | ⚠️ Not set (will use default)  | 100 (default)                          |
 | `SITE_URL`                | ✅ Set                         | `http://localhost:5173`                |
 | `EMAIL_DRY_RUN_LOG_CODES` | ⚠️ Not set (defaults to false) | `false` (safe default)                 |
@@ -33,7 +33,7 @@ The email system is now configured for **live operation**. All required environm
 Web3Forms is a **form relay service**. Here's how it works:
 
 1. Your application submits emails to Web3Forms API
-2. Web3Forms forwards them to **your inbox** at `info@mbventuresghana.com`
+2. Web3Forms forwards them to **your inbox** at `info@mbventuresgh.com`
 3. Customer emails (order confirmations, password resets) arrive at your inbox
 4. You forward/reply to customers from your own email client
 5. The `replyto` field preserves the customer's address for easy replies
@@ -66,7 +66,7 @@ This is different from direct SMTP delivery but has advantages:
 3. **Send a test message:**
    - Use the test-send panel on `/admin/emails`
    - Choose any template (e.g., "order-received")
-   - Check your `info@mbventuresghana.com` inbox
+   - Check your `info@mbventuresgh.com` inbox
    - The email should arrive within seconds
 
 4. **Verify a real flow:**
@@ -103,8 +103,8 @@ Production (`prod:necessary-newt-861`) is already deployed. To re-apply:
 3. **Set email addresses for production:**
 
    ```powershell
-   npx convex env set EMAIL_REPLY_TO info@mbventuresghana.com --prod
-   npx convex env set ADMIN_ALERT_EMAIL info@mbventuresghana.com --prod
+   npx convex env set EMAIL_REPLY_TO info@mbventuresgh.com --prod
+   npx convex env set ADMIN_ALERT_EMAIL info@mbventuresgh.com --prod
    ```
 
 4. **IMPORTANT:** Never set `EMAIL_DRY_RUN_LOG_CODES=true` in production (it's rejected by the startup assertion)

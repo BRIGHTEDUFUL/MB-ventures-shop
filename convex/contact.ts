@@ -9,8 +9,9 @@ import type { Doc } from "./_generated/dataModel";
 
 /**
  * Contact form. Messages are saved to the `contact_messages` table for staff
- * and admin visibility in the hub. Two notifications go out: an alert to the shop
- * (info@mbventuresghana.com) and an acknowledgement to whoever wrote in.
+ * and admin visibility in the hub. Two notifications go out: an alert to the
+ * shop inbox (ADMIN_ALERT_EMAIL, else store_settings.email) and an
+ * acknowledgement to whoever wrote in.
  */
 
 const RATE_LIMIT = 5;

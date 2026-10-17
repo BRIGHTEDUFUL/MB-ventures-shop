@@ -7,7 +7,7 @@ const SETTINGS = {
   hero_title: "Made for your workspace.",
   hero_subtitle: "Desks, chairs and everyday tech. From our Abelenkpe shop to your setup.",
   phone: "0249654442",
-  email: "info@mbventuresghana.com",
+  email: "info@mbventuresgh.com",
   address: "Abelenkpe taxi rank, Accra, Ghana",
   hours: "Monday to Saturday, 8:00 AM to 6:00 PM",
   central_fee: 30,
@@ -261,11 +261,13 @@ export const syncLocation = internalMutation({
 });
 
 /**
- * Rewrites `store_settings.email` when it still holds the original placeholder
- * (`orders@mbventuresgh.com`). An address the shop chose itself is left alone,
- * so this is safe to run repeatedly:
+ * Rewrites `store_settings.email` while it still holds a superseded address —
+ * the original placeholder (`orders@mbventuresgh.com`) or the pre-cutover
+ * contact inbox (`info@mbventuresghana.com`, moved to `info@mbventuresgh.com`
+ * on 17 Oct 2026). An address the shop chose itself is left alone, so this is
+ * safe to run repeatedly:
  *
- * `npx convex run seed:syncContactEmail` (add `--prod` for production)
+ * `npx convex run seed:syncContactEmail` (add `--env-file .env.prod.local` for production)
  */
 export const syncContactEmail = internalMutation({
   args: {},
@@ -276,7 +278,7 @@ export const syncContactEmail = internalMutation({
       .unique();
     if (settings === null) return { updated: false };
 
-    const stale = ["orders@mbventuresgh.com"];
+    const stale = ["orders@mbventuresgh.com", "info@mbventuresghana.com"];
     if (!stale.includes(settings.email.trim().toLowerCase())) return { updated: false };
     await ctx.db.patch(settings._id, { email: SETTINGS.email });
     return { updated: true };

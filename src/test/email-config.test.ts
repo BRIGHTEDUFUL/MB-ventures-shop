@@ -67,8 +67,8 @@ describe("getEmailConfig mode detection", () => {
     const config = getEmailConfig(
       env({
         WEB3FORMS_ACCESS_KEY: "w3f_123",
-        EMAIL_REPLY_TO: "info@mbventuresghana.com",
-        ADMIN_ALERT_EMAIL: "alerts@mbventuresghana.com",
+        EMAIL_REPLY_TO: "info@mbventuresgh.com",
+        ADMIN_ALERT_EMAIL: "alerts@mbventuresgh.com",
         EMAIL_DAILY_LIMIT: "40",
         EMAIL_DRY_RUN_LOG_CODES: "true",
         SITE_URL: "http://localhost:5173",
@@ -77,8 +77,8 @@ describe("getEmailConfig mode detection", () => {
     expect(config).toEqual({
       mode: "live",
       accessKey: "w3f_123",
-      replyTo: "info@mbventuresghana.com",
-      adminAlertEmail: "alerts@mbventuresghana.com",
+      replyTo: "info@mbventuresgh.com",
+      adminAlertEmail: "alerts@mbventuresgh.com",
       dailyLimit: 40,
       logCodes: true,
       siteUrl: "http://localhost:5173",
@@ -105,7 +105,7 @@ describe("emailConfigView", () => {
       getEmailConfig(
         env({
           WEB3FORMS_ACCESS_KEY: "w3f_123",
-          ADMIN_ALERT_EMAIL: "alerts@mbventuresghana.com",
+          ADMIN_ALERT_EMAIL: "alerts@mbventuresgh.com",
           SITE_URL: "https://mbventuresgh.com",
         }),
       ),
@@ -115,7 +115,7 @@ describe("emailConfigView", () => {
       dailyLimit: 100,
       logCodes: false,
       siteUrl: "https://mbventuresgh.com",
-      adminAlertEmail: "alerts@mbventuresghana.com",
+      adminAlertEmail: "alerts@mbventuresgh.com",
     });
   });
 

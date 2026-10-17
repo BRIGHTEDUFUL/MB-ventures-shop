@@ -194,6 +194,27 @@ Web3Forms documents a caveat worth checking before you rely on it: server-side
 (non-browser) calls to the API may require their paid plan and/or IP
 allow-listing on the account.
 
+### Moving the receiving inbox
+
+Because the key is bound to one inbox, moving the shop's address (as on
+17 Oct 2026: `info@mbventuresghana.com` → `info@mbventuresgh.com`) is a
+three-part change:
+
+1. **Web3Forms dashboard** — sign in at web3forms.com and change the form's
+   destination email to the new address (or create a fresh form there and
+   mint a new access key). The confirmation goes to the new inbox; until it
+   is clicked, mail keeps arriving at the old one.
+2. **Convex env** — `npx convex env set EMAIL_REPLY_TO <new>` and
+   `npx convex env set ADMIN_ALERT_EMAIL <new>` (plus
+   `WEB3FORMS_ACCESS_KEY <new-key>` only if a new key was minted).
+3. **Store data** — `npx convex run seed:syncContactEmail
+--env-file .env.prod.local` flips `store_settings.email` when it still
+   holds a superseded address; the UI fallbacks and template defaults live in
+   the repo and ship with the deploy.
+
+Verify afterwards: `/admin/emails` → send a test message and confirm it
+arrives at the **new** inbox; the payload's `replyto` should match too.
+
 ## 8. Troubleshooting
 
 | Symptom                                   | Likely cause                                                               |

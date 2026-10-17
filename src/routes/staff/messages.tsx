@@ -109,7 +109,7 @@ function MessagesPage() {
           </h2>
           <p className="page-lead">
             Messages and inquiries sent by shoppers via the contact form. All alerts also go to{" "}
-            <strong>info@mbventuresghana.com</strong>.
+            <strong>info@mbventuresgh.com</strong>.
           </p>
         </div>
       </div>

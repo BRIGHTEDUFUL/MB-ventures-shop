@@ -62,8 +62,8 @@ VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
-EMAIL_REPLY_TO=info@mbventuresghana.com
-ADMIN_ALERT_EMAIL=info@mbventuresghana.com
+EMAIL_REPLY_TO=info@mbventuresgh.com
+ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 SITE_URL=https://mbventuresgh.com
 EOF
@@ -112,8 +112,8 @@ VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
-EMAIL_REPLY_TO=info@mbventuresghana.com
-ADMIN_ALERT_EMAIL=info@mbventuresghana.com
+EMAIL_REPLY_TO=info@mbventuresgh.com
+ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 SITE_URL=https://mbventuresgh.com
 ```

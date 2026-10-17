@@ -11,6 +11,16 @@ the site (`is_enabled: true`); build history shows `completed` builds on
 (`gh secret list` empty), so CI deploys remain skipped — frontend deploys run
 via Hostinger MCP (`hosting_deploy-js-application`); the MCP token for the new
 account is configured in `~/.config/opencode/opencode.jsonc` (never commit it).
+
+> **Superseded 17 Oct 2026 — email address.** The contact / reply-to / alert
+> address this document describes as "deliberately unchanged"
+> (`info@mbventuresghana.com`) has since moved to **`info@mbventuresgh.com`**:
+> UI fallbacks, seeds, env templates, scripts and the Convex env
+> (`EMAIL_REPLY_TO`, `ADMIN_ALERT_EMAIL`) all carry the new address, and the
+> Web3Forms receiving inbox was rebound to it. Everything else here stands —
+> and the guardrail in §11 now reads the other way: do not resurrect the old
+> address.
+
 **Target:** `https://mbventuresgh.com` on a **new Hostinger account** — ACHIEVED
 **Backend:** unchanged — Convex `prod:necessary-newt-861` / `dev:stoic-elephant-714`
 
@@ -318,8 +328,9 @@ served locally):
   (the remote branch `origin/fix/auth-and-ui` is likewise fully merged).
 - **Do not push to `main`** until §5–§6 are done or a deploy to the old server
   is intended — pushes auto-deploy.
-- **Do not** "fix" `info@mbventuresghana.com` back to the new domain: it is the
-  live Web3Forms inbox and deliberately stays.
+- **Do not** resurrect `info@mbventuresghana.com`: since 17 Oct 2026 the
+  official contact / reply-to / alert address is `info@mbventuresgh.com` (see
+  the superseded-note at the top of this file).
 - **Do not** change `convex/auth.config.ts` to the new domain — the JWT issuer
   must remain `CONVEX_SITE_URL`.
 

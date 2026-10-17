@@ -20,8 +20,10 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
   `https://mbventuresgh.com` from the **new Hostinger account** (client
   `1023530876`, hosting user `u963034723`, Node.js site, latest build
   `completed` 15 Oct 2026). The old `mbventuresghana.com` account is retired
-  for hosting; the contact / reply-to address `info@mbventuresghana.com` is
-  intentionally unchanged. See `docs/DOMAIN-MIGRATION.md` for the record.
+  for hosting. The official contact / reply-to / alert address is
+  `info@mbventuresgh.com` (moved 17 Oct 2026; the Web3Forms receiving inbox
+  follows it — procedure in `docs/EMAIL.md` §7). See `docs/DOMAIN-MIGRATION.md`
+  for the cutover record.
 
 ---
 
@@ -503,7 +505,9 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 - hero_title: "Your workspace. Elevated."
 - Featured hotspots: electric-standing-desk-rgb-160, mottian-ai-smart-keyboard-mouse, custom-macro-mechanical-keyboard
 - Contact: `phone` and `whatsapp` are both `0249654442` — one shop number for
-  every `tel:` link and every WhatsApp button. Edit both together in
+  every `tel:` link and every WhatsApp button. `email` is
+  `info@mbventuresgh.com` — the visible contact address, the reply-to on every
+  message and the fallback shop inbox for alerts. Edit them in
   `/staff` → Customization → Contact.
 - Payments: no in-app payment — pickup pays at the shop counter, delivery pays cash on
   arrival; staff mark payment received in /staff (legacy MoMo recipient fields are kept

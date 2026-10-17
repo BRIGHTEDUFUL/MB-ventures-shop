@@ -11,7 +11,7 @@ const ACCESS_KEY = "w3f_super_secret_key_do_not_log";
 const liveConfig: EmailConfig = {
   mode: "live",
   accessKey: ACCESS_KEY,
-  replyTo: "info@mbventuresghana.com",
+  replyTo: "info@mbventuresgh.com",
   adminAlertEmail: "",
   dailyLimit: 100,
   logCodes: false,
@@ -59,7 +59,7 @@ afterEach(() => {
 describe("isValidRecipient", () => {
   it("accepts ordinary addresses", () => {
     expect(isValidRecipient("ama@example.com")).toBe(true);
-    expect(isValidRecipient("  orders+desk@mbventuresghana.com ")).toBe(true);
+    expect(isValidRecipient("  orders+desk@mbventuresgh.com ")).toBe(true);
   });
 
   it("rejects anything the relay would bounce on", () => {
@@ -103,7 +103,7 @@ describe("live mode payload", () => {
       to: "ama@example.com",
       subject: "Order MB-2FA41C09 received",
       body: "We have your order.",
-      replyto: "info@mbventuresghana.com",
+      replyto: "info@mbventuresgh.com",
     });
     // No Resend leftovers: no html, no tags, no idempotency key.
     expect(body).not.toHaveProperty("html");
