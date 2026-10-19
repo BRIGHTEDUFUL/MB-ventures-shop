@@ -34,9 +34,11 @@ export function render(data: unknown, ctx: RenderContext): RenderedEmail {
     {
       kind: "note",
       text:
-        order.fulfillment === "pickup"
-          ? "No payment is needed now. Pay at the shop counter when you collect your order."
-          : "No payment is needed now. Pay the courier in cash when your order arrives.",
+        order.paymentMethod === "Online payment (Paystack)"
+          ? "Your items are reserved while you pay. Complete the online payment to confirm your order — card, Mobile Money and bank transfer are all accepted."
+          : order.fulfillment === "pickup"
+            ? "No payment is needed now. Pay at the shop counter when you collect your order."
+            : "No payment is needed now. Pay the courier in cash when your order arrives.",
     },
     { kind: "p", text: `Track your order any time with reference ${order.reference}.` },
   ];

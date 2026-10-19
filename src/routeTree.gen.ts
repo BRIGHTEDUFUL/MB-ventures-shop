@@ -29,6 +29,7 @@ import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
 import { Route as AuthSigninRouteImport } from './routes/auth/signin'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as DevEmailPreviewRouteImport } from './routes/dev/email-preview'
+import { Route as PaystackReturnRouteImport } from './routes/paystack/return'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as StaffActivityRouteImport } from './routes/staff/activity'
@@ -40,6 +41,7 @@ import { Route as StaffMessagesRouteImport } from './routes/staff/messages'
 import { Route as StaffTeamRouteImport } from './routes/staff/team'
 import { Route as StaffOrdersIndexRouteImport } from './routes/staff/orders/index'
 import { Route as StaffOrdersIdRouteImport } from './routes/staff/orders/$id'
+import { Route as StaffOrdersNewRouteImport } from './routes/staff/orders/new'
 import { Route as StaffProductsIndexRouteImport } from './routes/staff/products/index'
 import { Route as StaffProductsIdRouteImport } from './routes/staff/products/$id'
 import { Route as StaffProductsNewRouteImport } from './routes/staff/products/new'
@@ -144,6 +146,11 @@ const DevEmailPreviewRoute = DevEmailPreviewRouteImport.update({
   path: '/dev/email-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaystackReturnRoute = PaystackReturnRouteImport.update({
+  id: '/paystack/return',
+  path: '/paystack/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductSlugRoute = ProductSlugRouteImport.update({
   id: '/product/$slug',
   path: '/product/$slug',
@@ -199,6 +206,11 @@ const StaffOrdersIdRoute = StaffOrdersIdRouteImport.update({
   path: '/orders/$id',
   getParentRoute: () => StaffRoute,
 } as any)
+const StaffOrdersNewRoute = StaffOrdersNewRouteImport.update({
+  id: '/orders/new',
+  path: '/orders/new',
+  getParentRoute: () => StaffRoute,
+} as any)
 const StaffProductsIndexRoute = StaffProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -235,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
+  '/paystack/return': typeof PaystackReturnRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
   '/staff/categories': typeof StaffCategoriesRoute
@@ -246,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/staff/orders/$id': typeof StaffOrdersIdRoute
+  '/staff/orders/new': typeof StaffOrdersNewRoute
   '/staff/products/$id': typeof StaffProductsIdRoute
   '/staff/products/new': typeof StaffProductsNewRoute
   '/staff/orders/': typeof StaffOrdersIndexRoute
@@ -270,6 +284,7 @@ export interface FileRoutesByTo {
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
+  '/paystack/return': typeof PaystackReturnRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
   '/staff/categories': typeof StaffCategoriesRoute
@@ -281,6 +296,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/staff': typeof StaffIndexRoute
   '/staff/orders/$id': typeof StaffOrdersIdRoute
+  '/staff/orders/new': typeof StaffOrdersNewRoute
   '/staff/products/$id': typeof StaffProductsIdRoute
   '/staff/products/new': typeof StaffProductsNewRoute
   '/staff/orders': typeof StaffOrdersIndexRoute
@@ -307,6 +323,7 @@ export interface FileRoutesById {
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/dev/email-preview': typeof DevEmailPreviewRoute
+  '/paystack/return': typeof PaystackReturnRoute
   '/product/$slug': typeof ProductSlugRoute
   '/staff/activity': typeof StaffActivityRoute
   '/staff/categories': typeof StaffCategoriesRoute
@@ -318,6 +335,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/staff/orders/$id': typeof StaffOrdersIdRoute
+  '/staff/orders/new': typeof StaffOrdersNewRoute
   '/staff/products/$id': typeof StaffProductsIdRoute
   '/staff/products/new': typeof StaffProductsNewRoute
   '/staff/orders/': typeof StaffOrdersIndexRoute
@@ -345,6 +363,7 @@ export interface FileRouteTypes {
     | '/auth/signin'
     | '/auth/signup'
     | '/dev/email-preview'
+    | '/paystack/return'
     | '/product/$slug'
     | '/staff/activity'
     | '/staff/categories'
@@ -356,6 +375,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/staff/'
     | '/staff/orders/$id'
+    | '/staff/orders/new'
     | '/staff/products/$id'
     | '/staff/products/new'
     | '/staff/orders/'
@@ -380,6 +400,7 @@ export interface FileRouteTypes {
     | '/auth/signin'
     | '/auth/signup'
     | '/dev/email-preview'
+    | '/paystack/return'
     | '/product/$slug'
     | '/staff/activity'
     | '/staff/categories'
@@ -391,6 +412,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/staff'
     | '/staff/orders/$id'
+    | '/staff/orders/new'
     | '/staff/products/$id'
     | '/staff/products/new'
     | '/staff/orders'
@@ -416,6 +438,7 @@ export interface FileRouteTypes {
     | '/auth/signin'
     | '/auth/signup'
     | '/dev/email-preview'
+    | '/paystack/return'
     | '/product/$slug'
     | '/staff/activity'
     | '/staff/categories'
@@ -427,6 +450,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/staff/'
     | '/staff/orders/$id'
+    | '/staff/orders/new'
     | '/staff/products/$id'
     | '/staff/products/new'
     | '/staff/orders/'
@@ -453,6 +477,7 @@ export interface RootRouteChildren {
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
   DevEmailPreviewRoute: typeof DevEmailPreviewRoute
+  PaystackReturnRoute: typeof PaystackReturnRoute
   ProductSlugRoute: typeof ProductSlugRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -599,6 +624,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevEmailPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/paystack/return': {
+      id: '/paystack/return'
+      path: '/paystack/return'
+      fullPath: '/paystack/return'
+      preLoaderRoute: typeof PaystackReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product/$slug': {
       id: '/product/$slug'
       path: '/product/$slug'
@@ -676,6 +708,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffOrdersIdRouteImport
       parentRoute: typeof StaffRoute
     }
+    '/staff/orders/new': {
+      id: '/staff/orders/new'
+      path: '/orders/new'
+      fullPath: '/staff/orders/new'
+      preLoaderRoute: typeof StaffOrdersNewRouteImport
+      parentRoute: typeof StaffRoute
+    }
     '/staff/products/': {
       id: '/staff/products/'
       path: '/products'
@@ -710,6 +749,7 @@ interface StaffRouteChildren {
   StaffTeamRoute: typeof StaffTeamRoute
   StaffIndexRoute: typeof StaffIndexRoute
   StaffOrdersIdRoute: typeof StaffOrdersIdRoute
+  StaffOrdersNewRoute: typeof StaffOrdersNewRoute
   StaffProductsIdRoute: typeof StaffProductsIdRoute
   StaffProductsNewRoute: typeof StaffProductsNewRoute
   StaffOrdersIndexRoute: typeof StaffOrdersIndexRoute
@@ -726,6 +766,7 @@ const StaffRouteChildren: StaffRouteChildren = {
   StaffTeamRoute: StaffTeamRoute,
   StaffIndexRoute: StaffIndexRoute,
   StaffOrdersIdRoute: StaffOrdersIdRoute,
+  StaffOrdersNewRoute: StaffOrdersNewRoute,
   StaffProductsIdRoute: StaffProductsIdRoute,
   StaffProductsNewRoute: StaffProductsNewRoute,
   StaffOrdersIndexRoute: StaffOrdersIndexRoute,
@@ -754,6 +795,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,
   DevEmailPreviewRoute: DevEmailPreviewRoute,
+  PaystackReturnRoute: PaystackReturnRoute,
   ProductSlugRoute: ProductSlugRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

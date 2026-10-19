@@ -29,7 +29,11 @@ export function render(data: unknown, ctx: RenderContext): RenderedEmail {
       text:
         order.paymentMethod === "Mobile Money"
           ? "Mobile Money payment is confirmed already, so nothing is due at the counter."
-          : "Bring the order reference with you when you collect.",
+          : order.paymentMethod === "Online payment (Paystack)"
+            ? order.paymentStatus === "confirmed"
+              ? "Your online payment is confirmed, so nothing is due at the counter."
+              : "Your order is ready. Please complete the online payment for it before travelling to the shop."
+            : "Bring the order reference with you when you collect.",
     },
   ];
 

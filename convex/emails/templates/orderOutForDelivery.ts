@@ -28,7 +28,9 @@ export function render(data: unknown, ctx: RenderContext): RenderedEmail {
       text:
         order.paymentMethod === "Cash on delivery"
           ? "Have the exact amount ready if you can. The courier collects payment on arrival."
-          : "Your payment is already confirmed, so nothing is due on arrival.",
+          : order.paymentStatus === "confirmed"
+            ? "Your payment is already confirmed, so nothing is due on arrival."
+            : "Your online payment is still being confirmed — nothing more is due on arrival.",
     },
     { kind: "p", text: "Answer the courier call so the drop-off goes smoothly." },
   ];

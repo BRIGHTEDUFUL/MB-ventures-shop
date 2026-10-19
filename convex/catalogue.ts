@@ -595,6 +595,10 @@ export const saveSettings = mutation({
     hero_image: v.string(),
     setup_image: v.string(),
     ordering_enabled: v.boolean(),
+    // Offer "Pay online now (Paystack)" at checkout. Turning this on without
+    // PAYSTACK_SECRET_KEY configured on the server is safe: checkout shows
+    // the option, but starting a payment fails with a clear message.
+    paystack_enabled: v.boolean(),
     featured_ids: v.array(v.string()),
     // Homepage section copy (see `HOME_CONTENT_DEFAULTS` for the rules:
     // strings blank out to the default, an empty array hides the section).
@@ -696,6 +700,7 @@ export const saveSettings = mutation({
       hero_image: args.hero_image,
       setup_image: args.setup_image,
       ordering_enabled: args.ordering_enabled,
+      paystack_enabled: args.paystack_enabled,
       featured_ids: args.featured_ids,
       home_category_heading: args.home_category_heading.trim(),
       home_featured_heading: args.home_featured_heading.trim(),
@@ -716,7 +721,7 @@ export const saveSettings = mutation({
       ctx,
       actorId,
       "settings.update",
-      `Updated storefront settings (ordering ${args.ordering_enabled ? "open" : "closed"}).`,
+      `Updated storefront settings (ordering ${args.ordering_enabled ? "open" : "closed"}, online payment ${args.paystack_enabled ? "on" : "off"}).`,
     );
     return { ok: true };
   },

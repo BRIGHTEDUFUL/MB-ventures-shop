@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PAYMENT_LABEL, STATUS_LABEL, type Order } from "@/lib/store";
+import { CHANNEL_LABEL, PAYMENT_LABEL, STATUS_LABEL, type Order } from "@/lib/store";
 
 /** Card container shared by every hub page (matches the store's panel look). */
 export function Panel({
@@ -164,6 +164,31 @@ export function PaymentPill({ payment }: { payment: Order["payment_status"] }) {
       )}
     >
       {PAYMENT_LABEL[payment]}
+    </span>
+  );
+}
+
+const CHANNEL_STYLE: Record<NonNullable<Order["channel"]>, string> = {
+  online: "bg-muted text-muted-foreground",
+  whatsapp: "bg-success/15 text-success",
+  phone: "bg-link/15 text-link",
+  walk_in: "bg-offer/15 text-offer",
+};
+
+/**
+ * Where the order came from. Nothing renders for a row written before
+ * channels existed — a missing chip is honest, a guessed one is not.
+ */
+export function ChannelPill({ channel }: { channel: Order["channel"] }) {
+  if (channel === null) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        CHANNEL_STYLE[channel],
+      )}
+    >
+      {CHANNEL_LABEL[channel]}
     </span>
   );
 }

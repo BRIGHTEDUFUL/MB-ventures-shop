@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query, type QueryCtx } from "./_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireUser } from "./lib/auth";
 import { requirePermission } from "./lib/permissions";
@@ -18,11 +18,18 @@ import {
   normalizePhone,
   round2,
   validateCheckout,
+  validateManualOrder,
   validateStatusChange,
 } from "./lib/rules";
-import { applyStockChange, stockStateOf, type StockState } from "./lib/stock";
+import { applyStockChange, stockStateOf, type MovementSource, type StockState } from "./lib/stock";
+import { cancelUnpaidOrder } from "./lib/orderCancel";
+import { pesewas } from "./lib/paystack";
 import { validators } from "./schema";
-import { notifyOrderPlaced, notifyOrderUpdated } from "./emails/orderTriggers";
+import {
+  notifyManualOrderPlaced,
+  notifyOrderPlaced,
+  notifyOrderUpdated,
+} from "./emails/orderTriggers";
 
 const checkoutArgs = {
   customer_name: v.string(),
@@ -40,6 +47,13 @@ const checkoutArgs = {
       variant_key: v.optional(v.string()),
     }),
   ),
+  // How the shopper wants to pay. `offline` (the default) keeps the pay-later
+  // model — derived from fulfilment, cash at the counter or to the courier.
+  // `online` opts into Paystack: the order still lands here first (stock is
+  // held immediately), and the browser is then sent to the hosted checkout
+  // by `payments.initialize`. The gateway reference and amount are NEVER
+  // accepted from the client — they are computed and stored right here.
+  payment: v.optional(v.union(v.literal("online"), v.literal("offline"))),
 };
 
 /** `MB-` + 8 random bytes hex, retried until unique (Postgres had a UNIQUE constraint). */
@@ -63,6 +77,133 @@ async function historyFor(ctx: QueryCtx, orderId: Id<"orders">) {
     .query("order_history")
     .withIndex("by_order", (q) => q.eq("order_id", orderId))
     .collect();
+}
+
+/** One line as a browser may describe it: identity, option, quantity. No money. */
+type LineInput = { id: string; quantity: number; variant_key?: string | undefined };
+
+/** Which door is holding the stock, for the ledger and the idempotency keys. */
+type HoldDoor = {
+  source: MovementSource;
+  /** The staff member taking the order; undefined for a storefront checkout. */
+  actorId?: Id<"users"> | undefined;
+  /** Key namespace: `place:` for checkout, `manual:` for counter orders. */
+  prefix: "place" | "manual";
+  /** "cart" or "order" — the noun the refusal messages address the caller by. */
+  what: "cart" | "order";
+};
+
+/**
+ * Turn browser-supplied line identities into priced order lines, holding the
+ * stock for each one. Shared by `place` (storefront) and `staffCreate`
+ * (counter): both doors send only ids, options and quantities, and everything
+ * money- or stock-shaped — the price, the label, the availability check and
+ * the reservation itself — is decided here. Neither caller can therefore buy a
+ * Black desk at White's price, skip the option picker, or hold stock the shop
+ * does not have.
+ */
+async function holdLines(
+  ctx: MutationCtx,
+  reference: string,
+  items: LineInput[],
+  door: HoldDoor,
+): Promise<{ lines: Order["items"]; subtotal: number }> {
+  let subtotal = 0;
+  const lines: Order["items"] = [];
+
+  for (const line of items) {
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", line.id))
+      .unique();
+    // The storefront filters hidden and draft products out of every listing,
+    // so checkout refuses them too — a crafted cart cannot buy something the
+    // shop has pulled from sale. The counter form only offers listed products,
+    // so both doors refuse exactly the same set.
+    if (product === null || !product.verified || !isListed(product)) {
+      throw new ConvexError({
+        message: `An item is not available. Please check your ${door.what}.`,
+      });
+    }
+
+    // Resolve the option, if the line named one. The browser sends only an
+    // identity — the price, the stock check and the label are all decided
+    // here, so a tampered cart cannot buy a Black desk at White's price.
+    const wantedKey = line.variant_key?.trim() ?? "";
+    const variant =
+      wantedKey === ""
+        ? null
+        : await ctx.db
+            .query("product_variants")
+            .withIndex("by_product_key", (q) =>
+              q.eq("product_slug", product.slug).eq("key", wantedKey),
+            )
+            .unique();
+    if (wantedKey !== "" && (variant === null || !variant.visible)) {
+      throw new ConvexError({
+        message: `An item is no longer available. Please check your ${door.what}.`,
+      });
+    }
+
+    // Guard: if this product sells in multiple versions, the order line must
+    // name one of them. A tampered cart (or a future API caller) that skips
+    // the picker would otherwise charge the base price and bypass per-variant
+    // stock checks, which is both commercially wrong and a stock-integrity
+    // violation. We only look for visible variants so a product whose sole
+    // visible variant was just removed degrades gracefully to the base product.
+    if (variant === null) {
+      const hasVisibleVariants = await ctx.db
+        .query("product_variants")
+        .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
+        .filter((q) => q.eq(q.field("visible"), true))
+        .first();
+      if (hasVisibleVariants !== null) {
+        throw new ConvexError({ message: "Please select an option before ordering." });
+      }
+    }
+
+    const price = variant?.price ?? product.price;
+    const available = variant === null ? product.stock : variant.stock;
+    if (available < line.quantity) {
+      throw new ConvexError({
+        message: `An item is not available. Please check your ${door.what}.`,
+      });
+    }
+
+    subtotal += price * line.quantity;
+    lines.push({
+      id: product.slug,
+      // The option becomes part of the name so staff, receipts and the
+      // top-sellers report all read the colour back without a join.
+      name: variant === null ? product.name : `${product.name} — ${variant.name}`,
+      price,
+      quantity: line.quantity,
+      image_key: variant?.image_key ?? product.image_key,
+      ...(variant === null ? {} : { variant_key: variant.key, variant_name: variant.name }),
+    });
+    // The units are *held*, not gone: `stock` (available) drops so nobody
+    // else can buy them, `reserved` grows by the same amount, and on-hand
+    // (= stock + reserved) is unchanged until the goods actually leave.
+    // Same visible number as the old direct decrement, but cancellable
+    // without guessing what to restore.
+    await applyStockChange(ctx, {
+      slug: product.slug,
+      ...(variant === null ? {} : { variant_key: variant.key }),
+      command: { kind: "reserve", quantity: line.quantity },
+      movement_type: "reserve",
+      source: door.source,
+      reason: `Sold on order ${reference}`,
+      reference,
+      ...(door.actorId === undefined ? {} : { actor_id: door.actorId }),
+      // One intent, one movement: a retried client cannot double-hold. The
+      // option is part of the key so two colours of one order are two holds.
+      operation_key: `${door.prefix}:${reference}:${product.slug}${
+        variant === null ? "" : `:${variant.key}`
+      }`,
+    });
+  }
+
+  return { lines, subtotal: round2(subtotal) };
 }
 
 /**
@@ -94,118 +235,74 @@ export const place = mutation({
     );
     if (problem !== null) throw new ConvexError({ message: problem });
 
-    let subtotal = 0;
-    const lines: Order["items"] = [];
-    const reference = await uniqueReference(ctx);
-
-    for (const line of args.items) {
-      const product = await ctx.db
-        .query("products")
-        .withIndex("by_slug", (q) => q.eq("slug", line.id))
-        .unique();
-      // The storefront filters hidden and draft products out of every listing,
-      // so checkout refuses them too — a crafted cart cannot buy something the
-      // shop has pulled from sale.
-      if (product === null || !product.verified || !isListed(product)) {
-        throw new ConvexError({ message: "An item is not available. Please check your cart." });
-      }
-
-      // Resolve the option, if the line named one. The browser sends only an
-      // identity — the price, the stock check and the label are all decided
-      // here, so a tampered cart cannot buy a Black desk at White's price.
-      const wantedKey = line.variant_key?.trim() ?? "";
-      const variant =
-        wantedKey === ""
-          ? null
-          : await ctx.db
-              .query("product_variants")
-              .withIndex("by_product_key", (q) =>
-                q.eq("product_slug", product.slug).eq("key", wantedKey),
-              )
-              .unique();
-      if (wantedKey !== "" && (variant === null || !variant.visible)) {
-        throw new ConvexError({
-          message: "An item is no longer available. Please check your cart.",
-        });
-      }
-
-      // Guard: if this product sells in multiple versions, the order line must
-      // name one of them. A tampered cart (or a future API caller) that skips
-      // the picker would otherwise charge the base price and bypass per-variant
-      // stock checks, which is both commercially wrong and a stock-integrity
-      // violation. We only look for visible variants so a product whose sole
-      // visible variant was just removed degrades gracefully to the base product.
-      if (variant === null) {
-        const hasVisibleVariants = await ctx.db
-          .query("product_variants")
-          .withIndex("by_product", (q) => q.eq("product_slug", product.slug))
-          .filter((q) => q.eq(q.field("visible"), true))
-          .first();
-        if (hasVisibleVariants !== null) {
-          throw new ConvexError({ message: "Please select an option before ordering." });
-        }
-      }
-
-      const price = variant?.price ?? product.price;
-      const available = variant === null ? product.stock : variant.stock;
-      if (available < line.quantity) {
-        throw new ConvexError({ message: "An item is not available. Please check your cart." });
-      }
-
-      subtotal += price * line.quantity;
-      lines.push({
-        id: product.slug,
-        // The option becomes part of the name so staff, receipts and the
-        // top-sellers report all read the colour back without a join.
-        name: variant === null ? product.name : `${product.name} — ${variant.name}`,
-        price,
-        quantity: line.quantity,
-        image_key: variant?.image_key ?? product.image_key,
-        ...(variant === null ? {} : { variant_key: variant.key, variant_name: variant.name }),
-      });
-      // The units are *held*, not gone: `stock` (available) drops so nobody
-      // else can buy them, `reserved` grows by the same amount, and on-hand
-      // (= stock + reserved) is unchanged until the goods actually leave.
-      // Same visible number as the old direct decrement, but cancellable
-      // without guessing what to restore.
-      await applyStockChange(ctx, {
-        slug: product.slug,
-        ...(variant === null ? {} : { variant_key: variant.key }),
-        command: { kind: "reserve", quantity: line.quantity },
-        movement_type: "reserve",
-        source: "checkout",
-        reason: `Sold on order ${reference}`,
-        reference,
-        // One intent, one movement: a retried client cannot double-hold. The
-        // option is part of the key so two colours of one order are two holds.
-        operation_key: `place:${reference}:${product.slug}${
-          variant === null ? "" : `:${variant.key}`
-        }`,
+    // Online payment must be both switched on by staff and configured on the
+    // server; the checkout only offers the choice when this passes.
+    const online = args.payment === "online";
+    if (online && settings.paystack_enabled !== true) {
+      throw new ConvexError({
+        message:
+          "Online payment is not available right now. Please pay on delivery or at the shop.",
       });
     }
 
-    subtotal = round2(subtotal);
+    // A shopper who backs out of Paystack and checks out again must not
+    // leave the first reservation holding stock forever: the older unpaid
+    // online order is cancelled (stock returned, deliberately silent — no
+    // cancellation mail for a checkout that never finished). Payment is
+    // still pending here, so a `charge.success` racing this cancellation
+    // always wins inside `cancelUnpaidOrder`'s guard.
+    if (online) {
+      const recent = await ctx.db
+        .query("orders")
+        .withIndex("by_user", (q) => q.eq("user_id", userId))
+        .order("desc")
+        .take(25);
+      for (const old of recent) {
+        if (old.payment_method !== "paystack") continue;
+        if (old.payment_status !== "pending" || old.status !== "received") continue;
+        await cancelUnpaidOrder(ctx, old, {
+          reason: "Superseded by a newer checkout attempt.",
+          actorId: null,
+          notify: false,
+        });
+      }
+    }
+
+    const reference = await uniqueReference(ctx);
+    const { lines, subtotal } = await holdLines(ctx, reference, args.items, {
+      source: "checkout",
+      prefix: "place",
+      what: "cart",
+    });
+
     const fee = deliveryFee(settings, args.zone, subtotal, args.fulfillment);
     if (fee === null) throw new ConvexError({ message: "Choose a delivery area." });
     const orderId = await ctx.db.insert("orders", {
       reference,
       user_id: userId,
+      // Every storefront checkout says so — the counterpart to the counter
+      // channels (`whatsapp` / `phone` / `walk_in`) staff pick in /staff.
+      channel: "online",
       customer_name: args.customer_name.trim(),
       email: args.email.trim(),
       phone: normalizePhone(args.phone),
       address: args.address.trim(),
       fulfillment: args.fulfillment,
       zone: args.zone,
-      // No money moves in the app: the method is simply where the cash
-      // changes hands. Pickup orders are paid at the shop counter, delivery
-      // orders are paid to the courier on arrival.
-      payment_method: args.fulfillment === "pickup" ? "pay_at_store" : "cod",
+      // Offline orders keep the pay-later model: the method is simply where
+      // the cash changes hands (pickup → shop counter, delivery → courier).
+      // Online orders are paid through Paystack; the charge is confirmed
+      // later by the return page or the webhook, never by the browser here.
+      payment_method: online ? "paystack" : args.fulfillment === "pickup" ? "pay_at_store" : "cod",
       payment_status: "pending",
       status: "received",
       subtotal,
       delivery_fee: fee,
       total: round2(subtotal + fee),
       items: lines,
+      // The exact amount (pesewas) a Paystack charge must match to confirm
+      // this order. Locked now, next to the total it was computed from.
+      ...(online ? { payment_amount_pesewas: pesewas(round2(subtotal + fee)) } : {}),
       // Tracks what happened to the physical units for this order, so a
       // later cancellation returns them exactly once and never twice.
       stock_state: "reserved",
@@ -214,8 +311,9 @@ export const place = mutation({
     await ctx.db.insert("order_history", {
       order_id: orderId,
       status: "received",
-      note:
-        args.fulfillment === "pickup"
+      note: online
+        ? "Order received. Complete the online payment to confirm it — your items are reserved while you pay."
+        : args.fulfillment === "pickup"
           ? "Order received. Pay at the shop when you collect your order."
           : "Order received. Pay cash when your order arrives.",
     });
@@ -296,7 +394,10 @@ export const staffList = query({
         if (args.status !== undefined && o.status !== args.status) return false;
         if (args.payment !== undefined && o.payment_status !== args.payment) return false;
         if (search !== "") {
-          const haystack = `${o.reference} ${o.customer_name} ${o.phone} ${o.email}`.toLowerCase();
+          // Channels are searchable too — "whatsapp" finds the orders taken
+          // from WhatsApp, which is how the shop re-reads a day's messages.
+          const haystack =
+            `${o.reference} ${o.customer_name} ${o.phone} ${o.email} ${o.channel ?? ""}`.toLowerCase();
           if (!haystack.includes(search)) return false;
         }
         return true;
@@ -341,6 +442,168 @@ export const staffGet = query({
     history.sort((a, b) => a.created_at.localeCompare(b.created_at));
 
     return { order: orderDTO(order), history };
+  },
+});
+
+/**
+ * Record an order a staff member took in the shop — a WhatsApp message, a
+ * phone call, a walk-in at the counter. The mirror of `place` with the same
+ * guarantees: the server prices every line, computes the delivery fee and
+ * holds the stock inside one transaction, so a counter sale counts against
+ * the shelf exactly like an online one and flows through the same
+ * `staffUpdate` cancel/complete machinery afterwards.
+ *
+ * Guarded by `orders.create` (staff floor): an attendant can record sales
+ * without admin access. The customer's account stays empty — a walk-in has
+ * none — while `created_by` records who took the order.
+ */
+export const staffCreate = mutation({
+  args: {
+    customer_name: v.string(),
+    phone: v.string(),
+    // Optional: a walk-in often has no email, and one must never be invented
+    // (scheduling a confirmation to `""` only earns a failed email-log row).
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    fulfillment: validators.fulfillment,
+    zone: validators.zone,
+    items: v.array(
+      v.object({
+        id: v.string(),
+        quantity: v.number(),
+        // Which option of `id` was bought — same identity-only contract as
+        // checkout: the price and stock of the option are decided server-side.
+        variant_key: v.optional(v.string()),
+      }),
+    ),
+    // The sale's three shop-side channels. `online` is excluded on purpose:
+    // that one is stamped by `orders.place`, never chosen by hand.
+    channel: v.optional(v.union(v.literal("whatsapp"), v.literal("phone"), v.literal("walk_in"))),
+    // The three offline methods only. `paystack` is deliberately not accepted:
+    // money through Paystack only ever comes from the customer's own hosted
+    // checkout, never from a form staff fill in.
+    payment_method: v.optional(
+      v.union(v.literal("momo"), v.literal("cod"), v.literal("pay_at_store")),
+    ),
+    // `confirmed` means the cash/MoMo is already in hand while the order is
+    // taken, so it is recorded in the same breath instead of as a later update.
+    payment_status: v.optional(validators.paymentStatus),
+    // Anything the customer promised or asked for, kept on the timeline.
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<Order> => {
+    const actorId = await requirePermission(ctx, "orders.create");
+    const actor = await ctx.db.get(actorId);
+    const actorName = actor?.name?.trim() || actor?.email?.trim() || "Shop staff";
+
+    const settings = await getSettings(ctx);
+    const email = (args.email ?? "").trim();
+    const address = (args.address ?? "").trim();
+    const channel = args.channel ?? "walk_in";
+    const payment_method =
+      args.payment_method ?? (args.fulfillment === "pickup" ? "pay_at_store" : "cod");
+    const payment_status = args.payment_status ?? "pending";
+    const note = (args.note ?? "").trim();
+    if (note.length > 500) {
+      throw new ConvexError({ message: "Keep the note under 500 characters." });
+    }
+
+    const problem = validateManualOrder({
+      customer_name: args.customer_name,
+      phone: args.phone,
+      email,
+      address,
+      fulfillment: args.fulfillment,
+      zone: args.zone,
+      items: args.items,
+      payment_method,
+      payment_status,
+      channel,
+    });
+    if (problem !== null) throw new ConvexError({ message: problem });
+
+    const reference = await uniqueReference(ctx);
+    const { lines, subtotal } = await holdLines(ctx, reference, args.items, {
+      source: "attendant",
+      actorId,
+      prefix: "manual",
+      what: "order",
+    });
+
+    const fee = deliveryFee(settings, args.zone, subtotal, args.fulfillment);
+    if (fee === null) throw new ConvexError({ message: "Choose a delivery area." });
+
+    const orderId = await ctx.db.insert("orders", {
+      reference,
+      // No customer account: a walk-in sale belongs to nobody's login. Who
+      // *took* the order is `created_by` below.
+      channel,
+      created_by: actorId,
+      created_by_name: actorName,
+      customer_name: args.customer_name.trim(),
+      email,
+      phone: normalizePhone(args.phone),
+      address,
+      fulfillment: args.fulfillment,
+      zone: args.zone,
+      payment_method,
+      payment_status,
+      status: "received",
+      subtotal,
+      delivery_fee: fee,
+      total: round2(subtotal + fee),
+      items: lines,
+      // Held, exactly like a checkout reservation: a later cancellation
+      // releases it once, a completion commits it once (`staffUpdate`).
+      stock_state: "reserved",
+    });
+
+    // The timeline, in words the customer would recognise if they called in.
+    const taken =
+      channel === "whatsapp"
+        ? "Order taken from WhatsApp"
+        : channel === "phone"
+          ? "Order taken by phone"
+          : "Walk-in order recorded";
+    const howToPay =
+      payment_method === "pay_at_store"
+        ? "Pay at the shop when the customer collects."
+        : payment_method === "cod"
+          ? "Pay cash when the order arrives."
+          : payment_status === "confirmed"
+            ? "Mobile Money received at the counter."
+            : "Mobile Money payment pending — confirm it once it lands.";
+    await ctx.db.insert("order_history", {
+      order_id: orderId,
+      status: "received",
+      note: `${taken}. ${howToPay}`,
+      actor_id: actorId,
+    });
+    if (note !== "") {
+      await ctx.db.insert("order_history", {
+        order_id: orderId,
+        status: "received",
+        note,
+        actor_id: actorId,
+      });
+    }
+    if (payment_status === "confirmed") {
+      await ctx.db.insert("order_history", {
+        order_id: orderId,
+        status: "received",
+        note: "Payment: confirmed · Received when the order was taken.",
+        actor_id: actorId,
+      });
+    }
+
+    const order = await ctx.db.get(orderId);
+    if (order === null) throw new Error("Order could not be saved.");
+
+    // Notifications only: a failure here is swallowed inside `scheduleEmail`,
+    // so the order itself always commits (same contract as `place`).
+    await notifyManualOrderPlaced(ctx, order);
+
+    return orderDTO(order);
   },
 });
 

@@ -24,6 +24,7 @@ export type {
 export {
   DEFAULT_ANNOUNCEMENT,
   DEFAULT_FEES,
+  LOW_STOCK_AT,
   announcementText,
   displayFees,
   normalizeWhatsApp,
@@ -34,6 +35,29 @@ export {
 
 export const money = (n: number, decimals = false) =>
   `GH₵ ${n.toLocaleString("en-GH", { minimumFractionDigits: decimals ? 2 : 0, maximumFractionDigits: 2 })}`;
+
+/**
+ * Where an order came from, written the way the staff screens say it.
+ * Rows without a channel (written before the field existed) render no chip.
+ */
+export const CHANNEL_LABEL: Record<NonNullable<Order["channel"]>, string> = {
+  online: "Online",
+  whatsapp: "WhatsApp",
+  phone: "Phone",
+  walk_in: "Walk-in",
+};
+
+/**
+ * How an order is paid, spelled out for the payment panels. `paystack` is
+ * here only so the map stays total — a staff-recorded order can never carry
+ * it (the server refuses that method on `orders.staffCreate`).
+ */
+export const PAYMENT_METHOD_LABEL: Record<Order["payment_method"], string> = {
+  momo: "Mobile Money",
+  cod: "Cash on delivery",
+  pay_at_store: "Pay at the shop",
+  paystack: "Online payment (Paystack)",
+};
 
 /**
  * The catalogue price slider's fixed top: GH₵ 50,000, by the shop's choice.
@@ -104,6 +128,12 @@ export type CheckoutForm = {
   address: string;
   fulfillment: "delivery" | "pickup";
   zone: "central" | "greater" | "nationwide";
+  /**
+   * `offline` keeps the pay-later model (cash at the counter / to the courier);
+   * `online` routes the order through Paystack's hosted checkout. The choice
+   * only appears when the store has online payments switched on.
+   */
+  payment: "online" | "offline";
 };
 
 /**

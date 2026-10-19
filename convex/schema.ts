@@ -9,14 +9,40 @@ const { users: _authUsers, ...authTablesExceptUsers } = authTables;
 const zone = v.union(v.literal("central"), v.literal("greater"), v.literal("nationwide"));
 const fulfillment = v.union(v.literal("delivery"), v.literal("pickup"));
 /**
- * How an order is paid. There is no in-app payment: money changes hands
- * offline, so the method is derived from fulfilment when the order is placed
- * (`orders.place`) — pickup orders are paid at the shop counter, delivery
- * orders are cash on arrival. The `momo` literal survives only so rows written
- * before this model existed keep validating; no new order ever carries it.
+ * How an order is paid.
+ *
+ * - `cod` / `pay_at_store` — money changes hands offline (delivery is cash on
+ *   arrival, pickup is paid at the shop counter). `orders.place` still derives
+ *   these from fulfilment.
+ * - `paystack` — the shopper chose "Pay online now" at checkout; the charge is
+ *   taken by Paystack and confirmed by the return page or the webhook
+ *   (`convex/payments.ts`). The gateway reference stored on the order is
+ *   always server-generated — never accepted from the browser.
+ * - `momo` survives only so rows written before this model existed keep
+ *   validating; no new order ever carries it.
  */
-const paymentMethod = v.union(v.literal("momo"), v.literal("cod"), v.literal("pay_at_store"));
+const paymentMethod = v.union(
+  v.literal("momo"),
+  v.literal("cod"),
+  v.literal("pay_at_store"),
+  v.literal("paystack"),
+);
 const paymentStatus = v.union(v.literal("pending"), v.literal("confirmed"), v.literal("rejected"));
+/**
+ * Where an order came from.
+ *
+ * - `online` — the shopper checked out through the storefront (`orders.place`
+ *   stamps it; rows written before the field existed were all online too, and
+ *   read as `null` until backfilled).
+ * - `whatsapp` / `phone` / `walk_in` — recorded by a staff member in the back
+ *   office (`orders.staffCreate`) for a sale that happened in the shop.
+ */
+const orderChannel = v.union(
+  v.literal("online"),
+  v.literal("whatsapp"),
+  v.literal("phone"),
+  v.literal("walk_in"),
+);
 const orderStatus = v.union(
   v.literal("received"),
   v.literal("processing"),
@@ -108,6 +134,7 @@ export const PERMISSION_KEYS = [
   "inventory.health", // data-health report + fixes
   // Orders
   "orders.view",
+  "orders.create", // counter/WhatsApp/phone orders recorded by staff
   "orders.update", // status/payment transitions, notes, contact fixes
   // Reporting
   "reports.view",
@@ -165,6 +192,7 @@ export const validators = {
   paymentMethod,
   paymentStatus,
   orderStatus,
+  orderChannel,
   trustIcon,
   emailStatus,
   emailCategory,
@@ -332,6 +360,10 @@ export default defineSchema({
     nationwide_fee: v.number(),
     free_threshold: v.number(),
     ordering_enabled: v.boolean(),
+    // Show "Pay online now (Paystack)" as a payment choice at checkout.
+    // Off by default: even when on, a payment only ever starts if the backend
+    // also carries PAYSTACK_SECRET_KEY — the key is the real switch.
+    paystack_enabled: v.optional(v.boolean()),
     hero_image: v.string(),
     setup_image: v.string(),
     announcement: v.string(),
@@ -367,20 +399,49 @@ export default defineSchema({
   // Replaces `public.orders`. `created_at` is derived from `_creationTime`.
   orders: defineTable({
     reference: v.string(),
-    user_id: v.id("users"),
+    // The customer's account, when they signed in to check out. Optional: an
+    // order recorded at the counter for a walk-in has no account behind it —
+    // `created_by` below is who *took* the order, which is a different thing.
+    user_id: v.optional(v.id("users")),
+    // Where the order came from. Absent on rows written before this field
+    // existed (all of which came through the storefront checkout).
+    channel: v.optional(orderChannel),
+    // The staff member who recorded this order in the back office
+    // (`orders.staffCreate`). Undefined for storefront checkouts, where the
+    // customer placed it themselves.
+    created_by: v.optional(v.id("users")),
+    // Denormalized so the orders list can name them without a join per row.
+    created_by_name: v.optional(v.string()),
     customer_name: v.string(),
     email: v.string(),
     phone: v.string(),
     address: v.string(),
     fulfillment,
     zone,
-    // Derived from fulfilment at checkout — never chosen by the shopper.
+    // Offline methods are derived from fulfilment at checkout; `paystack`
+    // comes from the shopper's explicit "Pay online now" choice.
     payment_method: paymentMethod,
-    // Legacy MoMo fields. Kept (optional) so pre-existing orders keep
-    // validating and staff can still read what a past order carried; no new
-    // order writes them.
+    // Legacy MoMo fields, now reused by online payments: `provider` carries
+    // the gateway name ("paystack") once a charge is verified, and
+    // `transaction_reference` the gateway's authorization/transaction id.
+    // Optional so pre-existing orders keep validating unchanged.
     provider: v.optional(v.string()),
     transaction_reference: v.optional(v.string()),
+    // ── Online payment (Paystack) ───────────────────────────────────────
+    // All optional: nothing predating the feature writes them, and offline
+    // orders never carry any. See `convex/payments.ts` for the flow.
+    //
+    // The exact amount (in pesewas) a charge must match to confirm this
+    // order, locked when the order is placed — never re-derived later.
+    payment_amount_pesewas: v.optional(v.number()),
+    // Hosted-checkout hand-off: stored so a shopper who taps back can resume
+    // the same Paystack session instead of starting a second one.
+    paystack_access_code: v.optional(v.string()),
+    paystack_authorization_url: v.optional(v.string()),
+    // Filled in by the verification that confirms the payment.
+    paid_at: v.optional(v.number()),
+    payment_channel: v.optional(v.string()), // card, mobile_money, bank, ussd…
+    paystack_transaction_id: v.optional(v.number()),
     payment_status: paymentStatus,
     status: orderStatus,
     subtotal: v.number(),

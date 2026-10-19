@@ -14,7 +14,7 @@ import {
   type Order,
 } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { EmptyState, Panel, PaymentPill, StatusPill } from "@/components/staff/bits";
+import { ChannelPill, EmptyState, Panel, PaymentPill, StatusPill } from "@/components/staff/bits";
 import { images } from "@/lib/store-images";
 import { toast } from "sonner";
 
@@ -182,11 +182,15 @@ function OrderView({
           <h2 className="page-title">{order.reference}</h2>
           <p className="text-sm text-muted-foreground">
             Placed {new Date(order.created_at).toLocaleString()}
+            {/* Counter orders name the staff member who took them; storefront
+                checkouts have nobody to name — the customer placed it. */}
+            {order.created_by_name ? ` · Taken by ${order.created_by_name}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <StatusPill status={order.status} />
           <PaymentPill payment={order.payment_status} />
+          <ChannelPill channel={order.channel} />
           <span className="text-xl font-semibold">{money(order.total, true)}</span>
         </div>
       </div>
@@ -338,11 +342,13 @@ function OrderView({
           <Panel
             title="Payment"
             description={
-              order.payment_method === "momo"
-                ? "Legacy in-app Mobile Money order."
-                : order.fulfillment === "pickup"
-                  ? "Cash collected at the shop counter on collection."
-                  : "Cash collected by the courier on delivery."
+              order.payment_method === "paystack"
+                ? "Taken online through Paystack at checkout."
+                : order.payment_method === "momo"
+                  ? "Legacy in-app Mobile Money order."
+                  : order.fulfillment === "pickup"
+                    ? "Cash collected at the shop counter on collection."
+                    : "Cash collected by the courier on delivery."
             }
           >
             <dl className="space-y-2 text-sm">
@@ -351,11 +357,25 @@ function OrderView({
                 <dd>
                   {order.payment_method === "momo"
                     ? "Mobile Money"
-                    : order.payment_method === "pay_at_store"
-                      ? "Pay at the shop"
-                      : "Cash on delivery"}
+                    : order.payment_method === "paystack"
+                      ? "Online payment (Paystack)"
+                      : order.payment_method === "pay_at_store"
+                        ? "Pay at the shop"
+                        : "Cash on delivery"}
                 </dd>
               </div>
+              {order.payment_channel && (
+                <div className="summary-row">
+                  <dt>Channel</dt>
+                  <dd className="capitalize">{order.payment_channel.replace("_", " ")}</dd>
+                </div>
+              )}
+              {order.paid_at !== null && (
+                <div className="summary-row">
+                  <dt>Paid</dt>
+                  <dd>{new Date(order.paid_at).toLocaleString()}</dd>
+                </div>
+              )}
               {order.provider && (
                 <div className="summary-row">
                   <dt>Provider</dt>

@@ -16,4 +16,11 @@ crons.interval("purge old email logs", { hours: 24 }, internal.emails.cleanup, {
  */
 crons.daily("inventory health check", { hourUTC: 5, minuteUTC: 0 }, internal.health.dailyCheck, {});
 
+/**
+ * Online orders that never completed their Paystack payment age out: cancel
+ * them and put the reserved stock back (see `internal.payments.expireStale`
+ * and docs/PAYMENTS-PAYSTACK.md).
+ */
+crons.interval("expire unpaid online orders", { minutes: 15 }, internal.payments.expireStale, {});
+
 export default crons;

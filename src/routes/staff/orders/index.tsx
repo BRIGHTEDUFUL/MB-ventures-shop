@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../../convex/_generated/api";
 import { money, pageHead, type Order } from "@/lib/store";
-import { EmptyState, PaymentPill, QueryState, StatusPill } from "@/components/staff/bits";
+import { Button } from "@/components/ui/button";
+import {
+  ChannelPill,
+  EmptyState,
+  PaymentPill,
+  QueryState,
+  StatusPill,
+} from "@/components/staff/bits";
 
 export const Route = createFileRoute("/staff/orders/")({
   head: () => pageHead("Orders", "Update order status, record payments and track every order."),
@@ -34,6 +41,11 @@ function OrdersList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  // Recording a sale is its own permission (`orders.create`, staff floor) —
+  // the button hides without it, and `orders.staffCreate` refuses without it.
+  const permissions = useQuery({ ...convexQueryOptions(api.users.myPermissions, {}) });
+  const canCreate = permissions.isSuccess && permissions.data.includes("orders.create");
+
   // Debounced so typing doesn't fire a query per keystroke.
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -50,11 +62,20 @@ function OrdersList() {
 
   return (
     <div>
-      <h2 className="page-title">Orders</h2>
-      <p className="page-lead">
-        Payment is collected offline — cash at the shop counter or to the courier. Mark payment as
-        received once the money is in.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="page-title">Orders</h2>
+          <p className="page-lead">
+            Payment is collected offline — cash at the shop counter or to the courier. Mark payment
+            as received once the money is in.
+          </p>
+        </div>
+        {canCreate && (
+          <Button asChild className="shrink-0">
+            <Link to="/staff/orders/new">Record an order</Link>
+          </Button>
+        )}
+      </div>
 
       <div className="toolbar mt-6">
         <input
@@ -103,6 +124,7 @@ function OrdersList() {
                       <span className="font-mono text-base font-semibold">{o.reference}</span>
                       <StatusPill status={o.status} />
                       <PaymentPill payment={o.payment_status} />
+                      <ChannelPill channel={o.channel} />
                     </span>
                     <span className="mt-1 block truncate text-sm text-muted-foreground">
                       {o.customer_name} · {o.phone} ·{" "}

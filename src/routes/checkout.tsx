@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { convexQuery, useConvexAction, useConvexMutation } from "@convex-dev/react-query";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/store-provider";
@@ -37,6 +37,7 @@ const EMPTY_FORM: CheckoutForm = {
   address: "",
   fulfillment: "delivery",
   zone: "central",
+  payment: "offline",
 };
 
 /** The persisted draft (`{ step, ...form }`), or null when absent/unreadable. */
@@ -54,7 +55,8 @@ function Checkout() {
     { data } = useQuery(storeQuery),
     navigate = useNavigate();
   const { session, loading, profile } = useSession(),
-    placeOrder = useConvexMutation(api.orders.place);
+    placeOrder = useConvexMutation(api.orders.place),
+    startPayment = useConvexAction(api.payments.initialize);
   // Right after sign-up Convex Auth can resolve to "signed out" for a beat,
   // which bounces checkout through /account and back — remounting this
   // component with fresh state. The draft keeps both the step and the fields
@@ -137,6 +139,15 @@ function Checkout() {
           ...(l.variant ? { variant_key: l.variant.key } : {}),
         })),
       });
+      if (form.payment === "online") {
+        // The order and its stock hold already exist; now hand the shopper to
+        // Paystack's hosted checkout. The cart stays intact until the payment
+        // is verified on the way back (/paystack/return), so an abandoned
+        // gateway page never loses the shopper's work.
+        const { authorization_url } = await startPayment({ reference: order.reference });
+        window.location.assign(authorization_url);
+        return;
+      }
       sessionStorage.setItem("mb-receipt", JSON.stringify(order));
       sessionStorage.removeItem(DRAFT_KEY);
       // Flag before clearing: the emptied cart must not bounce the shopper to
@@ -146,7 +157,6 @@ function Checkout() {
       navigate({ to: "/confirmation", search: { ref: order.reference } });
     } catch (e) {
       setError(errorMessage(e, "Order could not be placed. Please try again."));
-    } finally {
       setBusy(false);
     }
   };
@@ -307,14 +317,60 @@ function Checkout() {
                     </div>
                     <div className="solid-panel">
                       <h3>Payment</h3>
-                      <p className="mt-3 text-sm">
-                        {form.fulfillment === "pickup"
-                          ? "Pay at the shop when you collect your order."
-                          : "Pay cash to the courier when your order arrives."}
-                      </p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        No payment is taken online. Have the exact amount ready where possible.
-                      </p>
+                      {data.settings.paystack_enabled ? (
+                        // Online payments are on: the shopper picks how to pay.
+                        // The whole choice disappears when the switch is off,
+                        // which keeps the pay-later flow byte-for-byte intact.
+                        <div className="mt-3 space-y-2">
+                          {[
+                            {
+                              id: "online" as const,
+                              title: "Pay online now",
+                              text: "Card, Mobile Money or bank transfer — secured by Paystack. Your order is confirmed the moment payment completes.",
+                            },
+                            {
+                              id: "offline" as const,
+                              title:
+                                form.fulfillment === "pickup"
+                                  ? "Pay at the shop"
+                                  : "Pay on delivery",
+                              text:
+                                form.fulfillment === "pickup"
+                                  ? "Pay cash at the counter when you collect your order."
+                                  : "Pay cash to the courier when your order arrives.",
+                            },
+                          ].map((o) => (
+                            <label className="solid-panel cursor-pointer" key={o.id}>
+                              <input
+                                type="radio"
+                                className="!mr-2 !w-auto !min-h-0"
+                                name="payment"
+                                checked={form.payment === o.id}
+                                onChange={() => set("payment", o.id)}
+                              />
+                              {o.title}
+                              <p className="mt-2 text-xs text-muted-foreground">{o.text}</p>
+                            </label>
+                          ))}
+                          {form.payment === "online" && (
+                            <p className="text-xs text-muted-foreground">
+                              You will be taken to Paystack's secure checkout page. Your items stay
+                              reserved while you pay.
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <p className="mt-3 text-sm">
+                            {form.fulfillment === "pickup"
+                              ? "Pay at the shop when you collect your order."
+                              : "Pay cash to the courier when your order arrives."}
+                          </p>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            No payment is taken online. Have the exact amount ready where possible.
+                          </p>
+                        </>
+                      )}
                     </div>
                     <label className="filter-line">
                       <input required type="checkbox" />I agree to the{" "}
@@ -338,11 +394,15 @@ function Checkout() {
                   )}
                   <Button type="submit" disabled={busy || (step === 2 && !canOrder)}>
                     {busy
-                      ? "Placing order…"
+                      ? form.payment === "online" && step === 2
+                        ? "Taking you to Paystack…"
+                        : "Placing order…"
                       : step < 2
                         ? "Continue"
                         : canOrder
-                          ? "Place order"
+                          ? form.payment === "online"
+                            ? `Pay ${money(total, true)} online`
+                            : "Place order"
                           : "Ordering not open yet"}
                   </Button>
                 </div>
@@ -382,9 +442,9 @@ function Checkout() {
                 <span>{money(total, true)}</span>
               </div>
               <p className="mt-4 text-xs text-muted-foreground">
-                {form.fulfillment === "pickup"
-                  ? "Pay at the shop when you collect your order."
-                  : "Pay cash when your order arrives."}{" "}
+                {data.settings.paystack_enabled && form.payment === "online"
+                  ? "Pay online — your order is reserved the moment you place it, and confirmed as soon as payment completes."
+                  : `${form.fulfillment === "pickup" ? "Pay at the shop when you collect your order." : "Pay cash when your order arrives."} `}{" "}
                 Prices are rechecked by the store when your order is placed.
               </p>
               {!canOrder && (

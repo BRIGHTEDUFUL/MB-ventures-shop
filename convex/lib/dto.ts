@@ -93,6 +93,8 @@ export type Settings = {
   nationwide_fee: number;
   free_threshold: number;
   ordering_enabled: boolean;
+  /** Show "Pay online now (Paystack)" at checkout. Still needs the server key. */
+  paystack_enabled: boolean;
   hero_image: string;
   setup_image: string;
   announcement: string;
@@ -125,18 +127,38 @@ export type OrderItem = {
 export type Order = {
   id: string;
   reference: string;
+  /** The customer's account when they checked out signed-in; null for counter sales. */
   user_id: string | null;
+  /**
+   * Where the order came from: `online` for storefront checkouts, `whatsapp` /
+   * `phone` / `walk_in` when staff recorded it in the back office. Null on
+   * rows written before channels existed.
+   */
+  channel: "online" | "whatsapp" | "phone" | "walk_in" | null;
+  /** Staff member who recorded this order; null for storefront checkouts. */
+  created_by_name: string | null;
   customer_name: string;
   email: string;
   phone: string;
   address: string;
   fulfillment: "delivery" | "pickup";
   zone: "central" | "greater" | "nationwide";
-  /** Where the money changes hands: `cod` (courier) or `pay_at_store`; `momo` is legacy. */
-  payment_method: "momo" | "cod" | "pay_at_store";
-  /** Legacy MoMo fields — null on every order placed since pay-later ordering shipped. */
+  /**
+   * Where the money changes hands: `cod` (courier) or `pay_at_store` offline;
+   * `paystack` when the shopper paid online; `momo` is legacy.
+   */
+  payment_method: "momo" | "cod" | "pay_at_store" | "paystack";
+  /**
+   * For online payments: the gateway name ("paystack") and its
+   * authorization/transaction id, filled in when the charge is verified.
+   * Null on every offline order.
+   */
   provider: string | null;
   transaction_reference: string | null;
+  /** When a Paystack charge was confirmed (epoch ms); null until then/offline. */
+  paid_at: number | null;
+  /** Paystack channel of the confirmed charge: card, mobile_money, bank, ussd… */
+  payment_channel: string | null;
   payment_status: "pending" | "confirmed" | "rejected";
   status: "received" | "processing" | "ready" | "dispatched" | "completed" | "cancelled";
   subtotal: number;
@@ -162,6 +184,8 @@ export type Receipt = Pick<
   | "delivery_fee"
   | "total"
   | "created_at"
+  // Online payments show when the money actually landed; offline stays null.
+  | "paid_at"
 > & { history?: HistoryEntry[] };
 
 export type SavedAddress = { id: string; name: string; address: string; phone: string };
@@ -322,6 +346,7 @@ export const settingsDTO = (settings: Doc<"store_settings">): Settings => {
     home_cta_body,
     home_brands,
     home_trust,
+    paystack_enabled,
     ...fields
   } = settings;
   const text = (value: string | undefined, fallback: string) =>
@@ -329,6 +354,8 @@ export const settingsDTO = (settings: Doc<"store_settings">): Settings => {
   return {
     id: 1,
     ...fields,
+    // Rows written before the feature exist — off until staff opt in.
+    paystack_enabled: paystack_enabled ?? false,
     home_category_heading: text(home_category_heading, HOME_CONTENT_DEFAULTS.home_category_heading),
     home_featured_heading: text(home_featured_heading, HOME_CONTENT_DEFAULTS.home_featured_heading),
     home_setup_eyebrow: text(home_setup_eyebrow, HOME_CONTENT_DEFAULTS.home_setup_eyebrow),
@@ -344,7 +371,9 @@ export const settingsDTO = (settings: Doc<"store_settings">): Settings => {
 export const orderDTO = (order: Doc<"orders">): Order => ({
   id: order._id,
   reference: order.reference,
-  user_id: order.user_id,
+  user_id: order.user_id ?? null,
+  channel: order.channel ?? null,
+  created_by_name: order.created_by_name ?? null,
   customer_name: order.customer_name,
   email: order.email,
   phone: order.phone,
@@ -354,6 +383,8 @@ export const orderDTO = (order: Doc<"orders">): Order => ({
   payment_method: order.payment_method,
   provider: order.provider ?? null,
   transaction_reference: order.transaction_reference ?? null,
+  paid_at: order.paid_at ?? null,
+  payment_channel: order.payment_channel ?? null,
   payment_status: order.payment_status,
   status: order.status,
   subtotal: order.subtotal,
@@ -383,6 +414,7 @@ export const receiptDTO = (order: Doc<"orders">, history: Doc<"order_history">[]
   delivery_fee: order.delivery_fee,
   total: order.total,
   created_at: new Date(order._creationTime).toISOString(),
+  paid_at: order.paid_at ?? null,
   history: historyDTO(history),
 });
 

@@ -30,11 +30,15 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
             o.payment_status === "confirmed"
             ? "Your Mobile Money payment has been confirmed by staff."
             : "Your Mobile Money reference awaits manual staff confirmation."
-          : o.payment_status === "confirmed"
-            ? "Payment received. Thank you."
-            : o.fulfillment === "pickup"
-              ? "Pay at the shop when you collect your order."
-              : "Pay cash when the courier arrives."}
+          : o.payment_method === "paystack"
+            ? o.payment_status === "confirmed"
+              ? `Paid online through Paystack${o.paid_at ? ` on ${new Date(o.paid_at).toLocaleString()}` : ""}. Thank you.`
+              : "Your online payment is still being confirmed. Your items are reserved in the meantime."
+            : o.payment_status === "confirmed"
+              ? "Payment received. Thank you."
+              : o.fulfillment === "pickup"
+                ? "Pay at the shop when you collect your order."
+                : "Pay cash when the courier arrives."}
         {o.fulfillment === "pickup"
           ? " Please wait until your order is ready before visiting the shop."
           : ""}

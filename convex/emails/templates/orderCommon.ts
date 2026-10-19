@@ -9,6 +9,8 @@ export type OrderEmailFields = {
   deliveryFee: string;
   total: string;
   paymentMethod: string;
+  /** pending / confirmed / rejected — decides "nothing is due" wording. */
+  paymentStatus: string;
   provider: string;
   transactionReference: string;
   address: string;
@@ -22,7 +24,13 @@ const PAYMENT_LABELS: Record<string, string> = {
   momo: "Mobile Money",
   cod: "Cash on delivery",
   pay_at_store: "Pay at the shop",
+  // Online payments taken through Paystack at checkout.
+  paystack: "Online payment (Paystack)",
 };
+
+/** True when the order's money moves through Paystack rather than offline. */
+export const isOnlinePayment = (fields: OrderEmailFields): boolean =>
+  fields.paymentMethod === PAYMENT_LABELS["paystack"];
 
 const ZONE_LABELS: Record<string, string> = {
   central: "Accra Central and Abelenkpe",
@@ -57,6 +65,7 @@ export function readOrder(data: Record<string, unknown>): OrderEmailFields {
       fulfillment === "pickup" ? "Free (pickup)" : formatMoney(num(data["delivery_fee"], 0)),
     total: formatMoney(num(data["total"], 0)),
     paymentMethod: PAYMENT_LABELS[paymentMethod] ?? paymentMethod,
+    paymentStatus: str(data["payment_status"], "pending"),
     provider: str(data["provider"]),
     transactionReference: str(data["transaction_reference"]),
     address: str(data["address"]),

@@ -39,6 +39,7 @@ type StoreForm = {
   whatsapp: string;
   announcement: string;
   ordering_enabled: boolean;
+  paystack_enabled: boolean;
   featured_ids: string[];
   home_category_heading: string;
   home_featured_heading: string;
@@ -63,6 +64,7 @@ const seed = (settings: Settings): StoreForm => ({
   whatsapp: settings.whatsapp,
   announcement: settings.announcement,
   ordering_enabled: settings.ordering_enabled,
+  paystack_enabled: settings.paystack_enabled,
   featured_ids: [...settings.featured_ids],
   home_category_heading: settings.home_category_heading,
   home_featured_heading: settings.home_featured_heading,
@@ -772,10 +774,22 @@ function OrderingPane({
         />
         Accept orders on the storefront
       </label>
+      <label className="filter-line">
+        <input
+          type="checkbox"
+          checked={form.paystack_enabled}
+          onChange={(e) => set("paystack_enabled", e.target.checked)}
+        />
+        Accept online payments (Paystack)
+      </label>
       <p className="mt-3 text-xs text-muted-foreground">
-        Customers pay when they collect at the shop or when the courier arrives — no online payment
-        is taken. While ordering is off, checkout reports “Ordering is not open yet” and no stock is
-        reserved.
+        Customers can pay when they collect at the shop or when the courier arrives. While ordering
+        is off, checkout reports “Ordering is not open yet” and no stock is reserved.
+      </p>
+      <p className="mt-3 text-xs text-muted-foreground">
+        With online payments on, checkout also offers “Pay now” by card, Mobile Money or bank
+        transfer through Paystack. The option only works once the server carries
+        PAYSTACK_SECRET_KEY; unpaid online orders release their stock automatically after an hour.
       </p>
     </Panel>
   );

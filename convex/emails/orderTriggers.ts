@@ -1,5 +1,6 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
+import { isValidEmail } from "../lib/rules";
 import { getEmailConfig } from "./config";
 import { adminRecipient, scheduleEmail } from "./enqueue";
 import type { TemplateName } from "./templates";
@@ -27,6 +28,7 @@ export function orderEmailData(order: Order, extra: Record<string, unknown> = {}
     delivery_fee: order.delivery_fee,
     total: order.total,
     payment_method: order.payment_method,
+    payment_status: order.payment_status,
     provider: order.provider ?? "",
     transaction_reference: order.transaction_reference ?? "",
     address: order.address,
@@ -53,6 +55,18 @@ export function templateForStatus(order: Order): TemplateName | null {
   return null;
 }
 
+/** The shop's own alert for a brand-new order. Shared by both order doors. */
+async function notifyAdminNewOrder(ctx: MutationCtx, order: Order, inbox: string): Promise<void> {
+  if (inbox === "") return;
+  await scheduleEmail(ctx, {
+    template: "admin-new-order",
+    to: inbox,
+    orderId: order._id,
+    data: orderEmailData(order),
+    category: "admin",
+  });
+}
+
 /** Order placed: confirmation to the customer, alert to the shop. */
 export async function notifyOrderPlaced(ctx: MutationCtx, order: Order): Promise<void> {
   const config = getEmailConfig();
@@ -66,15 +80,31 @@ export async function notifyOrderPlaced(ctx: MutationCtx, order: Order): Promise
     category: "customer",
   });
 
-  if (inbox !== "") {
+  await notifyAdminNewOrder(ctx, order, inbox);
+}
+
+/**
+ * Order recorded by staff (`orders.staffCreate`): the shop alert always goes
+ * out, but the customer confirmation only when the order actually carries a
+ * usable address — a walk-in sale without an email must never leave a
+ * `failed` row in the email log, which is exactly what scheduling to `""`
+ * would do.
+ */
+export async function notifyManualOrderPlaced(ctx: MutationCtx, order: Order): Promise<void> {
+  const config = getEmailConfig();
+  const inbox = await adminRecipient(ctx, config);
+
+  if (isValidEmail(order.email)) {
     await scheduleEmail(ctx, {
-      template: "admin-new-order",
-      to: inbox,
+      template: "order-received",
+      to: order.email,
       orderId: order._id,
       data: orderEmailData(order),
-      category: "admin",
+      category: "customer",
     });
   }
+
+  await notifyAdminNewOrder(ctx, order, inbox);
 }
 
 export type StatusChange = {

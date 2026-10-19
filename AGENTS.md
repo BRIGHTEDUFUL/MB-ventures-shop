@@ -3,7 +3,7 @@
 This file is the single source of truth for any AI IDE, agent, or collaborator
 working in this repository. Read it in full before touching `convex/` or any route file.
 
-**Last audited against the codebase: 17 October 2026.**
+**Last audited against the codebase: 19 October 2026.**
 
 ---
 
@@ -29,16 +29,17 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 
 ## 2. Tech stack
 
-| Layer       | Choice                                                                              |
-| ----------- | ----------------------------------------------------------------------------------- |
-| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                                 |
-| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono                 |
-| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions                |
-| Auth        | Convex Auth · email + password only · no OAuth · no email verify                    |
-| Client data | TanStack Query via `@convex-dev/react-query`                                        |
-| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                             |
-| Tests       | Vitest (256 tests, 17 files) + Playwright (36 read-only + 11 live checks)           |
-| CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips) |
+| Layer       | Choice                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------ |
+| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                                                          |
+| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono                                          |
+| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions                                         |
+| Auth        | Convex Auth · email + password only · no OAuth · no email verify                                             |
+| Client data | TanStack Query via `@convex-dev/react-query`                                                                 |
+| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                                                      |
+| Payments    | Paystack online (opt-in, gated on `PAYSTACK_SECRET_KEY` + staff switch) · pay-on-delivery / pay-at-shop stay |
+| Tests       | Vitest (307 tests, 20 files) + Playwright (36 read-only + 11 live checks)                                    |
+| CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips)                          |
 
 ---
 
@@ -49,6 +50,7 @@ convex/
   schema.ts               Single source of truth for all 14 table schemas
   inventory_import.ts     Idempotent real-product migration — safe to re-run
   orders.ts               place, track, mine, staffList, staffGet, staffUpdate, staffNote, staffFixContact
+  payments.ts             Paystack: initialize, verify, status, markPaid, abandon, expireStale, webhook
   catalogue.ts            saveProduct, deleteProduct, saveSettings, saveDeliverySettings, …
   users.ts                me, isStaff, myRole, myPermissions, team, addStaff, setRole,
                           revokeRole, setPermission, grantStaff, updateProfile, deleteUser, …
@@ -76,6 +78,8 @@ convex/
     templates/            HTML email templates
   lib/
     stock.ts              applyStockChange — THE only way to mutate stock
+    orderCancel.ts        cancelUnpaidOrder — the one auto-cancel path (Paystack supersede/rollback/expiry)
+    paystack.ts           Pure Paystack helpers: pesewas, HMAC signature, response parsing, money gate
     auth.ts               currentUserId, requireUser, requireStaff, requireAdmin, isStaff, getRole
     permissions.ts        requirePermission — fine-grained per-action guards
     permission_catalog.ts PERMISSION_CATALOG, defaults, grouping — pure data, browser-safe
@@ -98,6 +102,8 @@ src/
     account.tsx           Customer account / sign-in / sign-up
     track.tsx             Guest order tracking by reference + phone
     confirmation.tsx      Post-checkout confirmation
+    paystack/
+      return.tsx          Post-Paystack landing: verifies the charge, clears cart, receipt
     login.tsx             Redirect → /account
     signin.tsx            Redirect → /account
     signup.tsx            Redirect → /account
@@ -113,6 +119,7 @@ src/
       orders/
         index.tsx         Order list with filters
         $id.tsx           Single order detail + actions
+        new.tsx           Record a counter order (WhatsApp / phone / walk-in)
       products/
         index.tsx         Product list + bulk actions
         $id.tsx           Product editor
@@ -281,7 +288,7 @@ without inventing a new role. The closed set of permission keys lives in
 catalogue.view, catalogue.edit, catalogue.delete, catalogue.bulk,
 catalogue.categories, catalogue.settings, catalogue.delivery,
 inventory.view, inventory.adjust, inventory.stocktake, inventory.health,
-orders.view, orders.update,
+orders.view, orders.update, orders.create,
 reports.view, activity.view,
 uploads.create,
 team.view, team.manage,
@@ -305,14 +312,35 @@ Images are referenced by a **string key**, not a URL. Key resolution is in
 2. Add `"key": "/images/path.ext"` to the `base` object
 3. Add `"key": [width, height]` to the `sizes` object
 
-### 4f. Payments happen offline
+### 4f. Payments: offline by default, Paystack online (opt-in)
 
-There is no in-app payment step. `orders.place` derives `payment_method` from
-fulfilment — `pickup ⇒ "pay_at_store"`, `delivery ⇒ "cod"` — and never accepts
-provider or transaction-reference arguments. The `"momo"` literal stays in the
-schema only so pre-existing MoMo orders keep validating; `store_settings.momo_number` /
-`momo_name` are legacy optional fields that no UI or mutation touches. Staff record
-receipt in `/staff`; completing an order still requires `payment_status: "confirmed"`.
+There is no in-app _card form_ — money either changes hands offline or runs
+through Paystack's hosted checkout:
+
+- `orders.place` accepts an optional `payment` argument. `"offline"` (default)
+  derives `payment_method` from fulfilment — `pickup ⇒ "pay_at_store"`,
+  `delivery ⇒ "cod"`. `"online"` requires `store_settings.paystack_enabled`
+  and creates a `"paystack"` order with `payment_amount_pesewas` locked to the
+  server-computed total.
+- The browser **never** supplies money facts: no amounts, no gateway
+  references, no provider names. The gateway reference and amount are
+  generated server-side in `orders.place` / `convex/payments.ts`.
+- A Paystack charge only confirms an order through `internal.payments.markPaid`
+  (return page's `payments.verify` action and the signed webhook both funnel
+  there). It re-checks reference, currency (`GHS`) and the locked pesewas
+  amount, and only ever moves `pending → confirmed` — a cancelled order can
+  never be resurrected by a late charge.
+- Unpaid online orders release their stock automatically: superseded by a newer
+  checkout (`orders.place`), rolled back when initialisation fails
+  (`payments.abandon`), or aged out by the cron (`payments.expireStale`, hold
+  window `PAYSTACK_PENDING_MINUTES`, default 60). All three go through
+  `lib/orderCancel.cancelUnpaidOrder` — the single auto-cancel path.
+- `PAYSTACK_SECRET_KEY` is the real switch (server-only, never logged, never
+  in `VITE_*` variables); the staff toggle only decides whether checkout
+  _offers_ the choice. `"momo"` stays in the schema only so pre-existing MoMo
+  orders keep validating. Staff record offline receipt in `/staff`;
+  completing any order still requires `payment_status: "confirmed"`.
+- Full design, env vars and webhook setup: `docs/PAYMENTS-PAYSTACK.md`.
 
 ### 4g. Product variants
 
@@ -334,6 +362,50 @@ the product's own photos.
 
 The `variant-picker.tsx` component renders swatches for colours and text chips
 for other axes. `variant-editor.tsx` in the staff product editor manages CRUD.
+
+### 4h. Counter orders — staff record a sale in person
+
+Staff can record a WhatsApp / phone / walk-in purchase at `/staff/orders/new`
+("Record an order" button on the dashboard and orders list, gated on
+`orders.create` — floor **staff**, no admin needed). The door is
+`orders.staffCreate` in `convex/orders.ts`, guarded by
+`requirePermission(ctx, "orders.create")`:
+
+- **Pricing and stock are identical to customer checkout.** Both `place` and
+  `staffCreate` call the shared `holdLines()` helper — the server recomputes
+  price × quantity and the delivery fee, and reserves stock once. The browser
+  never supplies money facts.
+- **The customer is not at a keyboard.** `validateManualOrder`
+  (`convex/lib/rules.ts`) accepts a name + phone, an optional email (must be
+  valid when given, else no customer email is sent), and an optional note
+  (≤ 500 chars). It is _not_ gated on `ordering_enabled` — the storefront can
+  be closed while the counter keeps selling. Quantity is capped at 50 per line.
+- **Stock reserves with `source: "attendant"`,
+  `movement_type: "reserve"` and `operation_key:
+manual:${reference}:${slug}[:${variantKey}]`**, `actor_id` = the creating
+  staff member, and the order lands with `stock_state: "reserved"`.
+  `staffUpdate`'s cancel/complete paths are unchanged — they key off
+  `stock_state`, so cancelling restocks exactly once and completing does not
+  double-touch the shelf.
+- **`payment_method` is a literal union of the three offline methods**
+  (`momo | cod | pay_at_store`); `paystack` is structurally rejected at the
+  validator — money through Paystack only ever comes from the shopper's own
+  hosted checkout. `pay_at_store` requires pickup, `cod` requires delivery.
+  A confirmed payment stamps a timeline entry but no `paid_at`.
+- **Attribution and channel** are stored on the order (`created_by`,
+  `created_by_name`, `channel`) and shown as a chip + "Taken by …" on the
+  list and detail pages. `staffList` search matches the channel.
+- **Emails**: the shared `notifyAdminNewOrder` alert always fires;
+  `notifyManualOrderPlaced` sends the customer their `order-received` email
+  only when a valid address was given.
+- Manual orders are ordinary orders — they appear in `stats.overview` /
+  `trends` (sales reports) like any other.
+
+The staff dashboard (`src/routes/staff/index.tsx`) is permission-aware: it
+reads `users.myPermissions` first and renders a reduced view (queue, latest
+orders, stock warnings) when `reports.view` is revoked, so a stock-room or
+counter role never hits "The dashboard could not load." — `orders.staffList`
+and `orders.staffCreate` keep working regardless.
 
 ---
 
@@ -452,7 +524,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 256/256 across 17 test files
+npm test                  # 307/307 across 20 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 36/36 Playwright checks (read-only)
@@ -509,9 +581,11 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
   `info@mbventuresgh.com` — the visible contact address, the reply-to on every
   message and the fallback shop inbox for alerts. Edit them in
   `/staff` → Customization → Contact.
-- Payments: no in-app payment — pickup pays at the shop counter, delivery pays cash on
-  arrival; staff mark payment received in /staff (legacy MoMo recipient fields are kept
-  in the row for old orders but no UI or mutation touches them)
+- Payments: offline by default — pickup pays at the shop counter, delivery pays cash on
+  arrival, staff mark payment received in /staff (legacy MoMo recipient fields are kept
+  in the row for old orders but no UI or mutation touches them). Online Paystack payment
+  exists but is **switched off** until the staff toggle is on and `PAYSTACK_SECRET_KEY`
+  is configured (see §4f and `docs/PAYMENTS-PAYSTACK.md`)
 
 ---
 
@@ -579,6 +653,19 @@ Or use the staff panel at /staff Customization.
 Use `/staff` → Team → click a member → toggle individual permissions.
 Or via CLI: `npx convex run users:setPermission` (requires admin).
 
+### Enable Paystack online payments (when the keys arrive)
+
+1. Set the secret on the deployment: `npx convex env set PAYSTACK_SECRET_KEY sk_live_… --env-file .env.prod.local`
+   (use `sk_test_…` without `--env-file` for the dev deployment)
+2. `/staff` → Customization → Ordering → tick **Accept online payments (Paystack)** → save
+3. (Production) In the Paystack dashboard set the return URL to
+   `https://mbventuresgh.com/paystack/return` and the webhook URL to the Convex
+   HTTP route `https://necessary-newt-861.convex.site/webhooks/paystack`
+   (i.e. `<CONVEX_SITE_URL>/webhooks/paystack`) — details in
+   `docs/PAYMENTS-PAYSTACK.md`
+
+To take it down: untick the staff switch (immediate) — no redeploy needed.
+
 ### Verify a production password
 
 ```powershell
@@ -592,8 +679,9 @@ npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"si
 - Do NOT bypass applyStockChange — never patch products.stock directly
 - Do NOT delete demo products — they are preserved intentionally
 - Do NOT add OAuth, social login or email verification to signup
-- Do NOT reintroduce in-app payment inputs (MoMo references, provider pickers) — payment
-  is always collected offline and `payment_method` is derived from fulfilment in `orders.place`
+- Do NOT build an in-app card form or accept Paystack amounts/references from the browser —
+  online payment goes through the hosted checkout, and `markPaid` is the only pending→confirmed door
+- Do NOT log or expose PAYSTACK_SECRET_KEY (no console, no VITE_* variable, no client bundle)
 - Do NOT use Resend or SendGrid — email transport is Web3Forms only
 - Do NOT push CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY or JWKS to git
 - Do NOT invent product slugs or prices — use only convex/inventory_import.ts
@@ -652,6 +740,7 @@ see `scripts/create-new-accounts.mjs` (`spawnSync` with `shell: true` and
 | docs/INVENTORY-AUDIT.md           | Full product specs and original inventory doc                    |
 | docs/INVENTORY-DECISIONS.md       | Design decisions log (D1–D9)                                     |
 | docs/PRODUCT-VARIANTS.md          | Options (colour/size/type): data model, stock, UI                |
+| docs/PAYMENTS-PAYSTACK.md         | Paystack online payments: flow, env vars, webhook, testing       |
 | docs/USER-MANAGEMENT.md           | User and role management reference                               |
 | docs/BACKEND-STATUS.md            | Backend health and migration status                              |
 | docs/HOSTINGER-SETUP-CHECKLIST.md | VPS setup steps for the new Hostinger account                    |
@@ -669,22 +758,25 @@ see `scripts/create-new-accounts.mjs` (`spawnSync` with `shell: true` and
 
 ## 15. Test files
 
-| File                               | Coverage                                        |
-| ---------------------------------- | ----------------------------------------------- |
-| gallery.test.ts                    | buildGallery ordering, variant photo, dedupe    |
-| catalogue-rules.test.ts            | Price ceiling from the shelf, filter predicates |
-| convex-mutations.test.ts           | orders.place, checkout, cart rollback           |
-| convex-staff-mutations.test.ts     | Staff order updates, payment, cancellation      |
-| stock-single-writer.test.ts        | applyStockChange invariant enforcement          |
-| inventory-reverse.test.ts          | Movement reversal logic                         |
-| order-rules.test.ts                | Fee calculation, status transitions             |
-| delivery-and-contact-rules.test.ts | Phone normalisation, fee display, WhatsApp      |
-| permissions.test.ts                | Role defaults, per-user overrides               |
-| variants.test.ts                   | Key building, axis derivation, colour swatches  |
-| home-content-settings.test.ts      | Homepage content CRUD                           |
-| stats-trends.test.ts               | Dashboard analytics queries                     |
-| email-config.test.ts               | Email configuration validation                  |
-| email-pipeline.test.ts             | Queue → send → log pipeline                     |
-| email-templates.test.ts            | Template rendering + HTML escaping              |
-| email-transport.test.ts            | Web3Forms transport + retry behaviour           |
-| app-routing.test.tsx               | Route existence + redirects                     |
+| File                               | Coverage                                                |
+| ---------------------------------- | ------------------------------------------------------- |
+| gallery.test.ts                    | buildGallery ordering, variant photo, dedupe            |
+| catalogue-rules.test.ts            | Price ceiling from the shelf, filter predicates         |
+| convex-mutations.test.ts           | orders.place, checkout, cart rollback                   |
+| convex-staff-mutations.test.ts     | Staff order updates, payment, cancellation              |
+| stock-single-writer.test.ts        | applyStockChange invariant enforcement                  |
+| inventory-reverse.test.ts          | Movement reversal logic                                 |
+| order-rules.test.ts                | Fee calculation, status transitions                     |
+| delivery-and-contact-rules.test.ts | Phone normalisation, fee display, WhatsApp              |
+| permissions.test.ts                | Role defaults, per-user overrides                       |
+| variants.test.ts                   | Key building, axis derivation, colour swatches          |
+| paystack.test.ts                   | Pesewas, HMAC signature, response parsing, money gate   |
+| payments-flow.test.ts              | Online order placement, markPaid, rollback, webhook     |
+| home-content-settings.test.ts      | Homepage content CRUD                                   |
+| stats-trends.test.ts               | Dashboard analytics queries                             |
+| email-config.test.ts               | Email configuration validation                          |
+| email-pipeline.test.ts             | Queue → send → log pipeline                             |
+| email-templates.test.ts            | Template rendering + HTML escaping                      |
+| email-transport.test.ts            | Web3Forms transport + retry behaviour                   |
+| app-routing.test.tsx               | Route existence + redirects                             |
+| staff-create-order.test.ts         | Counter orders: permission gate, pricing, stock, emails |

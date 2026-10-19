@@ -21,6 +21,8 @@ export type Fulfillment = "delivery" | "pickup";
  */
 export type PaymentMethod = "momo" | "cod" | "pay_at_store";
 export type PaymentStatus = "pending" | "confirmed" | "rejected";
+/** Channels a staff member can record (`orders.staffCreate`); `online` is stamped by checkout. */
+export type OrderChannel = "online" | "whatsapp" | "phone" | "walk_in";
 export type OrderStatus =
   "received" | "processing" | "ready" | "dispatched" | "completed" | "cancelled";
 
@@ -57,6 +59,9 @@ export const DEFAULT_FEES: FeeBreakdown = {
 
 /** Settings-driven copy shown in the header facts bar; empty means "hide it". */
 export const DEFAULT_ANNOUNCEMENT = "Abelenkpe, Accra · Pickup in store · Delivery across Ghana";
+
+/** On-hand counts at or below this deserve a restock — the "running low" line. */
+export const LOW_STOCK_AT = 5;
 
 /** Fees + the ordering switch, whichever settings doc we pass in. */
 export interface FeeSettings extends FeeBreakdown {
@@ -197,6 +202,66 @@ export function validateCheckout(input: CheckoutInput, settings: FeeSettings): s
     return "Enter a delivery address.";
   }
 
+  return null;
+}
+
+/** What `orders.staffCreate` receives, after defaults are applied by the mutation. */
+export interface ManualOrderInput {
+  customer_name: string;
+  phone: string;
+  /** May be empty — many walk-ins have no email. Valid when present. */
+  email: string;
+  address: string;
+  fulfillment: Fulfillment;
+  zone: Zone;
+  items: { id: string; quantity: number }[];
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
+  channel: Exclude<OrderChannel, "online">;
+}
+
+/**
+ * Validation for an order a staff member records themselves
+ * (`orders.staffCreate`). Deliberate differences from `validateCheckout`:
+ *
+ * - **No `ordering_enabled` gate.** That switch governs the storefront; a sale
+ *   that already happened at the counter is always written down.
+ * - **Email is optional** (a walk-in often has none) but must be valid when
+ *   given, so an address can never be quietly recorded broken.
+ * - **The payment method is checked instead of derived.** Checkout derives it
+ *   from fulfilment because the shopper picks nothing; the staff form offers
+ *   all three offline methods, so each is pinned to the fulfilment it can
+ *   honestly describe — and `paystack` is not accepted at all: money through
+ *   Paystack only ever comes from the customer's own hosted checkout.
+ */
+export function validateManualOrder(input: ManualOrderInput): string | null {
+  if (input.customer_name.trim().length < 2 || normalizePhone(input.phone).length < 9) {
+    return "Enter the customer's name and phone number.";
+  }
+  if (input.email.trim() !== "" && !isValidEmail(input.email)) {
+    return "Enter a valid email address, or leave it blank.";
+  }
+  if (input.items.length < 1 || input.items.length > 50) {
+    return "Add at least one item to the order.";
+  }
+  for (const line of input.items) {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 50) {
+      return "Invalid quantity.";
+    }
+  }
+  if (input.fulfillment === "delivery" && input.address.trim().length < 5) {
+    return "Enter a delivery address.";
+  }
+  if (input.payment_method === "pay_at_store" && input.fulfillment !== "pickup") {
+    return "Pay at the shop only applies to pickup orders.";
+  }
+  if (input.payment_method === "cod" && input.fulfillment !== "delivery") {
+    return "Cash on delivery only applies to delivery orders.";
+  }
+  if (!PAYMENT_STATUSES.includes(input.payment_status)) return "Invalid payment status.";
+  if (input.channel !== "whatsapp" && input.channel !== "phone" && input.channel !== "walk_in") {
+    return "Choose where the order came from.";
+  }
   return null;
 }
 

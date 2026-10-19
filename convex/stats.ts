@@ -4,10 +4,7 @@ import type { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./lib/permissions";
 import { recentActivity, type ActivityEntry } from "./lib/activity";
 import { isListed, orderDTO, type Order } from "./lib/dto";
-import { round2 } from "./lib/rules";
-
-/** Below this count a verified listing deserves a restock. */
-export const LOW_STOCK_AT = 5;
+import { LOW_STOCK_AT, round2 } from "./lib/rules";
 
 /** Days shown on the dashboard till tape. */
 export const TREND_DAYS = 14;

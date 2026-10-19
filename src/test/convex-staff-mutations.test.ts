@@ -159,6 +159,7 @@ async function settingsForm(
     hero_image: settings.hero_image,
     setup_image: settings.setup_image,
     ordering_enabled: settings.ordering_enabled,
+    paystack_enabled: settings.paystack_enabled ?? false,
     featured_ids: settings.featured_ids,
     home_category_heading: settings.home_category_heading ?? "",
     home_featured_heading: settings.home_featured_heading ?? "",
