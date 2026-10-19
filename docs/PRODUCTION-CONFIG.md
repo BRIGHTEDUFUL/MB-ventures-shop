@@ -16,7 +16,7 @@ All production environment variables have been set and verified.
 | Variable               | Value                      | Purpose                                                     |
 | ---------------------- | -------------------------- | ----------------------------------------------------------- |
 | `SITE_URL`             | `https://mbventuresgh.com` | Origin for all email links, canonical URLs, Open Graph tags |
-| `WEB3FORMS_ACCESS_KEY` | `c8395fed-...` (set)       | Web3Forms API access key for email delivery                 |
+| `WEB3FORMS_ACCESS_KEY` | `ab22e273-...` (set)       | Web3Forms API access key for email delivery                 |
 | `EMAIL_REPLY_TO`       | `info@mbventuresgh.com`    | Reply-to address on all outgoing emails                     |
 | `ADMIN_ALERT_EMAIL`    | `info@mbventuresgh.com`    | Where admin alerts and contact form messages go             |
 | `EMAIL_DAILY_LIMIT`    | `250`                      | Maximum emails per day (increased from default 100)         |
@@ -241,7 +241,7 @@ npx convex env get WEB3FORMS_ACCESS_KEY
 npx convex env get SITE_URL
 
 # Should show:
-# - Key: c8395fed-...
+# - Key: ab22e273-...
 # - URL: http://localhost:5173 (dev) OR https://mbventuresgh.com (if set for testing)
 ```
 
@@ -254,7 +254,7 @@ npx convex env get SITE_URL --prod
 npx convex env get EMAIL_REPLY_TO --prod
 
 # Should show:
-# - Key: c8395fed-...
+# - Key: ab22e273-...
 # - URL: https://mbventuresgh.com
 # - Reply: info@mbventuresgh.com
 ```

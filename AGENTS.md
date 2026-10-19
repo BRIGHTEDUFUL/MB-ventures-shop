@@ -24,6 +24,13 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
   `info@mbventuresgh.com` (moved 17 Oct 2026; the Web3Forms receiving inbox
   follows it — procedure in `docs/EMAIL.md` §7). See `docs/DOMAIN-MIGRATION.md`
   for the cutover record.
+- **Email live via Web3Forms (key rotated 19 Oct 2026).** Access key
+  `ab22e273-…` on both deployments; the form's Recipient Emails is
+  `info@mbventuresgh.com`, so every store email lands at the shop inbox.
+  Verified end-to-end (contact form → both log rows `sent`/`live`). The key
+  lives only on the Convex deployments — never in the repo's `.env.local` /
+  `.env.prod.local`. Free plan caps at **250 emails/month**. Details:
+  `docs/EMAIL.md` §7 and `docs/EMAIL-SETUP-STATUS.md`.
 
 ---
 

@@ -61,7 +61,10 @@ npm run test:e2e  # Playwright — 32 checks (head, outline, mobile overflow mat
 
 Environment variables are documented in `.env.example` — copy it to `.env.local`
 (gitignored) and fill in what you need. Email runs in **dry-run** until
-`WEB3FORMS_ACCESS_KEY` is set; see `docs/EMAIL.md`.
+`WEB3FORMS_ACCESS_KEY` is set; it is already set on the shared dev and prod
+Convex deployments (key `ab22e273-…`, forwarding to `info@mbventuresgh.com`),
+so a fresh local `.env.local` without it simply keeps email in dry-run. See
+`docs/EMAIL.md`.
 
 ## Architecture notes
 

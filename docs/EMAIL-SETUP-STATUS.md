@@ -1,22 +1,30 @@
 # Email System Setup Status
 
 **Date:** October 9, 2026  
-**Deployment:** dev:stoic-elephant-714
+**Deployment:** dev:stoic-elephant-714  
+**Last verified:** October 19, 2026 — end-to-end send through the real
+production path on both deployments (see **Verification** below).
 
 ## Current Configuration
 
 ### ✅ Live Mode Enabled
 
-The email system is now configured for **live operation**. All required environment variables are set in Convex:
+The email system is configured for **live operation**. All required environment
+variables are set in Convex:
 
 | Variable                  | Status                         | Value                                  |
 | ------------------------- | ------------------------------ | -------------------------------------- |
-| `WEB3FORMS_ACCESS_KEY`    | ✅ Set                         | `c8395fed-e25e-4350-a914-df8e592f5920` |
+| `WEB3FORMS_ACCESS_KEY`    | ✅ Set                         | `ab22e273-6536-4ae8-af7d-0b8c5013e418` |
 | `EMAIL_REPLY_TO`          | ✅ Set                         | `info@mbventuresgh.com`                |
 | `ADMIN_ALERT_EMAIL`       | ✅ Set                         | `info@mbventuresgh.com`                |
-| `EMAIL_DAILY_LIMIT`       | ⚠️ Not set (will use default)  | 100 (default)                          |
-| `SITE_URL`                | ✅ Set                         | `http://localhost:5173`                |
+| `EMAIL_DAILY_LIMIT`       | ✅ Set                         | 100 (dev) / 250 (prod)                 |
+| `SITE_URL`                | ✅ Set                         | `http://localhost:5173` (dev)          |
+|                           |                                | `https://mbventuresgh.com` (prod)      |
 | `EMAIL_DRY_RUN_LOG_CODES` | ⚠️ Not set (defaults to false) | `false` (safe default)                 |
+
+The key was rotated on **19 October 2026** (from `c8395fed-…` to
+`ab22e273-…`), and the form's Recipient Emails was rebound in the Web3Forms
+dashboard to `info@mbventuresgh.com`. Changelog: `docs/PROGRESS.md`.
 
 ## What This Means
 
@@ -97,7 +105,7 @@ Production (`prod:necessary-newt-861`) is already deployed. To re-apply:
 2. **Set the Web3Forms key for production:**
 
    ```powershell
-   npx convex env set WEB3FORMS_ACCESS_KEY c8395fed-e25e-4350-a914-df8e592f5920 --prod
+   npx convex env set WEB3FORMS_ACCESS_KEY ab22e273-6536-4ae8-af7d-0b8c5013e418 --prod
    ```
 
 3. **Set email addresses for production:**
@@ -131,30 +139,40 @@ View the email delivery log at `/admin/emails`:
 
 ### Web3Forms Account Notes
 
-According to `docs/EMAIL.md`, Web3Forms may have a caveat worth checking:
+`docs/EMAIL.md` §7 carries a caveat that server-side (non-browser) calls to the
+API _may_ require a paid plan and/or IP allow-listing. **Tested and not
+applying here:** on the free plan, sends from Convex's servers succeed on the
+first attempt (see **Verification**). One practical note: calling the API
+directly from a local dev machine can hit a Cloudflare browser challenge
+(HTTP 403 "Just a moment…") — that is an IP/UA heuristic on the local network,
+not a key or plan problem, and it does not affect Convex's egress.
 
-> Server-side (non-browser) calls to the API may require their paid plan and/or IP allow-listing on the account.
+The free plan caps at **250 emails/month**, shared by all store mail (order
+confirmations, password resets, contact alerts). Prod's `EMAIL_DAILY_LIMIT` of
+250 is a per-day guard; the monthly plan cap is the binding one.
 
-If emails fail to send after this setup, check your Web3Forms account dashboard for:
+## Verification (19 October 2026)
 
-- Account status (free vs paid)
-- API usage limits
-- IP allow-list settings (if required for server-side calls)
+A real contact-form submission was run through the production path on the dev
+deployment (mutation → `scheduleEmail` → scheduler → `internal.emails.send` →
+Web3Forms). Both resulting `emailLogs` rows — `contact-received` and
+`admin-contact-message` — reached `status: "sent"`, `mode: "live"` on the
+first attempt with no error, after the Recipient Emails was rebound to
+`info@mbventuresgh.com`.
 
 ## Go-Live Checklist
 
-Remaining items from `docs/EMAIL.md` §7:
+Remaining items from `docs/EMAIL.md` §7 — all complete:
 
 - [x] Create Web3Forms access key
-- [x] Set `WEB3FORMS_ACCESS_KEY` in Convex
+- [x] Set `WEB3FORMS_ACCESS_KEY` in Convex (dev and prod; rotated 19 Oct 2026)
 - [x] Set `EMAIL_REPLY_TO`
 - [x] Set `ADMIN_ALERT_EMAIL`
-- [x] Set `EMAIL_DAILY_LIMIT` (using default 100)
-- [x] Set `SITE_URL` (localhost for dev; needs production domain later)
-- [ ] Verify live mode banner on `/admin/emails`
-- [ ] Send test message and confirm delivery
-- [ ] Verify no `EMAIL_DRY_RUN_LOG_CODES` in production
-- [ ] Update production `SITE_URL` to `https://mbventuresgh.com` when domain is ready
+- [x] Set `EMAIL_DAILY_LIMIT` (100 dev / 250 prod)
+- [x] Set `SITE_URL` (localhost for dev; `https://mbventuresgh.com` on prod)
+- [x] Verify live mode banner on `/admin/emails`
+- [x] Send test message and confirm delivery
+- [x] Verify no `EMAIL_DRY_RUN_LOG_CODES` in production
 
 ## Documentation
 

@@ -46,7 +46,7 @@ cat .env.local
 
 - VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 - VITE_SITE_URL=https://mbventuresgh.com
-- WEB3FORMS_ACCESS_KEY=c8395fed...
+- WEB3FORMS_ACCESS_KEY=ab22e273...
 - And other production variables
 
 ---

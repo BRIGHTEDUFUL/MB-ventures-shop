@@ -25,7 +25,7 @@
 ### Development Environment Variables
 
 ```
-✓ WEB3FORMS_ACCESS_KEY: c8395fed-e25e-4350-a914-df8e592f5920
+✓ WEB3FORMS_ACCESS_KEY: ab22e273-6536-4ae8-af7d-0b8c5013e418
 ✓ EMAIL_REPLY_TO: info@mbventuresgh.com
 ✓ ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 ✓ EMAIL_DAILY_LIMIT: 100
@@ -37,7 +37,7 @@
 ### Production Environment Variables
 
 ```
-✓ WEB3FORMS_ACCESS_KEY: c8395fed-e25e-4350-a914-df8e592f5920
+✓ WEB3FORMS_ACCESS_KEY: ab22e273-6536-4ae8-af7d-0b8c5013e418
 ✓ EMAIL_REPLY_TO: info@mbventuresgh.com
 ✓ ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 ✓ EMAIL_DAILY_LIMIT: 250 (higher for production)

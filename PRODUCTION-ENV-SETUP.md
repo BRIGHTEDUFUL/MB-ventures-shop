@@ -14,7 +14,7 @@ VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
+WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -40,7 +40,7 @@ EMAIL_REPLY_TO=info@mbventuresgh.com
 JWKS={"keys":[{"use":"sig","kty":"RSA","n":"7GRdtbc95L3RX0PJDWe4Ggn51duri6PVobRDlcLU_l5nWmD2lro8MVwjQVp7giK9nuRR0selzAj7Rw_dIYIlG9rxDIZEXtKadi7yqwJ-B7T0g4TPRjUt9brUs8xxddogYFIvxnlG4hp26BuDHyYGKvypJ6HCvsVWtIyWZMGmTtjN0aL1jWTcu1EDezyI8OYpq4Y8fee2GviHkZtMvRxiX5HAbYAQz67FtKrSvErt86mns-d2raqB3zHmPNvdGwjoCCnSIvDDB-dfXHqtOQdMe5ioDv9fezQ8NLz7QF8K8KRwwsY3-miwCdrPISd5AGZlu2Zhz1couXY7p5qoNGaS7Q","e":"AQAB"}]}
 JWT_PRIVATE_KEY=-----BEGIN PRIVATE KEY----- [REDACTED] -----END PRIVATE KEY-----
 SITE_URL=https://mbventuresgh.com
-WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
+WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
 ```
 
 ---
@@ -79,7 +79,7 @@ VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
+WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -123,7 +123,7 @@ VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
 VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
+WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -183,7 +183,7 @@ curl https://mbventuresgh.com
 ### Email:
 
 - **Provider**: Web3Forms
-- **Access Key**: `c8395fed-e25e-4350-a914-df8e592f5920`
+- **Access Key**: `ab22e273-6536-4ae8-af7d-0b8c5013e418`
 - **Reply To**: info@mbventuresgh.com
 - **Admin Alerts**: info@mbventuresgh.com
 - **Daily Limit**: 250 emails

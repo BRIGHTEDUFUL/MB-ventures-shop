@@ -24,17 +24,23 @@ The following items that were previously "blocked on external information" are n
 | Environment     | Deployment                | Configuration                          |
 | --------------- | ------------------------- | -------------------------------------- |
 | **Development** | `dev:stoic-elephant-714`  | ✅ Live mode                           |
-|                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
+|                 | Access Key                | `ab22e273-6536-4ae8-af7d-0b8c5013e418` |
 |                 | Site URL                  | `http://localhost:5173`                |
 |                 | Reply-to                  | `info@mbventuresgh.com`                |
 |                 | Admin alerts              | `info@mbventuresgh.com`                |
 |                 | Daily limit               | 100 emails                             |
 | **Production**  | `prod:necessary-newt-861` | ✅ Live mode                           |
-|                 | Access Key                | `c8395fed-e25e-4350-a914-df8e592f5920` |
+|                 | Access Key                | `ab22e273-6536-4ae8-af7d-0b8c5013e418` |
 |                 | Site URL                  | `https://mbventuresgh.com`             |
 |                 | Reply-to                  | `info@mbventuresgh.com`                |
 |                 | Admin alerts              | `info@mbventuresgh.com`                |
 |                 | Daily limit               | 250 emails                             |
+
+> **Key rotated 19 Oct 2026** (from `c8395fed-…` to `ab22e273-…`), and the
+> form's Recipient Emails rebound in the Web3Forms dashboard to
+> `info@mbventuresgh.com`. Re-verified end-to-end afterwards. Note the free
+> plan caps at **250 emails/month** (shared by all store mail), which is
+> tighter than the per-day limits above. Changelog: `docs/PROGRESS.md`.
 
 **Email templates ready:**
 
@@ -348,5 +354,5 @@ These can be tested after going live and adjusted if needed.
 
 ---
 
-**Last Updated:** October 9, 2026  
+**Last Updated:** October 19, 2026  
 **Configuration Verified:** ✅ All systems operational

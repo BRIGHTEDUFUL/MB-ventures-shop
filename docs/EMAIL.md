@@ -194,6 +194,13 @@ Web3Forms documents a caveat worth checking before you rely on it: server-side
 (non-browser) calls to the API may require their paid plan and/or IP
 allow-listing on the account.
 
+> **Tested, 19 Oct 2026:** on the **free** plan, server-side sends from
+> Convex's servers succeed on the first attempt — the caveat did not apply.
+> (A direct `fetch` from a _local dev machine_ can still hit a Cloudflare
+> browser challenge, HTTP 403 "Just a moment…"; that is a local IP/UA
+> heuristic and never affects Convex's egress.) The free plan caps at
+> **250 emails/month** across all store mail.
+
 ### Moving the receiving inbox
 
 Because the key is bound to one inbox, moving the shop's address (as on
@@ -214,6 +221,18 @@ three-part change:
 
 Verify afterwards: `/admin/emails` → send a test message and confirm it
 arrives at the **new** inbox; the payload's `replyto` should match too.
+
+**Record — 19 Oct 2026:** a fresh form was created in the Web3Forms dashboard
+(`My Form mbventuresgh`, access key `ab22e273-6536-4ae8-af7d-0b8c5013e418`),
+replacing the old key, and its Recipient Emails set to
+`info@mbventuresgh.com`. The new key was applied to both deployments with
+`npx convex env set WEB3FORMS_ACCESS_KEY …` (prod with
+`--env-file .env.prod.local`) and every tracked env template/doc that carried
+the old key was updated so a re-deploy cannot revert it. Verified end-to-end:
+contact-form submission → both log rows `sent`/`live`, first attempt. Because
+`EMAIL_REPLY_TO` / `ADMIN_ALERT_EMAIL` already read `info@mbventuresgh.com`
+and the store row was already synced, steps 2–3 above needed no change. Full
+changelog: `docs/PROGRESS.md`.
 
 ## 8. Troubleshooting
 

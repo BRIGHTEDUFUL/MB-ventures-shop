@@ -5,6 +5,65 @@ still open is listed under **Open**.
 
 ---
 
+## Web3Forms access key rotated (19 October 2026)
+
+**Status:** Complete — new key live on dev + prod, verified with a real send.
+
+### What was asked
+
+Connect the store's forms to a new Web3Forms form (`My Form mbventuresgh`,
+form/access key `ab22e273-6536-4ae8-af7d-0b8c5013e418`, website URL
+`https://mbventuresgh.com`, recipient `abdulganiwufuseini5@gmail.com`).
+
+### What changed
+
+There was no code to change: every form (contact, order emails, auth mail)
+already posts to Convex mutations, which hand mail to the Web3Forms transport
+keyed by the deployment's `WEB3FORMS_ACCESS_KEY`. Connecting the new form is
+therefore an env-var swap:
+
+- **Convex dev + prod**: `WEB3FORMS_ACCESS_KEY` set to
+  `ab22e273-6536-4ae8-af7d-0b8c5013e418` via `npx convex env set`
+  (prod with `--env-file .env.prod.local`), replacing `c8395fed-…`.
+- **Tracked env templates and docs** that carried the old key were updated in
+  place so a future re-deploy cannot revert to it: `.env.hostinger`,
+  `.env.production.complete`, `COPY-PASTE-DEPLOYMENT.txt`,
+  `DEPLOYMENT-SUMMARY.md`, `docs/BACKEND-STATUS.md`,
+  `docs/EMAIL-SETUP-STATUS.md`, `docs/HOSTINGER-SETUP-CHECKLIST.md`,
+  `docs/SETUP-COMPLETE.md`, `HOW-TO-IMPORT-ENV.md`, `PRODUCTION-ENV-SETUP.md`,
+  `roadmap.md`, `scripts/setup-production-env.sh`.
+  (`.env.local` / `.env.prod.local` never held the key — it lives only on the
+  deployment.)
+
+### Verified
+
+- `npx convex env get WEB3FORMS_ACCESS_KEY` reads the new key on both
+  deployments.
+- A real contact-form submission on dev went through the production path
+  (mutation → `scheduleEmail` → scheduler → `internal.emails.send` →
+  Web3Forms). Both resulting `emailLogs` rows — `contact-received` and
+  `admin-contact-message` — reached `status: "sent"`, `mode: "live"` on the
+  first attempt with no error, so Convex's server-side egress is accepted by
+  Web3Forms on this key.
+- Note: direct `fetch` to `api.web3forms.com` **from a local dev machine** can
+  hit a Cloudflare browser challenge (HTTP 403 "Just a moment…"). That is an
+  IP/UA heuristic on the local network, not a key problem — sends from
+  Convex's servers pass cleanly.
+
+### Watch out
+
+The receiving inbox follows the key: Web3Forms forwards every submission to
+the one inbox bound to the form. After the swap it was still
+`abdulganiwufuseini5@gmail.com`; on 19 October 2026 the form's Recipient
+Emails was changed in the Web3Forms dashboard to `info@mbventuresgh.com`, so
+all store mail lands at the shop inbox. Re-verified end-to-end afterwards:
+a fresh contact-form submission produced `contact-received` +
+`admin-contact-message` rows at `status: "sent"`, `mode: "live"`, first
+attempt. (Changing the recipient needs no code or deploy — the key is
+unchanged.)
+
+---
+
 ## Official email moved to info@mbventuresgh.com (17 October 2026)
 
 **Status:** Complete — all quality gates green (tsc, lint, 256 unit tests,

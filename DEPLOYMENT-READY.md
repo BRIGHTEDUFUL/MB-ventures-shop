@@ -59,7 +59,7 @@ Prod: prod:necessary-newt-861       ✅ Fully configured
 
 ```
 Development:
-  Access Key:    c8395fed-... (set)
+  Access Key:    ab22e273-... (set)
   Site URL:      http://localhost:5173
   Reply-to:      info@mbventuresgh.com
   Admin Alerts:  info@mbventuresgh.com
@@ -67,7 +67,7 @@ Development:
   Status:        🟢 Live Mode
 
 Production:
-  Access Key:    c8395fed-... (set)
+  Access Key:    ab22e273-... (set)
   Site URL:      https://mbventuresgh.com
   Reply-to:      info@mbventuresgh.com
   Admin Alerts:  info@mbventuresgh.com

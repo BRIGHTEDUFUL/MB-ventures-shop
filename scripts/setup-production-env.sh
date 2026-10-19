@@ -61,7 +61,7 @@ NODE_ENV=production
 # ============================================
 # Email Configuration (Web3Forms)
 # ============================================
-WEB3FORMS_ACCESS_KEY=c8395fed-e25e-4350-a914-df8e592f5920
+WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -103,7 +103,7 @@ echo "The following must be set in Convex dashboard for prod deployment:"
 echo "https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861"
 echo ""
 echo "Required Convex Env Vars:"
-echo "  • WEB3FORMS_ACCESS_KEY = c8395fed-e25e-4350-a914-df8e592f5920"
+echo "  • WEB3FORMS_ACCESS_KEY = ab22e273-6536-4ae8-af7d-0b8c5013e418"
 echo "  • EMAIL_REPLY_TO = info@mbventuresgh.com"
 echo "  • ADMIN_ALERT_EMAIL = info@mbventuresgh.com"
 echo "  • EMAIL_DAILY_LIMIT = 250"
