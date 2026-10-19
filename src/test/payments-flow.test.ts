@@ -191,7 +191,11 @@ describe("orders.place — online payment", () => {
     // The lock is exact: the total the server computed, in pesewas.
     const stored = await readOrder(env, order.id);
     expect(stored?.payment_amount_pesewas).toBe(Math.round(order.total * 100));
+    // No delivery fee any more (the rider is paid by the customer directly),
+    // so the total the lock was taken from is the subtotal, exactly.
+    expect(order.delivery_fee).toBe(0);
     expect(stored?.total).toBe(order.subtotal + order.delivery_fee);
+    expect(stored?.total).toBe(order.total);
 
     // Units are held exactly like a cash order: on the shelf they are gone,
     // on the books they are reserved until the goods leave.

@@ -14,8 +14,10 @@ import schema from "../../convex/schema";
  *
  * - the permission floor is **staff**, not admin (`orders.create`), and an
  *   explicit override can still take it away;
- * - the server prices every line, computes the fee and holds the stock inside
- *   one transaction, exactly like `orders.place`;
+ * - the server prices every line, books the (zero) delivery fee and holds the
+ *   stock inside one transaction, exactly like `orders.place`;
+ * - a discount needs `orders.discount`, is bounded by the server-priced
+ *   subtotal, and lands in the total and on the timeline;
  * - a hold is released once on cancellation and committed once on completion;
  * - the counter door stays open when the storefront's ordering switch is off;
  * - counter sales land in the dashboard totals, while a staff member whose
@@ -259,6 +261,7 @@ describe("orders.staffCreate — what the counter records", () => {
       created_by_name: "Kofi Boateng",
       subtotal: 999.99,
       delivery_fee: 0,
+      discount: 0,
       total: 999.99,
     });
     // A walk-in belongs to nobody's login — the seller is `created_by`.
@@ -303,7 +306,7 @@ describe("orders.staffCreate — what the counter records", () => {
     expect(history[0]?.actor_id).toBe(env.staffId);
   });
 
-  it("charges the zone fee on delivery and waives it over the free threshold", async () => {
+  it("books no delivery fee in any zone — the rider is paid directly", async () => {
     const env = await setup();
     const delivery = (zone: "central" | "greater" | "nationwide") =>
       env.staff.mutation(
@@ -315,15 +318,23 @@ describe("orders.staffCreate — what the counter records", () => {
         }),
       );
 
-    // The method defaults from fulfilment — no card fields, no gateway.
+    // The method defaults from fulfilment — no card fields, no gateway — and
+    // no zone adds a cedi: the shop does not deliver, riders bill the
+    // customer themselves, so the total is the subtotal everywhere.
     const central = await delivery("central");
-    expect(central).toMatchObject({ delivery_fee: 30, total: 1029.99, payment_method: "cod" });
+    expect(central).toMatchObject({
+      subtotal: 999.99,
+      delivery_fee: 0,
+      total: 999.99,
+      payment_method: "cod",
+    });
     const greater = await delivery("greater");
-    expect(greater.delivery_fee).toBe(50);
+    expect(greater).toMatchObject({ delivery_fee: 0, total: 999.99 });
     const nationwide = await delivery("nationwide");
-    expect(nationwide.delivery_fee).toBe(100);
+    expect(nationwide).toMatchObject({ delivery_fee: 0, total: 999.99 });
 
-    // Six desks clear the GH₵ 5,000 threshold, so the fee drops away.
+    // A big basket behaves exactly the same way — nothing threshold-shaped
+    // is left in the rules.
     const bulk = await env.staff.mutation(
       api.orders.staffCreate,
       take({
@@ -606,6 +617,153 @@ describe("orders.staffCreate — validation", () => {
   });
 });
 
+describe("orders.staffCreate — the staff discount", () => {
+  it("takes a flat GH₵ off the order and says so on the timeline", async () => {
+    const env = await setup();
+    const order = await env.staff.mutation(api.orders.staffCreate, take({ discount: 150 }));
+
+    expect(order).toMatchObject({
+      subtotal: 999.99,
+      delivery_fee: 0,
+      discount: 150,
+      total: 849.99,
+    });
+
+    const raw = await readOrder(env, order.id);
+    expect(raw?.discount).toBe(150);
+    expect(raw?.total).toBe(849.99);
+
+    const history = await orderHistory(env, order.id);
+    expect(history.map((row) => row.note)).toEqual([
+      "Order taken from WhatsApp. Pay at the shop when the customer collects.",
+      "Discount of GH₵ 150 applied.",
+    ]);
+    expect(history[1]?.actor_id).toBe(env.staffId);
+
+    // The money side never touches the shelf: one unit held, nothing else.
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 49, reserved: 1 });
+  });
+
+  it("rounds a fractional discount to two decimals before storing it", async () => {
+    const env = await setup();
+    const order = await env.staff.mutation(api.orders.staffCreate, take({ discount: 12.345 }));
+
+    expect(order).toMatchObject({ subtotal: 999.99, discount: 12.35, total: 987.64 });
+    const history = await orderHistory(env, order.id);
+    expect(history.map((row) => row.note)).toContain("Discount of GH₵ 12.35 applied.");
+  });
+
+  it("counts the discounted total in the day's takings", async () => {
+    const env = await setup();
+    const order = await env.staff.mutation(
+      api.orders.staffCreate,
+      take({ payment_method: "momo", payment_status: "confirmed", discount: 150 }),
+    );
+    expect(order).toMatchObject({ subtotal: 999.99, discount: 150, total: 849.99 });
+
+    // The dashboard sums `total`, so the discount flows into it for free.
+    const overview = await env.staff.query(api.stats.overview, {});
+    expect(overview.orders).toMatchObject({ today: 1, today_revenue: 849.99 });
+    expect(overview.orders.today_revenue).toBe(order.total);
+  });
+
+  it("refuses a discount bigger than the order and holds no stock", async () => {
+    const env = await setup();
+    const error = await capture(
+      env.staff.mutation(api.orders.staffCreate, take({ discount: 1000 })),
+    );
+    expect(error).toBeInstanceOf(ConvexError);
+    expect((error as ConvexError<{ message: string }>).data.message).toBe(
+      "The discount can't be bigger than the order.",
+    );
+
+    // The refusal rolls the transaction back: no order, no hold, no ledger.
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 50 });
+    expect(await ordersIn(env)).toHaveLength(0);
+    expect(await movements(env)).toHaveLength(0);
+  });
+
+  it("refuses a negative or NaN discount without touching stock", async () => {
+    const env = await setup();
+
+    const negative = await capture(
+      env.staff.mutation(api.orders.staffCreate, take({ discount: -5 })),
+    );
+    expect((negative as ConvexError<{ message: string }>).data.message).toBe(
+      "The discount can't be negative.",
+    );
+
+    // NaN must never reach the total — the counter validation refuses it (as
+    // does the argument validator if it ever got that far), hence either way.
+    await expect(
+      env.staff.mutation(api.orders.staffCreate, take({ discount: Number.NaN })),
+    ).rejects.toThrow();
+
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 50 });
+    expect(await ordersIn(env)).toHaveLength(0);
+    expect(await movements(env)).toHaveLength(0);
+  });
+
+  it("needs orders.discount: on for staff by default, revocable per person", async () => {
+    const env = await setup();
+
+    // The default staff set carries it (floor: staff), so an attendant may
+    // discount a sale without asking the owner.
+    expect(await env.staff.query(api.users.myPermissions, {})).toContain("orders.discount");
+    const allowed = await env.staff.mutation(api.orders.staffCreate, take({ discount: 100 }));
+    expect(allowed).toMatchObject({ discount: 100, total: 899.99 });
+
+    // One override later, the same attendant cannot.
+    await env.admin.mutation(api.users.setPermission, {
+      user_id: env.staffId,
+      permission: "orders.discount",
+      granted: false,
+    });
+
+    const denied = await capture(
+      env.staff.mutation(
+        api.orders.staffCreate,
+        take({ discount: 100, customer_name: "Abena Kojo", phone: "201112233" }),
+      ),
+    );
+    expect(denied).toBeInstanceOf(ConvexError);
+    expect((denied as ConvexError<{ code: string }>).data.code).toBe("PERMISSION_DENIED");
+    expect((denied as ConvexError<{ message: string }>).data.message).toBe(
+      "You do not have permission to apply a discount.",
+    );
+
+    // Only the discount is gated — the same person still records a plain sale.
+    const plain = await env.staff.mutation(
+      api.orders.staffCreate,
+      take({ channel: "walk_in", customer_name: "Abena Kojo", phone: "201112233" }),
+    );
+    expect(plain).toMatchObject({ discount: 0, total: 999.99 });
+
+    // Two holds: the allowed discount and the plain order; the denial wrote none.
+    expect(await movements(env)).toHaveLength(2);
+    expect(await ordersIn(env)).toHaveLength(2);
+  });
+
+  it("emails a receipt that shows the discount", async () => {
+    const env = await setup();
+    const order = await env.staff.mutation(
+      api.orders.staffCreate,
+      take({ email: "yaw@example.com", discount: 150 }),
+    );
+    await drain(env);
+
+    const confirmation = (await emailLogs(env)).find((row) => row.template === "order-received");
+    expect(confirmation?.status).toBe("skipped_dry_run");
+    expect(confirmation?.data["discount"]).toBe(150);
+    expect(confirmation?.text).toContain("Discount: -GH₵ 150.00");
+    expect(confirmation?.text).toContain("Subtotal: GH₵ 999.99");
+    expect(confirmation?.text).toContain("Total: GH₵ 849.99");
+    // This one is a pickup, so the delivery row keeps its pickup wording.
+    expect(confirmation?.text).toContain("Delivery: Free (pickup)");
+    expect(order).toMatchObject({ discount: 150, total: 849.99 });
+  });
+});
+
 describe("orders.staffCreate — options (variants)", () => {
   it("insists on an option and prices the line from the option row", async () => {
     const env = await setup();
@@ -818,8 +976,12 @@ describe("orders.place — the other side of the shared door", () => {
       user_id: env.customerId,
       created_by_name: null,
       subtotal: 999.99,
-      delivery_fee: 30,
-      total: 1029.99,
+      // Checkout never charges delivery and never takes a discount: the
+      // total is the subtotal, and the discount field is not even an
+      // argument of `orders.place` (the test below proves it structurally).
+      delivery_fee: 0,
+      discount: 0,
+      total: 999.99,
     });
 
     const raw = await readOrder(env, order.id);
@@ -828,5 +990,66 @@ describe("orders.place — the other side of the shared door", () => {
     expect(raw?.stock_state).toBe("reserved");
     // Same shelf effect as a counter sale — one shared `holdLines`.
     expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 49, reserved: 1 });
+  });
+
+  it("structurally refuses a discount — checkout has no such argument", async () => {
+    const env = await setup();
+    // The cast exists purely to prove the server says no: `discount` is not
+    // in `checkoutArgs`, so the argument validator rejects it outright.
+    const withDiscount = { ...CHECKOUT, discount: 50 } as unknown as PlaceArgs;
+    await expect(env.customer.mutation(api.orders.place, withDiscount)).rejects.toThrow();
+
+    expect(await ordersIn(env)).toHaveLength(0);
+    expect(await readProduct(env, "standing-desk")).toMatchObject({ stock: 50 });
+    expect(await movements(env)).toHaveLength(0);
+  });
+});
+
+describe("legacy orders — a stored delivery fee still reads back", () => {
+  it("keeps exposing delivery_fee: 30 through the DTO, the feed and the receipt", async () => {
+    const env = await setup();
+    // An order written while the shop still charged for delivery.
+    const legacyId = await env.t.run((ctx) =>
+      ctx.db.insert("orders", {
+        reference: "MB-0000000000000001",
+        customer_name: "Ama Mensah",
+        email: "ama@example.com",
+        phone: "0241234567",
+        address: "12 Abelenkpe Taxi Rank Road, Accra",
+        fulfillment: "delivery",
+        zone: "central",
+        payment_method: "cod",
+        payment_status: "confirmed",
+        status: "completed",
+        subtotal: 100,
+        delivery_fee: 30,
+        total: 130,
+        items: [
+          {
+            id: "standing-desk",
+            name: "Electric sit-stand desk",
+            price: 100,
+            quantity: 1,
+            image_key: "desk",
+          },
+        ],
+      }),
+    );
+
+    const [listed] = await env.staff.query(api.orders.staffList, {});
+    expect(listed).toMatchObject({
+      id: legacyId,
+      subtotal: 100,
+      delivery_fee: 30,
+      // A row from before the feature simply reads as "no discount".
+      discount: 0,
+      total: 130,
+    });
+
+    const receipt = await env.t.query(api.orders.track, {
+      ref: "MB-0000000000000001",
+      customer_phone: "0241234567",
+    });
+    expect(receipt).toMatchObject({ delivery_fee: 30, discount: 0, total: 130 });
   });
 });

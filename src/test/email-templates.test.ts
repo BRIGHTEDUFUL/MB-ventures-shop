@@ -121,11 +121,61 @@ describe("order emails", () => {
     expect(delivery.subject).toBe("Order MB-2FA41C09 received");
     expect(delivery.text).toContain("MB-2FA41C09");
     expect(delivery.text).toContain("GH₵ 3,699.00"); // subtotal
-    expect(delivery.text).toContain("GH₵ 30.00"); // delivery fee
-    expect(delivery.text).toContain("GH₵ 3,729.00"); // total
+    expect(delivery.text).toContain("GH₵ 3,699.00"); // total — no fee on top
+    // The shop does not charge delivery any more: the rider is paid by the
+    // customer directly, so that is exactly what the Delivery row says.
+    expect(delivery.text).toContain("Delivery: Paid directly to your rider");
+    expect(delivery.text).not.toContain("GH₵ 30.00");
+    expect(delivery.text).not.toContain("GH₵ 3,729.00");
     // Pay-later copy: the method is derived from fulfilment, never typed in.
     expect(delivery.text).toContain("Payment: Cash on delivery");
     expect(delivery.text).toContain("Pay the courier in cash when your order arrives.");
+  });
+
+  it("still prints a stored legacy fee for an order taken when fees were on", () => {
+    const legacy = {
+      ...sampleDataFor("order-received", ctx),
+      delivery_fee: 30,
+      total: 3729,
+    };
+    const rendered = renderTemplate("order-received", legacy, ctx);
+    expect(rendered.text).toContain("Delivery: GH₵ 30.00");
+    expect(rendered.text).toContain("GH₵ 3,729.00");
+  });
+
+  it("shows a Discount row only when the order actually carries one", () => {
+    const without = renderTemplate("order-received", sampleDataFor("order-received", ctx), ctx);
+    expect(without.text).not.toContain("Discount");
+
+    const discounted = renderTemplate(
+      "order-received",
+      { ...sampleDataFor("order-received", ctx), discount: 100, total: 3599 },
+      ctx,
+    );
+    expect(discounted.text).toContain("Discount: -GH₵ 100.00");
+    // The rows stay in reading order: subtotal, discount, delivery, total.
+    const rows = discounted.text
+      .split("\n")
+      .filter((line) => /^(Subtotal|Discount|Delivery|Total):/.test(line));
+    expect(rows).toEqual([
+      "Subtotal: GH₵ 3,699.00",
+      "Discount: -GH₵ 100.00",
+      "Delivery: Paid directly to your rider",
+      "Total: GH₵ 3,599.00",
+    ]);
+  });
+
+  it("shows the discount on the shop's own copy too, and hides it otherwise", () => {
+    const plain = renderTemplate("admin-new-order", sampleDataFor("admin-new-order", ctx), ctx);
+    expect(plain.text).not.toContain("Discount");
+
+    const discounted = renderTemplate(
+      "admin-new-order",
+      { ...sampleDataFor("admin-new-order", ctx), discount: 100, total: 3599 },
+      ctx,
+    );
+    expect(discounted.text).toContain("Discount: -GH₵ 100.00");
+    expect(discounted.text).toContain("Total: GH₵ 3,599.00");
   });
 
   it("still renders a legacy in-app MoMo order with its provider and reference", () => {

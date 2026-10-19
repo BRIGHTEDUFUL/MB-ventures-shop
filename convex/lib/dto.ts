@@ -162,7 +162,14 @@ export type Order = {
   payment_status: "pending" | "confirmed" | "rejected";
   status: "received" | "processing" | "ready" | "dispatched" | "completed" | "cancelled";
   subtotal: number;
+  /**
+   * Inert legacy: new orders always store 0 (the shop stopped charging
+   * delivery — riders bill the customer directly). Rows written while fees
+   * were still on keep their number and must keep rendering it.
+   */
   delivery_fee: number;
+  /** Flat GH₵ off a counter order; 0 everywhere else (and on all legacy rows). */
+  discount: number;
   total: number;
   items: OrderItem[];
   created_at: string;
@@ -182,6 +189,7 @@ export type Receipt = Pick<
   | "items"
   | "subtotal"
   | "delivery_fee"
+  | "discount"
   | "total"
   | "created_at"
   // Online payments show when the money actually landed; offline stays null.
@@ -389,6 +397,7 @@ export const orderDTO = (order: Doc<"orders">): Order => ({
   status: order.status,
   subtotal: order.subtotal,
   delivery_fee: order.delivery_fee,
+  discount: order.discount ?? 0,
   total: order.total,
   items: order.items,
   created_at: new Date(order._creationTime).toISOString(),
@@ -412,6 +421,7 @@ export const receiptDTO = (order: Doc<"orders">, history: Doc<"order_history">[]
   items: order.items,
   subtotal: order.subtotal,
   delivery_fee: order.delivery_fee,
+  discount: order.discount ?? 0,
   total: order.total,
   created_at: new Date(order._creationTime).toISOString(),
   paid_at: order.paid_at ?? null,

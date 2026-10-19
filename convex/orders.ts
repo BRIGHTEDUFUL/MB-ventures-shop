@@ -14,8 +14,8 @@ import {
 } from "./lib/dto";
 import { getSettings } from "./lib/settings";
 import {
-  deliveryFee,
   normalizePhone,
+  offlinePaymentProblem,
   round2,
   validateCheckout,
   validateManualOrder,
@@ -208,9 +208,15 @@ async function holdLines(
 
 /**
  * Place an order. Replaces `public.place_store_order(payload)`:
- * authoritative pricing/stock/fees, ordering switch, and the full checkout
+ * authoritative pricing/stock, ordering switch, and the full checkout
  * validation set — all inside one transaction, so concurrent purchases of the
  * last unit cannot oversell.
+ *
+ * The browser never sends a price, a fee or a discount: the total is
+ * `round2(subtotal)` and nothing else. Delivery is free to the shop — the
+ * rider is paid by the customer directly — and discounts belong to the
+ * counter (`orders.staffCreate`), so this argument list deliberately has no
+ * field for either.
  *
  * Requires a signed-in account (confirmed product decision); browsing and
  * tracking stay public.
@@ -234,6 +240,18 @@ export const place = mutation({
       settings,
     );
     if (problem !== null) throw new ConvexError({ message: problem });
+
+    // Deliveries beyond Accra ride with long-haul couriers and cannot be
+    // cash-on-arrival: the shopper must pay online. The checkout UI steers
+    // nationwide delivery to "Pay online now" — this shared rule is the
+    // authoritative backstop for anyone who forges the argument. Staff
+    // counter orders (`staffCreate`) are exempt: taken in person at the shop.
+    const offlineProblem = offlinePaymentProblem(
+      args.zone,
+      args.fulfillment,
+      args.payment ?? "offline",
+    );
+    if (offlineProblem !== null) throw new ConvexError({ message: offlineProblem });
 
     // Online payment must be both switched on by staff and configured on the
     // server; the checkout only offers the choice when this passes.
@@ -275,8 +293,12 @@ export const place = mutation({
       what: "cart",
     });
 
-    const fee = deliveryFee(settings, args.zone, subtotal, args.fulfillment);
-    if (fee === null) throw new ConvexError({ message: "Choose a delivery area." });
+    // The shop no longer charges delivery: the rider is paid by the customer
+    // directly, so a new order books `delivery_fee: 0` and the total is the
+    // subtotal to the pesewa. There is no fee lookup left that could fail on
+    // the zone — `validators.zone` is a closed union, so a delivery order
+    // always names a real area (the old "Choose a delivery area." guard was
+    // unreachable and went with the fees).
     const orderId = await ctx.db.insert("orders", {
       reference,
       user_id: userId,
@@ -297,12 +319,12 @@ export const place = mutation({
       payment_status: "pending",
       status: "received",
       subtotal,
-      delivery_fee: fee,
-      total: round2(subtotal + fee),
+      delivery_fee: 0,
+      total: round2(subtotal),
       items: lines,
       // The exact amount (pesewas) a Paystack charge must match to confirm
       // this order. Locked now, next to the total it was computed from.
-      ...(online ? { payment_amount_pesewas: pesewas(round2(subtotal + fee)) } : {}),
+      ...(online ? { payment_amount_pesewas: pesewas(round2(subtotal)) } : {}),
       // Tracks what happened to the physical units for this order, so a
       // later cancellation returns them exactly once and never twice.
       stock_state: "reserved",
@@ -448,10 +470,14 @@ export const staffGet = query({
 /**
  * Record an order a staff member took in the shop — a WhatsApp message, a
  * phone call, a walk-in at the counter. The mirror of `place` with the same
- * guarantees: the server prices every line, computes the delivery fee and
- * holds the stock inside one transaction, so a counter sale counts against
- * the shelf exactly like an online one and flows through the same
+ * guarantees: the server prices every line, holds the stock and books the
+ * (zero) delivery fee inside one transaction, so a counter sale counts
+ * against the shelf exactly like an online one and flows through the same
  * `staffUpdate` cancel/complete machinery afterwards.
+ *
+ * This is the only door that takes a discount: a flat GH₵ amount staff enter
+ * at the counter, held to `orders.discount` and bounded by the subtotal the
+ * server just computed.
  *
  * Guarded by `orders.create` (staff floor): an attendant can record sales
  * without admin access. The customer's account stays empty — a walk-in has
@@ -488,6 +514,9 @@ export const staffCreate = mutation({
     // `confirmed` means the cash/MoMo is already in hand while the order is
     // taken, so it is recorded in the same breath instead of as a later update.
     payment_status: v.optional(validators.paymentStatus),
+    // A flat GH₵ off the whole order, set once here and never editable later.
+    // Guarded by `orders.discount` below once a price exists to compare it to.
+    discount: v.optional(v.number()),
     // Anything the customer promised or asked for, kept on the timeline.
     note: v.optional(v.string()),
   },
@@ -496,7 +525,6 @@ export const staffCreate = mutation({
     const actor = await ctx.db.get(actorId);
     const actorName = actor?.name?.trim() || actor?.email?.trim() || "Shop staff";
 
-    const settings = await getSettings(ctx);
     const email = (args.email ?? "").trim();
     const address = (args.address ?? "").trim();
     const channel = args.channel ?? "walk_in";
@@ -519,6 +547,7 @@ export const staffCreate = mutation({
       payment_method,
       payment_status,
       channel,
+      discount: args.discount,
     });
     if (problem !== null) throw new ConvexError({ message: problem });
 
@@ -530,8 +559,23 @@ export const staffCreate = mutation({
       what: "order",
     });
 
-    const fee = deliveryFee(settings, args.zone, subtotal, args.fulfillment);
-    if (fee === null) throw new ConvexError({ message: "Choose a delivery area." });
+    // A discount is a counter-only privilege: no discount, no question. With
+    // one, the caller must hold `orders.discount` (staff floor by default,
+    // revocable per person), then the amount has to fit inside the subtotal
+    // the server just priced — a bigger one would pay the shop to take the
+    // goods. Every throw here rolls the whole transaction back, so a refused
+    // discount never leaves stock held.
+    const rawDiscount = args.discount ?? 0;
+    if (!Number.isFinite(rawDiscount)) {
+      throw new ConvexError({ message: "Enter a valid discount." });
+    }
+    if (rawDiscount > 0) {
+      await requirePermission(ctx, "orders.discount");
+    }
+    const discount = round2(rawDiscount);
+    if (discount > subtotal) {
+      throw new ConvexError({ message: "The discount can't be bigger than the order." });
+    }
 
     const orderId = await ctx.db.insert("orders", {
       reference,
@@ -550,8 +594,13 @@ export const staffCreate = mutation({
       payment_status,
       status: "received",
       subtotal,
-      delivery_fee: fee,
-      total: round2(subtotal + fee),
+      // The shop does not charge delivery — the rider is paid by the
+      // customer directly — so a counter order books the same 0 fee a
+      // storefront checkout does. Only a discount can move the total away
+      // from the subtotal, and only when one was entered.
+      delivery_fee: 0,
+      ...(discount > 0 ? { discount } : {}),
+      total: round2(subtotal - discount),
       items: lines,
       // Held, exactly like a checkout reservation: a later cancellation
       // releases it once, a completion commits it once (`staffUpdate`).
@@ -579,6 +628,16 @@ export const staffCreate = mutation({
       note: `${taken}. ${howToPay}`,
       actor_id: actorId,
     });
+    if (discount > 0) {
+      // Same shape as the "taken" note above: plain words on the timeline, in
+      // the cedis-and-round2 money format the rest of the back office uses.
+      await ctx.db.insert("order_history", {
+        order_id: orderId,
+        status: "received",
+        note: `Discount of GH₵ ${discount} applied.`,
+        actor_id: actorId,
+      });
+    }
     if (note !== "") {
       await ctx.db.insert("order_history", {
         order_id: orderId,

@@ -221,8 +221,10 @@ describe("orders.place — authoritative checkout", () => {
       },
     ]);
     expect(order.subtotal).toBe(1999.98);
-    expect(order.delivery_fee).toBe(30);
-    expect(order.total).toBe(2029.98);
+    // The shop does not charge delivery any more, so the total is the subtotal.
+    expect(order.delivery_fee).toBe(0);
+    expect(order.discount).toBe(0);
+    expect(order.total).toBe(1999.98);
 
     expect((await readProduct(env, "standing-desk")).stock).toBe(48);
 
@@ -364,6 +366,25 @@ describe("orders.place — authoritative checkout", () => {
     expect(pickup.delivery_fee).toBe(0);
   });
 
+  it("refuses cash-on-delivery outside Accra — nationwide delivery is prepaid", async () => {
+    const env = await setup();
+    // Accra delivery and shop pickup keep their offline options (central is
+    // the default above; pickup is exercised in the test just before this
+    // one), but a long-haul courier order may not leave the shop unpaid.
+    await expectConvexError(
+      env.customer.mutation(api.orders.place, checkout({ zone: "nationwide", payment: "offline" })),
+      /must be paid online/,
+    );
+
+    expect(await ordersIn(env)).toHaveLength(0);
+    expect((await readProduct(env, "standing-desk")).stock).toBe(50);
+    expect(await inventoryLog(env)).toHaveLength(0);
+
+    // Greater Accra delivery still pays the rider on arrival.
+    const accra = await placeOrder(env, { zone: "greater" });
+    expect(accra.payment_method).toBe("cod");
+  });
+
   it("only takes orders — and order feeds — from a signed-in account", async () => {
     const env = await setup();
     await expectConvexError(
@@ -389,7 +410,9 @@ describe("orders.track — guest lookup by reference and phone", () => {
     expect(receipt?.status).toBe("received");
     expect(receipt?.payment_status).toBe("pending");
     expect(receipt?.subtotal).toBe(1999.98);
-    expect(receipt?.total).toBe(2029.98);
+    expect(receipt?.delivery_fee).toBe(0);
+    expect(receipt?.discount).toBe(0);
+    expect(receipt?.total).toBe(1999.98);
     expect(receipt?.history).toHaveLength(1);
     expect(receipt?.history?.[0]?.note).toContain("Order received");
 

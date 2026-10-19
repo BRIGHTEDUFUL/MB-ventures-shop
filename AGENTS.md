@@ -45,7 +45,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Client data | TanStack Query via `@convex-dev/react-query`                                                                 |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                                                      |
 | Payments    | Paystack online (opt-in, gated on `PAYSTACK_SECRET_KEY` + staff switch) · pay-on-delivery / pay-at-shop stay |
-| Tests       | Vitest (307 tests, 20 files) + Playwright (36 read-only + 11 live checks)                                    |
+| Tests       | Vitest (316 tests, 20 files) + Playwright (36 read-only + 11 live checks)                                    |
 | CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips)                          |
 
 ---
@@ -262,8 +262,9 @@ zero. Regression tests live in `convex-staff-mutations.test.ts` and
 
 ### 4b. Server is authoritative on prices
 
-`orders.place` recomputes price × quantity, delivery fee and total inside the
-mutation. The browser shows estimates only.
+`orders.place` recomputes price × quantity and total inside the mutation. The
+browser shows estimates only — and never a delivery fee: the shop does not
+charge one (see §4i).
 
 ### 4c. Product visibility
 
@@ -279,7 +280,7 @@ mutation. The browser shows estimates only.
 | -------- | -------------------------------------------------------- |
 | customer | Browse, cart, checkout, account, order tracking          |
 | staff    | + orders, inventory, catalogue editing (per permissions) |
-| admin    | + team management, delivery fees, store settings         |
+| admin    | + team management, store settings                        |
 
 Role rows live in `user_roles`. Guards: `lib/auth.requireStaff` / `requireAdmin`.
 All user-facing errors must throw `ConvexError({ message })`.
@@ -295,7 +296,7 @@ without inventing a new role. The closed set of permission keys lives in
 catalogue.view, catalogue.edit, catalogue.delete, catalogue.bulk,
 catalogue.categories, catalogue.settings, catalogue.delivery,
 inventory.view, inventory.adjust, inventory.stocktake, inventory.health,
-orders.view, orders.update, orders.create,
+orders.view, orders.update, orders.create, orders.discount,
 reports.view, activity.view,
 uploads.create,
 team.view, team.manage,
@@ -380,8 +381,10 @@ Staff can record a WhatsApp / phone / walk-in purchase at `/staff/orders/new`
 
 - **Pricing and stock are identical to customer checkout.** Both `place` and
   `staffCreate` call the shared `holdLines()` helper — the server recomputes
-  price × quantity and the delivery fee, and reserves stock once. The browser
-  never supplies money facts.
+  price × quantity and the total (never a delivery fee — riders collect theirs
+  directly, §4i), and reserves stock once. The browser never supplies money
+  facts; the one staff-entered number is a discount, which the server bounds
+  (0 ≤ discount ≤ subtotal, gated on `orders.discount`, §4i).
 - **The customer is not at a keyboard.** `validateManualOrder`
   (`convex/lib/rules.ts`) accepts a name + phone, an optional email (must be
   valid when given, else no customer email is sent), and an optional note
@@ -413,6 +416,35 @@ reads `users.myPermissions` first and renders a reduced view (queue, latest
 orders, stock warnings) when `reports.view` is revoked, so a stock-room or
 counter role never hits "The dashboard could not load." — `orders.staffList`
 and `orders.staffCreate` keep working regardless.
+
+### 4i. Money rules — rider delivery fees, counter discounts, nationwide prepay
+
+- **The shop never charges a delivery fee.** Riders collect their fee from the
+  customer directly, so every new order stores `delivery_fee: 0` and
+  `total = round2(subtotal − discount)` (online `place` has no discount:
+  `round2(subtotal)`). The zone-fee engine (`deliveryFee`, `displayFees`,
+  `remainingForFreeDelivery`, `DEFAULT_FEES`) was deleted from
+  `convex/lib/rules.ts`; checkout, cart, receipts and emails only say
+  _"Delivery fee is paid directly to your rider."_ — never a number — and the
+  free-delivery progress bar plus the Customization → Delivery fees tab are
+  gone. Legacy orders keep their stored fee and still render it (for them
+  subtotal + fee = total must keep holding). The `store_settings` fee fields,
+  `catalogue.saveDeliverySettings` and the `catalogue.delivery` permission key
+  remain as inert legacy — no UI reaches them.
+- **Counter discounts** (`orders.discount` — floor **staff**, on by default for
+  staff and admin, revocable per person in `/staff` → Team): `orders.staffCreate`
+  accepts `discount`, rejected if NaN/negative (in `validateManualOrder`) or
+  larger than the server-priced subtotal, and stamped on the order timeline.
+  Receipts, the staff order page and the `order-received` / `adminNewOrder`
+  emails show a Discount row only when > 0; `stats` sums `order.total`, so
+  reports are net of discounts. The browser can never discount an online order
+  — `place`'s args have no such field.
+- **Nationwide delivery is prepay-only** (`offlinePaymentProblem` in
+  `convex/lib/rules.ts`): an online order with `zone: "nationwide"` + delivery
+  refuses `payment: "offline"` in `orders.place` and withdraws that choice from
+  checkout; counter orders are exempt (taken in person). With Paystack live the
+  nationwide shopper prepaids in checkout; the "call the shop" notice only
+  appears while the online-payment switch is off.
 
 ---
 
@@ -531,7 +563,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 307/307 across 20 test files
+npm test                  # 316/316 across 20 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 36/36 Playwright checks (read-only)
@@ -588,11 +620,16 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
   `info@mbventuresgh.com` — the visible contact address, the reply-to on every
   message and the fallback shop inbox for alerts. Edit them in
   `/staff` → Customization → Contact.
+- Delivery: the shop charges no delivery fee anywhere — riders collect theirs
+  from the customer directly (§4i); the legacy zone-fee settings still live in
+  the row but drive nothing.
 - Payments: offline by default — pickup pays at the shop counter, delivery pays cash on
   arrival, staff mark payment received in /staff (legacy MoMo recipient fields are kept
-  in the row for old orders but no UI or mutation touches them). Online Paystack payment
-  exists but is **switched off** until the staff toggle is on and `PAYSTACK_SECRET_KEY`
-  is configured (see §4f and `docs/PAYMENTS-PAYSTACK.md`)
+  in the row for old orders but no UI or mutation touches them). **Paystack online
+  payments are LIVE** (19 Oct 2026): `PAYSTACK_SECRET_KEY` is on the production
+  deployment, the staff toggle is on, and the dashboard carries the callback + webhook
+  URLs — checkout offers "Pay online now" everywhere, and nationwide delivery is
+  prepay-only (§4f, §4i, `docs/PAYMENTS-PAYSTACK.md`)
 
 ---
 
@@ -660,18 +697,22 @@ Or use the staff panel at /staff Customization.
 Use `/staff` → Team → click a member → toggle individual permissions.
 Or via CLI: `npx convex run users:setPermission` (requires admin).
 
-### Enable Paystack online payments (when the keys arrive)
+### Paystack online payments — LIVE on production (since 19 Oct 2026)
 
-1. Set the secret on the deployment: `npx convex env set PAYSTACK_SECRET_KEY sk_live_… --env-file .env.prod.local`
-   (use `sk_test_…` without `--env-file` for the dev deployment)
-2. `/staff` → Customization → Ordering → tick **Accept online payments (Paystack)** → save
-3. (Production) In the Paystack dashboard set the return URL to
-   `https://mbventuresgh.com/paystack/return` and the webhook URL to the Convex
-   HTTP route `https://necessary-newt-861.convex.site/webhooks/paystack`
+Already in place (verify rather than re-do):
+
+1. Secret on the deployment: `npx convex env set PAYSTACK_SECRET_KEY sk_live_… --env-file .env.prod.local`
+   (dev keeps a `sk_test_…` key without `--env-file`)
+2. `/staff` → Customization → Ordering → **Accept online payments (Paystack)** ticked
+3. Paystack dashboard (Developers → API configuration, Live): callback URL
+   `https://mbventuresgh.com/paystack/return`, webhook URL
+   `https://necessary-newt-861.convex.site/webhooks/paystack`
    (i.e. `<CONVEX_SITE_URL>/webhooks/paystack`) — details in
    `docs/PAYMENTS-PAYSTACK.md`
 
 To take it down: untick the staff switch (immediate) — no redeploy needed.
+To rotate the secret: generate the new key in the Paystack dashboard (this
+invalidates the old one immediately), then `npx convex env set PAYSTACK_SECRET_KEY …`.
 
 ### Verify a production password
 
@@ -694,6 +735,10 @@ npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"si
 - Do NOT invent product slugs or prices — use only convex/inventory_import.ts
 - Do NOT show products with verified: false as confirmed stock
 - Do NOT change `variantKey()` output format — old orders reference those keys
+- Do NOT re-add a shop-side delivery fee or the deleted zone-fee engine — riders
+  collect their fee from the customer directly (§4i)
+- Do NOT accept a discount on online checkout — discounts are staff-entered at
+  the counter only, server-bounded to ≤ subtotal (§4i)
 
 ---
 
@@ -773,8 +818,8 @@ see `scripts/create-new-accounts.mjs` (`spawnSync` with `shell: true` and
 | convex-staff-mutations.test.ts     | Staff order updates, payment, cancellation              |
 | stock-single-writer.test.ts        | applyStockChange invariant enforcement                  |
 | inventory-reverse.test.ts          | Movement reversal logic                                 |
-| order-rules.test.ts                | Fee calculation, status transitions                     |
-| delivery-and-contact-rules.test.ts | Phone normalisation, fee display, WhatsApp              |
+| order-rules.test.ts                | Discount validation, status transitions                 |
+| delivery-and-contact-rules.test.ts | Phone normalisation, WhatsApp                           |
 | permissions.test.ts                | Role defaults, per-user overrides                       |
 | variants.test.ts                   | Key building, axis derivation, colour swatches          |
 | paystack.test.ts                   | Pesewas, HMAC signature, response parsing, money gate   |
@@ -786,4 +831,4 @@ see `scripts/create-new-accounts.mjs` (`spawnSync` with `shell: true` and
 | email-templates.test.ts            | Template rendering + HTML escaping                      |
 | email-transport.test.ts            | Web3Forms transport + retry behaviour                   |
 | app-routing.test.tsx               | Route existence + redirects                             |
-| staff-create-order.test.ts         | Counter orders: permission gate, pricing, stock, emails |
+| staff-create-order.test.ts         | Counter orders + discounts: permissions, pricing, stock |

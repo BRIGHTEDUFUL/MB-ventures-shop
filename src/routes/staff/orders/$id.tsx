@@ -234,10 +234,24 @@ function OrderView({
                 <span>Subtotal</span>
                 <span>{money(order.subtotal, true)}</span>
               </div>
-              <div className="summary-row">
-                <span>Delivery fee</span>
-                <span>{order.delivery_fee === 0 ? "Free" : money(order.delivery_fee, true)}</span>
-              </div>
+              {/* Legacy orders carry a stored fee and must still add up
+                  honestly; new ones charge nothing — the rider collects it. */}
+              {order.delivery_fee > 0 ? (
+                <div className="summary-row">
+                  <span>Delivery fee</span>
+                  <span>{money(order.delivery_fee, true)}</span>
+                </div>
+              ) : order.fulfillment === "delivery" ? (
+                <p className="text-xs text-muted-foreground">
+                  Delivery fee is paid directly to your rider.
+                </p>
+              ) : null}
+              {order.discount > 0 && (
+                <div className="summary-row">
+                  <span>Discount</span>
+                  <span>−{money(order.discount, true)}</span>
+                </div>
+              )}
               <div className="summary-row font-semibold">
                 <span>Total</span>
                 <span>{money(order.total, true)}</span>

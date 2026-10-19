@@ -6,17 +6,10 @@ import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/store-provider";
 import { lineKey } from "@/lib/cart";
-import {
-  storeQuery,
-  pageHead,
-  money,
-  delivery,
-  zones,
-  errorMessage,
-  type CheckoutForm,
-} from "@/lib/store";
+import { storeQuery, pageHead, money, zones, errorMessage, type CheckoutForm } from "@/lib/store";
 import { useSession } from "@/lib/use-session";
 import { images } from "@/lib/store-images";
+import { offlinePaymentProblem } from "../../convex/lib/rules";
 
 export const Route = createFileRoute("/checkout")({
   head: () =>
@@ -75,6 +68,18 @@ function Checkout() {
   const set = (key: keyof CheckoutForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }) as CheckoutForm);
 
+  // Nationwide delivery cannot be cash-on-arrival: long-haul couriers carry
+  // the goods far from the shop, so the shared rule (also enforced
+  // authoritatively inside orders.place) requires online payment. The
+  // offline choice is withdrawn below and the selection moves to "online"
+  // the moment the combination becomes prepay-only.
+  const prepayOnly =
+    form.fulfillment === "delivery" &&
+    offlinePaymentProblem(form.zone, form.fulfillment, "offline") !== null;
+  useEffect(() => {
+    if (prepayOnly) setForm((f) => (f.payment === "online" ? f : { ...f, payment: "online" }));
+  }, [prepayOnly]);
+
   // Persist every keystroke and step change so a transient auth reconnect
   // (which briefly swaps in the loading placeholder) cannot lose progress.
   useEffect(() => {
@@ -114,8 +119,10 @@ function Checkout() {
 
   if (loading || !data) return <div className="page-content wrap">Loading checkout…</div>;
   if (!session) return <div className="page-content wrap">Taking you to sign in…</div>;
-  const fee = delivery(data.settings, form.zone, cart.subtotal, form.fulfillment === "pickup"),
-    total = cart.subtotal + fee;
+  // The shop never charges delivery: riders collect their fee straight from
+  // the customer, so the order total is the cart subtotal and no fee number
+  // is ever shown.
+  const total = cart.subtotal;
   const unavailable = cart.lines.some((l) => {
     const p = data.products.find((p) => p.id === l.product.id);
     if (!p?.verified) return true;
@@ -328,17 +335,24 @@ function Checkout() {
                               title: "Pay online now",
                               text: "Card, Mobile Money or bank transfer — secured by Paystack. Your order is confirmed the moment payment completes.",
                             },
-                            {
-                              id: "offline" as const,
-                              title:
-                                form.fulfillment === "pickup"
-                                  ? "Pay at the shop"
-                                  : "Pay on delivery",
-                              text:
-                                form.fulfillment === "pickup"
-                                  ? "Pay cash at the counter when you collect your order."
-                                  : "Pay cash to the courier when your order arrives.",
-                            },
+                            // Cash-on-arrival is withdrawn for nationwide
+                            // delivery — the courier network outside Accra
+                            // cannot collect, so this order is prepaid.
+                            ...(prepayOnly
+                              ? []
+                              : [
+                                  {
+                                    id: "offline" as const,
+                                    title:
+                                      form.fulfillment === "pickup"
+                                        ? "Pay at the shop"
+                                        : "Pay on delivery",
+                                    text:
+                                      form.fulfillment === "pickup"
+                                        ? "Pay cash at the counter when you collect your order."
+                                        : "Pay cash to the courier when your order arrives.",
+                                  },
+                                ]),
                           ].map((o) => (
                             <label className="solid-panel cursor-pointer" key={o.id}>
                               <input
@@ -358,16 +372,27 @@ function Checkout() {
                               reserved while you pay.
                             </p>
                           )}
+                          {prepayOnly && (
+                            <p className="text-xs text-muted-foreground">
+                              Deliveries outside Accra are prepaid: our courier partners carry your
+                              order to you, so cash cannot change hands on arrival. Within Greater
+                              Accra you can still pay on delivery or at the shop.
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <>
                           <p className="mt-3 text-sm">
-                            {form.fulfillment === "pickup"
-                              ? "Pay at the shop when you collect your order."
-                              : "Pay cash to the courier when your order arrives."}
+                            {prepayOnly
+                              ? "Orders delivered outside Accra are paid online by card, Mobile Money or bank transfer."
+                              : form.fulfillment === "pickup"
+                                ? "Pay at the shop when you collect your order."
+                                : "Pay cash to the courier when your order arrives."}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            No payment is taken online. Have the exact amount ready where possible.
+                            {prepayOnly
+                              ? "Online payment is being switched on — please call the shop to place this order, or choose a Greater Accra address."
+                              : "No payment is taken online. Have the exact amount ready where possible."}
                           </p>
                         </>
                       )}
@@ -433,10 +458,13 @@ function Checkout() {
                 <span>Subtotal</span>
                 <span>{money(cart.subtotal, true)}</span>
               </div>
-              <div className="summary-row">
-                <span>{form.fulfillment === "pickup" ? "Abelenkpe pickup" : "Delivery"}</span>
-                <span>{fee ? money(fee, true) : "Free"}</span>
-              </div>
+              {form.fulfillment === "delivery" ? (
+                // No number here on purpose: riders charge the customer
+                // directly, so the shop has no fee to quote.
+                <p className="my-4 text-xs text-muted-foreground">
+                  Delivery fee is paid directly to your rider.
+                </p>
+              ) : null}
               <div className="summary-row summary-total">
                 <span>Total</span>
                 <span>{money(total, true)}</span>

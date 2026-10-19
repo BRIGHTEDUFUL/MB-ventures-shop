@@ -3,10 +3,10 @@
  * (`place_store_order`, `staff_update_order`, `track_store_order`) that this
  * backend replaces.
  *
- * These are the single source of truth for validation messages and fee
- * calculation. The Convex mutations call them authoritatively; the browser
- * uses them for *estimates* only (AGENTS.md: totals are estimates until the
- * server computes them).
+ * These are the single source of truth for validation messages and the money
+ * rules that decide what an order totals. The Convex mutations call them
+ * authoritatively; the browser uses them for *estimates* only (AGENTS.md:
+ * totals are estimates until the server computes them).
  *
  * Nothing in this file may import from `convex/` so it stays unit-testable.
  */
@@ -37,34 +37,21 @@ export const ORDER_STATUSES: OrderStatus[] = [
 ];
 export const PAYMENT_STATUSES: PaymentStatus[] = ["pending", "confirmed", "rejected"];
 
-/** The four numbers that decide what a customer pays for delivery. */
-export interface FeeBreakdown {
-  central_fee: number;
-  greater_fee: number;
-  nationwide_fee: number;
-  free_threshold: number;
-}
-
-/**
- * Published defaults, used only while the settings row has not loaded.
- * They must never win over a saved value — including a saved `0`, which is how
- * staff turn a zone free (`fee || default` would silently resurrect 30).
- */
-export const DEFAULT_FEES: FeeBreakdown = {
-  central_fee: 30,
-  greater_fee: 50,
-  nationwide_fee: 100,
-  free_threshold: 5000,
-};
-
 /** Settings-driven copy shown in the header facts bar; empty means "hide it". */
 export const DEFAULT_ANNOUNCEMENT = "Abelenkpe, Accra · Pickup in store · Delivery across Ghana";
 
 /** On-hand counts at or below this deserve a restock — the "running low" line. */
 export const LOW_STOCK_AT = 5;
 
-/** Fees + the ordering switch, whichever settings doc we pass in. */
-export interface FeeSettings extends FeeBreakdown {
+/**
+ * What checkout validation needs from the settings row: the ordering switch.
+ *
+ * The delivery-fee fields (`central_fee`, `greater_fee`, `nationwide_fee`,
+ * `free_threshold`) still exist on `store_settings` as inert legacy — see the
+ * schema — but no rule here reads them: the shop no longer charges delivery,
+ * riders bill the customer directly.
+ */
+export interface CheckoutSettings {
   ordering_enabled: boolean;
 }
 
@@ -145,40 +132,15 @@ export function whatsappHref(
 export const announcementText = (settings: { announcement: string } | null | undefined): string =>
   settings ? settings.announcement.trim() : "";
 
-/** Display fees — the saved values once loaded, the published defaults before. */
-export const displayFees = (settings: FeeBreakdown | null | undefined): FeeBreakdown =>
-  settings ?? DEFAULT_FEES;
-
 /**
- * Delivery fee in cedis, or `null` when the zone is unusable
- * (only possible for a delivery order under the free threshold).
- */
-export function deliveryFee(
-  settings: FeeSettings,
-  zone: Zone,
-  subtotal: number,
-  fulfillment: Fulfillment,
-): number | null {
-  if (fulfillment === "pickup" || subtotal > settings.free_threshold) return 0;
-  if (zone === "central") return settings.central_fee;
-  if (zone === "greater") return settings.greater_fee;
-  if (zone === "nationwide") return settings.nationwide_fee;
-  return null;
-}
-
-/**
- * Cedis still needed before delivery becomes free (browser-side estimate).
+ * Fees are gone. The shop no longer charges delivery — riders bill the
+ * customer directly — so there is no `deliveryFee`, no free-delivery
+ * threshold and no cart hint left to keep in step with the server. The only
+ * thing checkout still decides about fulfilment is the address.
  *
- * `deliveryFee` charges while `subtotal <= free_threshold`, so a cart sitting
- * exactly on the threshold is still one cedi short — hence the `+ 1`. Keeping
- * this next to `deliveryFee` stops the cart hint and the server fee drifting.
+ * Returns the user-facing message, or `null` when the payload is valid.
  */
-export function remainingForFreeDelivery(freeThreshold: number, subtotal: number) {
-  return Math.max(0, freeThreshold - subtotal + 1);
-}
-
-/** Returns the user-facing message, or `null` when the payload is valid. */
-export function validateCheckout(input: CheckoutInput, settings: FeeSettings): string | null {
+export function validateCheckout(input: CheckoutInput, settings: CheckoutSettings): string | null {
   if (!settings.ordering_enabled) return "Ordering is not open yet. Contact the Abelenkpe shop.";
 
   if (
@@ -205,6 +167,30 @@ export function validateCheckout(input: CheckoutInput, settings: FeeSettings): s
   return null;
 }
 
+/**
+ * Deliveries outside Accra travel with long-haul couriers after the goods
+ * have left the shop, and the shop quotes no delivery fee up front — "cash
+ * on arrival" cannot cover a failed delivery hundreds of kilometres away. A
+ * `nationwide` delivery order must therefore be paid online at checkout;
+ * Accra (`central` / `greater`) delivery and shop pickup keep their offline
+ * options, and staff counter orders are deliberately exempt (taken in person
+ * — `validateManualOrder`).
+ *
+ * Returns the shopper-facing message refusing an offline payment, or null
+ * when the choice is fine. Shared by `orders.place` (authoritative) and the
+ * checkout page (which hides the offline option and explains why).
+ */
+export function offlinePaymentProblem(
+  zone: Zone,
+  fulfillment: Fulfillment,
+  payment: "online" | "offline",
+): string | null {
+  if (payment === "offline" && fulfillment === "delivery" && zone === "nationwide") {
+    return "Orders delivered outside Accra must be paid online — card, Mobile Money or bank transfer.";
+  }
+  return null;
+}
+
 /** What `orders.staffCreate` receives, after defaults are applied by the mutation. */
 export interface ManualOrderInput {
   customer_name: string;
@@ -218,6 +204,13 @@ export interface ManualOrderInput {
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
   channel: Exclude<OrderChannel, "online">;
+  /**
+   * Flat GH₵ off the order, entered by staff at the counter. Optional; the
+   * shape check lives here (no NaN, nothing negative) while the round-trip
+   * bound against the subtotal is checked in `orders.staffCreate`, which is
+   * the only place that knows the price the server computed.
+   */
+  discount?: number | undefined;
 }
 
 /**
@@ -259,6 +252,16 @@ export function validateManualOrder(input: ManualOrderInput): string | null {
     return "Cash on delivery only applies to delivery orders.";
   }
   if (!PAYMENT_STATUSES.includes(input.payment_status)) return "Invalid payment status.";
+  // The discount is a plain cedi amount a staff member types at the counter:
+  // NaN or Infinity would poison the total, and a negative one would *add*
+  // money. (How big it may be is decided against the subtotal in
+  // `orders.staffCreate`, where the server has priced the lines.)
+  if (input.discount !== undefined && !Number.isFinite(input.discount)) {
+    return "Enter a valid discount.";
+  }
+  if (input.discount !== undefined && input.discount < 0) {
+    return "The discount can't be negative.";
+  }
   if (input.channel !== "whatsapp" && input.channel !== "phone" && input.channel !== "walk_in") {
     return "Choose where the order came from.";
   }

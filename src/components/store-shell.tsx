@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
-import { CartLines, FreeDelivery } from "./store-ui";
+import { CartLines } from "./store-ui";
 import { money, storeQuery, announcementText, whatsappHref } from "@/lib/store";
 import { images, imageSize } from "@/lib/store-images";
 export function StoreHeader() {
@@ -257,13 +257,12 @@ export function StoreOverlays() {
             ) : (
               <>
                 <CartLines />
-                <FreeDelivery />
                 <div className="summary-row summary-total mt-8">
                   <span>Subtotal</span>
                   <span>{money(cart.subtotal, true)}</span>
                 </div>
                 <p className="my-4 text-xs text-muted-foreground">
-                  Delivery calculated at checkout. No payment is charged automatically.
+                  Delivery fee is paid directly to your rider. No payment is charged automatically.
                 </p>
                 <Button asChild className="w-full" onClick={() => cart.setCartOpen(false)}>
                   <Link to="/checkout">

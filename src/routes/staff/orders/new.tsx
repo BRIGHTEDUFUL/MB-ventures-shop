@@ -6,7 +6,7 @@ import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../../convex/_generated/api";
 import { PERMISSION_CATALOG } from "../../../../convex/lib/permission_catalog";
 import { findVariantByOptions } from "../../../../convex/lib/variants";
-import { delivery, errorMessage, money, pageHead, storeQuery, zones } from "@/lib/store";
+import { errorMessage, money, pageHead, storeQuery, zones } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { FormActions, Panel } from "@/components/staff/bits";
 import { VariantPicker } from "@/components/variant-picker";
@@ -62,6 +62,9 @@ function NewOrder() {
   const [address, setAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pay_at_store");
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "confirmed">("pending");
+  // Optional discount off the subtotal, in cedis. Only staff holding
+  // `orders.discount` see the input; the server enforces the same permission.
+  const [discount, setDiscount] = useState("");
 
   // Product picker (reset for every new line).
   const [productId, setProductId] = useState("");
@@ -112,6 +115,9 @@ function NewOrder() {
       </div>
     );
   }
+  // The discount field is a privilege, not a feature: without the permission
+  // the input never renders (and `orders.staffCreate` would refuse it anyway).
+  const canDiscount = permissions.data.includes("orders.discount");
 
   if (store.isPending) return <p className="text-sm text-muted-foreground">Loading catalogue…</p>;
   if (store.isError) {
@@ -125,7 +131,6 @@ function NewOrder() {
     );
   }
 
-  const settings = store.data.settings;
   // Exactly what checkout offers — and exactly what `staffCreate` accepts:
   // listed and verified, no hidden demo rows, no samples.
   const products = store.data.products.filter((p) => p.visible !== false && p.verified);
@@ -141,7 +146,12 @@ function NewOrder() {
   const available = product === null ? 0 : ((picking ? chosenVariant?.stock : product.stock) ?? 0);
 
   const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
-  const fee = delivery(settings, zone, subtotal, fulfillment === "pickup");
+  // The shop never charges delivery — the rider collects the fee straight from
+  // the customer — so the running total is the subtotal less any discount.
+  // Raw parse first (submit validates it), then a display-safe value so a
+  // half-typed input never renders "GH₵ NaN" in the totals.
+  const discountNumber = discount.trim() === "" ? 0 : Number(discount);
+  const discountValue = Number.isFinite(discountNumber) && discountNumber > 0 ? discountNumber : 0;
 
   const resetPicker = () => {
     setSelected({});
@@ -232,6 +242,16 @@ function NewOrder() {
       setFormError("Enter a delivery address.");
       return;
     }
+    // Same two rules the server applies — caught here so the form says it
+    // before the round trip.
+    if (discount.trim() !== "" && (!Number.isFinite(discountNumber) || discountNumber < 0)) {
+      setFormError("Enter a discount of zero or more.");
+      return;
+    }
+    if (discountNumber > subtotal) {
+      setFormError("The discount can't be bigger than the order.");
+      return;
+    }
     if (
       paymentStatus === "confirmed" &&
       !window.confirm(
@@ -259,6 +279,7 @@ function NewOrder() {
           ...(l.variant_key ? { variant_key: l.variant_key } : {}),
         })),
         ...(note.trim() ? { note: note.trim() } : {}),
+        ...(discountNumber > 0 ? { discount: discountNumber } : {}),
       });
       toast.success("Order recorded");
       navigate({ to: "/staff/orders/$id", params: { id: created.id } });
@@ -285,7 +306,8 @@ function NewOrder() {
       <h2 className="page-title mt-4">Record an order</h2>
       <p className="page-lead">
         For sales that happen in the shop — WhatsApp, phone or at the counter. The server prices
-        every item, charges the delivery fee and holds the stock, exactly like an online order.
+        every item and holds the stock, exactly like an online order. Delivery riders collect their
+        fee from the customer; the shop never charges one.
       </p>
 
       <form onSubmit={submit} className="mt-6">
@@ -483,7 +505,7 @@ function NewOrder() {
 
         <Panel
           title="Pickup or delivery"
-          description="Delivery fees follow the shop's saved rates."
+          description="Pickup is paid at the counter; riders collect their delivery fee from the customer."
         >
           <div className="space-y-4">
             <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -526,7 +548,7 @@ function NewOrder() {
                   <select value={zone} onChange={(e) => setZone(e.target.value as Zone)}>
                     {zones.map((z) => (
                       <option key={z.id} value={z.id}>
-                        {z.name} — {money(delivery(settings, z.id, subtotal, false), true)}
+                        {z.name} — {z.time}
                       </option>
                     ))}
                   </select>
@@ -542,18 +564,43 @@ function NewOrder() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Pickup — the customer pays at the shop counter. No delivery fee.
+                Pickup — the customer pays at the shop counter.
               </p>
             )}
+            {fulfillment === "delivery" ? (
+              <p className="text-xs text-muted-foreground">
+                Delivery fee is paid directly to your rider.
+              </p>
+            ) : null}
 
             <div className="space-y-1.5 text-sm">
-              <div className="summary-row">
-                <span>Delivery fee (estimate)</span>
-                <span>{fee === 0 ? "Free" : money(fee, true)}</span>
-              </div>
+              {canDiscount && (
+                <label className="summary-row">
+                  Discount (GH₵)
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    className="w-24 !mt-0 text-right"
+                    value={discount}
+                    onChange={(e) => {
+                      setDiscount(e.target.value);
+                      setFormError(null);
+                    }}
+                    placeholder="0"
+                  />
+                </label>
+              )}
+              {discountValue > 0 && (
+                <div className="summary-row">
+                  <span>Discount</span>
+                  <span>−{money(discountValue, true)}</span>
+                </div>
+              )}
               <div className="summary-row font-semibold">
                 <span>Total (estimate)</span>
-                <span>{money(subtotal + fee, true)}</span>
+                <span>{money(subtotal - discountValue, true)}</span>
               </div>
             </div>
           </div>

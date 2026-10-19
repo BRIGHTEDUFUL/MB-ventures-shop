@@ -6,7 +6,10 @@ export type OrderEmailFields = {
   fulfillment: "delivery" | "pickup";
   items: OrderLine[];
   subtotal: string;
+  /** Legacy fee (never shown on new orders), "Free (pickup)" or the rider line. */
   deliveryFee: string;
+  /** Flat GH₵ off a counter order. 0 on every row that has none. */
+  discount: number;
   total: string;
   paymentMethod: string;
   /** pending / confirmed / rejected — decides "nothing is due" wording. */
@@ -61,8 +64,17 @@ export function readOrder(data: Record<string, unknown>): OrderEmailFields {
     fulfillment: fulfillment === "pickup" ? "pickup" : "delivery",
     items,
     subtotal: formatMoney(num(data["subtotal"], 0)),
+    // Three cases, in priority order: a pickup never carries a fee; a legacy
+    // row booked while fees were still on keeps rendering its stored number;
+    // everything the shop writes today says who actually gets paid — the
+    // rider, directly by the customer.
     deliveryFee:
-      fulfillment === "pickup" ? "Free (pickup)" : formatMoney(num(data["delivery_fee"], 0)),
+      fulfillment === "pickup"
+        ? "Free (pickup)"
+        : num(data["delivery_fee"], 0) > 0
+          ? formatMoney(num(data["delivery_fee"], 0))
+          : "Paid directly to your rider",
+    discount: num(data["discount"], 0),
     total: formatMoney(num(data["total"], 0)),
     paymentMethod: PAYMENT_LABELS[paymentMethod] ?? paymentMethod,
     paymentStatus: str(data["payment_status"], "pending"),

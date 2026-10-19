@@ -68,7 +68,7 @@ so a fresh local `.env.local` without it simply keeps email in dry-run. See
 
 ## Architecture notes
 
-- **Server is authoritative.** Prices, stock, delivery fees and order totals are recomputed inside
+- **Server is authoritative.** Prices, stock and order totals are recomputed inside
   Convex mutations; anything the browser shows is an estimate until the order is placed. The
   payment method (`pay_at_store` for pickup, `cod` for delivery) is derived the same way.
 - Business rules live in `convex/lib/rules.ts` as pure functions shared by the mutations and the UI,

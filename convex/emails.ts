@@ -323,8 +323,10 @@ const sampleOrder = (fulfillment: "delivery" | "pickup") => ({
   zone: "central",
   items: [{ name: "Sample item for previewing", quantity: 1, price: 100 }],
   subtotal: 100,
-  delivery_fee: fulfillment === "pickup" ? 0 : 30,
-  total: fulfillment === "pickup" ? 100 : 130,
+  // No delivery fee any more — the rider is paid directly by the customer.
+  delivery_fee: 0,
+  discount: 0,
+  total: 100,
   payment_method: fulfillment === "pickup" ? "pay_at_store" : "cod",
   provider: "",
   transaction_reference: "",

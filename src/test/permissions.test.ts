@@ -67,7 +67,37 @@ describe("permissions — role defaults and per-person overrides", () => {
     expect(staff).toContain("inventory.adjust");
     expect(staff).not.toContain("team.manage");
     expect(admin).toContain("team.manage");
+    // The discount floor is staff: an attendant may apply one by default, and
+    // the owner holds every permission the attendant does.
+    expect(staff).toContain("orders.discount");
+    expect(admin).toContain("orders.discount");
     expect(admin.length).toBeGreaterThan(staff.length);
+  });
+
+  it("lets an admin take the discount away from one attendant", async () => {
+    const env = await setup();
+    expect(await env.staff.query(api.users.myPermissions, {})).toContain("orders.discount");
+
+    await env.admin.mutation(api.users.setPermission, {
+      user_id: env.staffId,
+      permission: "orders.discount",
+      granted: false,
+    });
+
+    // One bit flipped: the rest of the counter set is untouched, and the
+    // role row still says `staff`.
+    const after = await env.staff.query(api.users.myPermissions, {});
+    expect(after).not.toContain("orders.discount");
+    expect(after).toContain("orders.create");
+    expect(await env.staff.query(api.users.myRole, {})).toBe("staff");
+
+    // Clearing the override hands them the staff default back.
+    await env.admin.mutation(api.users.setPermission, {
+      user_id: env.staffId,
+      permission: "orders.discount",
+      granted: null,
+    });
+    expect(await env.staff.query(api.users.myPermissions, {})).toContain("orders.discount");
   });
 
   it("lets an admin revoke one permission without inventing a new role", async () => {

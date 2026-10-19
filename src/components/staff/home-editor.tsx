@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { FormActions, Panel } from "@/components/staff/bits";
 import {
   DEFAULT_ANNOUNCEMENT,
-  delivery,
   errorMessage,
   money,
   normalizeWhatsApp,
@@ -85,8 +84,8 @@ const subheading = "mt-6 pb-2 text-sm font-semibold first:mt-0";
  * contact details, WhatsApp and the ordering switch.
  *
  * The component stays mounted for every one of those panes and swaps only the
- * body, so a half-filled form survives tab changes; it renders nothing at all
- * while a different mutation's tab (delivery fees) is open.
+ * body, so a half-filled form survives tab changes; anything that is not one
+ * of its own panes renders nothing at all.
  */
 export function StorefrontSettings({
   tab,
@@ -792,154 +791,5 @@ function OrderingPane({
         PAYSTACK_SECRET_KEY; unpaid online orders release their stock automatically after an hour.
       </p>
     </Panel>
-  );
-}
-
-/* ── Delivery fees (staff) ─────────────────────────────────────────────── */
-
-/** Which zone a sample cart is priced against while editing the fees. */
-type FeeZone = "central" | "greater" | "nationwide";
-
-export function DeliverySettings({ settings }: { settings: Settings }) {
-  // Seeded once on mount — the tab is created fresh each time it opens, so a
-  // save echoes back equal values and a background settings change elsewhere
-  // can never stomp a fee being typed.
-  const [form, setForm] = useState({
-    central_fee: settings.central_fee,
-    greater_fee: settings.greater_fee,
-    nationwide_fee: settings.nationwide_fee,
-    free_threshold: settings.free_threshold,
-  });
-  const [busy, setBusy] = useState(false);
-  const [zone, setZone] = useState<FeeZone>("central");
-  const [subtotal, setSubtotal] = useState(1500);
-  const save = useConvexMutation(api.catalogue.saveDeliverySettings);
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await save(form);
-      toast.success("Delivery fees saved");
-    } catch (err) {
-      toast.error(errorMessage(err, "Delivery fees could not be saved."));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const number = (key: keyof typeof form, step: number) => (
-    <label>
-      {
-        {
-          central_fee: "Accra Central & Abelenkpe fee GH₵",
-          greater_fee: "Greater Accra fee GH₵",
-          nationwide_fee: "Nationwide fee GH₵",
-          free_threshold: "Free delivery above GH₵",
-        }[key]
-      }
-      <input
-        type="number"
-        min="0"
-        step={step}
-        inputMode="decimal"
-        value={form[key]}
-        onChange={(e) => setForm((current) => ({ ...current, [key]: Number(e.target.value) }))}
-      />
-    </label>
-  );
-
-  return (
-    <form onSubmit={submit}>
-      <Panel
-        title="Delivery fees"
-        description="What a customer pays for shipping. Saved by any staff member."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {number("central_fee", 0.5)}
-          {number("greater_fee", 0.5)}
-          {number("nationwide_fee", 0.5)}
-          {number("free_threshold", 50)}
-        </div>
-        <FormActions busy={busy} note="These take effect on the next page load.">
-          <Button disabled={busy}>{busy ? "Working…" : "Save delivery fees"}</Button>
-        </FormActions>
-      </Panel>
-
-      <Panel title="Try a cart" description="Check the new fees before customers see them.">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Delivery zone">
-          {(
-            [
-              ["central", "Accra Central"],
-              ["greater", "Greater Accra"],
-              ["nationwide", "Nationwide"],
-            ] as const
-          ).map(([value, label]) => (
-            <Button
-              key={value}
-              type="button"
-              size="sm"
-              variant={zone === value ? "default" : "outline"}
-              aria-pressed={zone === value}
-              onClick={() => setZone(value)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-        <label className="mt-4 block max-w-xs">
-          Cart subtotal GH₵
-          <input
-            type="number"
-            min="0"
-            step="50"
-            inputMode="decimal"
-            value={subtotal}
-            onChange={(e) => setSubtotal(Math.max(0, Number(e.target.value)))}
-          />
-        </label>
-        <p className="mt-4 text-2xl font-semibold">
-          {delivery(form, zone, subtotal) === 0 ? (
-            <span className="text-success">Free delivery</span>
-          ) : (
-            <>
-              {money(delivery(form, zone, subtotal), true)}
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                delivery fee ·{" "}
-                {zone === "central"
-                  ? "Accra Central"
-                  : zone === "greater"
-                    ? "Greater Accra"
-                    : "Nationwide"}
-              </span>
-            </>
-          )}
-        </p>
-        <table className="spec-table mt-5">
-          <tbody>
-            {(
-              [
-                ["central", "Accra Central & Abelenkpe"],
-                ["greater", "Greater Accra"],
-                ["nationwide", "Nationwide"],
-              ] as const
-            ).map(([value, label]) => (
-              <tr key={value}>
-                <th>{label}</th>
-                <td>
-                  {delivery(form, value, subtotal) === 0
-                    ? "Free"
-                    : money(delivery(form, value, subtotal))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Pickup and carts over {money(form.free_threshold)} always ship free. A saved fee of 0
-          makes that zone free.
-        </p>
-      </Panel>
-    </form>
   );
 }

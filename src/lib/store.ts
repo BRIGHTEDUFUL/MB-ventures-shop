@@ -20,17 +20,16 @@ export type {
 } from "../../convex/lib/dto";
 
 // Shared with the backend so the storefront, the delivery page and the staff
-// forms can never disagree about fees, the announcement or a WhatsApp link.
+// forms can never disagree about the announcement or a WhatsApp link. Delivery
+// fees are no longer part of this: riders charge the customer directly, so no
+// fee number ever reaches the browser.
 export {
   DEFAULT_ANNOUNCEMENT,
-  DEFAULT_FEES,
   LOW_STOCK_AT,
   announcementText,
-  displayFees,
   normalizeWhatsApp,
   validateWhatsApp,
   whatsappHref,
-  type FeeBreakdown,
 } from "../../convex/lib/rules";
 
 export const money = (n: number, decimals = false) =>
@@ -221,24 +220,6 @@ export const pageHead = (
     ],
   };
 };
-export const delivery = (
-  settings: {
-    central_fee: number;
-    greater_fee: number;
-    nationwide_fee: number;
-    free_threshold: number;
-  },
-  zone: string,
-  subtotal: number,
-  pickup = false,
-) =>
-  pickup || subtotal > settings.free_threshold
-    ? 0
-    : zone === "central"
-      ? settings.central_fee
-      : zone === "greater"
-        ? settings.greater_fee
-        : settings.nationwide_fee;
 export const zones = [
   { id: "central", name: "Accra Central & Abelenkpe", time: "Same day or next day" },
   { id: "greater", name: "Greater Accra", time: "1–2 business days" },

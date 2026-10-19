@@ -1,5 +1,6 @@
 import {
   asRecord,
+  formatMoney,
   renderEmail,
   siteLink,
   type BodyBlock,
@@ -20,6 +21,10 @@ export function render(data: unknown, ctx: RenderContext): RenderedEmail {
       kind: "rows",
       rows: [
         ["Subtotal", order.subtotal],
+        // Only a counter order can carry one — a checkout never does.
+        ...(order.discount > 0
+          ? ([["Discount", `-${formatMoney(order.discount)}`]] as [string, string][])
+          : []),
         ["Delivery", order.deliveryFee],
         ["Total", order.total],
         ["Payment", order.paymentMethod],

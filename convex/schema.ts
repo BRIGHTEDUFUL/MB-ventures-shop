@@ -136,6 +136,7 @@ export const PERMISSION_KEYS = [
   "orders.view",
   "orders.create", // counter/WhatsApp/phone orders recorded by staff
   "orders.update", // status/payment transitions, notes, contact fixes
+  "orders.discount", // flat GH₵ off a counter order (`orders.staffCreate`)
   // Reporting
   "reports.view",
   "activity.view",
@@ -445,7 +446,15 @@ export default defineSchema({
     payment_status: paymentStatus,
     status: orderStatus,
     subtotal: v.number(),
+    // Inert legacy: the shop no longer charges delivery (riders bill the
+    // customer directly), so every new order writes 0 here. Rows written
+    // while fees were still on keep their number and receipts/emails keep
+    // rendering it. See `lib/rules.ts` for what remains of the fee rules.
     delivery_fee: v.number(),
+    // Flat GH₵ off a counter order, set once at creation by staff holding
+    // `orders.discount`. Absent on every storefront checkout (`orders.place`
+    // does not even accept the field) and on orders taken before it existed.
+    discount: v.optional(v.number()),
     total: v.number(),
     items: v.array(
       v.object({

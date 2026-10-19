@@ -71,10 +71,25 @@ export function OrderReceipt({ order: o }: { order: Receipt }) {
           <span>Subtotal</span>
           <span>{money(o.subtotal, true)}</span>
         </div>
-        <div className="summary-row">
-          <span>Delivery</span>
-          <span>{money(o.delivery_fee, true)}</span>
-        </div>
+        {/* Legacy orders carry a stored fee and must still add up honestly
+            (subtotal + fee = total); new ones charge nothing — the rider
+            collects the delivery fee straight from the customer. */}
+        {o.delivery_fee > 0 ? (
+          <div className="summary-row">
+            <span>Delivery</span>
+            <span>{money(o.delivery_fee, true)}</span>
+          </div>
+        ) : o.fulfillment === "delivery" ? (
+          <p className="my-1 text-xs text-muted-foreground">
+            Delivery fee is paid directly to your rider.
+          </p>
+        ) : null}
+        {o.discount > 0 && (
+          <div className="summary-row">
+            <span>Discount</span>
+            <span>−{money(o.discount, true)}</span>
+          </div>
+        )}
         <div className="summary-row summary-total">
           <span>Total</span>
           <span>{money(o.total, true)}</span>

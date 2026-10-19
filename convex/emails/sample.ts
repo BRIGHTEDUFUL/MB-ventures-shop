@@ -17,8 +17,11 @@ const orderFields = (fulfillment: "delivery" | "pickup") => ({
   zone: "central",
   items: SAMPLE_ITEMS,
   subtotal: 3699,
-  delivery_fee: fulfillment === "pickup" ? 0 : 30,
-  total: fulfillment === "pickup" ? 3699 : 3729,
+  // The shop no longer charges delivery — the rider is paid directly by the
+  // customer — so a sample order books the same 0 fee real ones do.
+  delivery_fee: 0,
+  discount: 0,
+  total: 3699,
   // Mirrors `orders.place`: the method is derived from fulfilment, never typed.
   payment_method: fulfillment === "pickup" ? "pay_at_store" : "cod",
   provider: "",

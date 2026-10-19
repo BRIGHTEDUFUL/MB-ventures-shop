@@ -5,6 +5,107 @@ still open is listed under **Open**.
 
 ---
 
+## Paystack online payments live + nationwide prepay rule (19 October 2026)
+
+**Status:** Complete — live keys configured, dashboard verified, rules shipped
+through the full quality gate.
+
+### What was asked
+
+Connect the payment system with the live Paystack keys, then enforce the
+location rule: Accra customers keep paying in person (at the shop) or on
+delivery, while customers outside Accra pay online before delivery.
+
+### What changed
+
+**Configuration (no code needed — production only):**
+
+- `PAYSTACK_SECRET_KEY` (live) set on the production deployment via
+  `npx convex env set … --env-file .env.prod.local` — never written to a repo
+  file. `SITE_URL` was already `https://mbventuresgh.com`, so every
+  initialisation carries the correct `callback_url`.
+- `/staff → Customization → Ordering` → **Accept online payments (Paystack)**
+  ticked on production (verified: `store:get` → `paystack_enabled: true`).
+- Paystack dashboard (Live): callback URL set to
+  `https://mbventuresgh.com/paystack/return`, webhook URL set to
+  `https://necessary-newt-861.convex.site/webhooks/paystack`.
+- Smoke test: live `/transaction/initialize` (GH₵1, GHS) returned an
+  authorization URL; the webhook route now answers 401 to unsigned bodies
+  (401, not 503 — the key is live and the signature gate is active).
+
+**Code (nationwide prepay rule):**
+
+- `convex/lib/rules.ts` — new pure `offlinePaymentProblem(zone, fulfillment,
+payment)`: refuses cash for `nationwide` + delivery; Accra
+  (`central`/`greater`) delivery and pickup keep their offline options.
+- `convex/orders.ts` — `orders.place` enforces it server-side (the browser
+  cannot forge an offline nationwide order); staff counter orders stay exempt.
+- `src/routes/checkout.tsx` — checkout withdraws the "Pay on delivery" choice
+  for nationwide delivery, moves the selection to "Pay online now" and
+  explains why; while Paystack is switched off it tells nationwide shoppers to
+  call the shop or use a Greater Accra address.
+- Tests: `offlinePaymentProblem` unit cases in `order-rules.test.ts` and a
+  refusal + stock-intact case in `convex-mutations.test.ts`.
+
+**Gate:** tsc 0 errors · lint 0 errors (7 known warnings) · 316/316 tests ·
+prettier clean · build succeeds. Shipped together with the counter-discount /
+rider-fee feature from the parallel session (two commits).
+
+---
+
+## No shop delivery fees (riders collect) + staff counter discounts (19 October 2026)
+
+**Status:** Complete — all gates green (316/316 vitest, 36/36 Playwright), deployed to dev + prod.
+
+### What was asked
+
+1. **Delivery fees are the rider's money.** The shop charges nothing for
+   delivery — riders collect their fee from the customer directly. Stop
+   charging it and stop showing fee numbers anywhere in the shop.
+2. **Counter discounts.** Staff enter a flat GH₵ amount when a customer asks
+   for one, when recording an order at the counter.
+
+### What changed — delivery fees
+
+- `orders.place` and `orders.staffCreate` now store `delivery_fee: 0`; the
+  total is `round2(subtotal − discount)` (`place` has no discount:
+  `round2(subtotal)`).
+- The zone-fee engine was deleted from `convex/lib/rules.ts` (`deliveryFee`,
+  `displayFees`, `remainingForFreeDelivery`, `DEFAULT_FEES`), together with the
+  free-delivery progress bar (`FreeDelivery`), the Customization → Delivery fees
+  tab (`DeliverySettings`), and every fee figure on checkout, cart, the product
+  page, `/delivery`, staff order screens, receipts and the order emails — all
+  replaced by "Delivery fee is paid directly to your rider."
+- Legacy orders keep their stored fee and still render it. The
+  `store_settings` fee fields, `saveDeliverySettings` and the
+  `catalogue.delivery` permission key remain as inert legacy (dropping the
+  permission key would break stored role overrides).
+
+### What changed — counter discounts
+
+- New permission **`orders.discount`** (floor staff; granted to staff + admin
+  by default; revocable per person in `/staff` → Team).
+  `orders.staffCreate` accepts a `discount`, validated server-side (finite,
+  ≥ 0, ≤ the server-priced subtotal) and stamped on the order timeline.
+- `/staff/orders/new` shows a discount field when the permission is granted,
+  with a live totals preview; receipts, the staff order page and the
+  `order-received` / `adminNewOrder` emails show a Discount row only when > 0.
+  Sales reports sum `order.total`, so revenue stays net of discounts.
+- Online checkout cannot discount — `place`'s arguments have no such field.
+
+### Also in this batch (second workstream, same tree)
+
+- **Nationwide delivery is prepay-only** (`offlinePaymentProblem` in
+  `convex/lib/rules.ts`): an online nationwide delivery order refuses
+  `payment: "offline"` and checkout withdraws that choice; counter orders are
+  exempt. With Paystack live the nationwide shopper prepaids in checkout.
+
+### Verified
+
+- `tsc` 0 errors · lint 0 errors (7 known warnings) · vitest **316/316** across
+  20 files · Prettier clean · `vite build` succeeds · Playwright **36/36**
+  (read-only).
+
 ## Web3Forms access key rotated (19 October 2026)
 
 **Status:** Complete — new key live on dev + prod, verified with a real send.

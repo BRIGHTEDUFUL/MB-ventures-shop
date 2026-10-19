@@ -25,7 +25,9 @@ export function orderEmailData(order: Order, extra: Record<string, unknown> = {}
       price: item.price,
     })),
     subtotal: order.subtotal,
+    // Inert legacy on old rows, 0 on everything the shop writes today.
     delivery_fee: order.delivery_fee,
+    discount: order.discount ?? 0,
     total: order.total,
     payment_method: order.payment_method,
     payment_status: order.payment_status,

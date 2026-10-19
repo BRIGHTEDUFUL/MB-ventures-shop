@@ -5,37 +5,33 @@ import { convexQueryOptions } from "@/lib/convex";
 import { api } from "../../../convex/_generated/api";
 import { pageHead, storeQuery } from "@/lib/store";
 import { type StorefrontTab } from "@/lib/home-content";
-import { DeliverySettings, StorefrontSettings } from "@/components/staff/home-editor";
+import { StorefrontSettings } from "@/components/staff/home-editor";
 
 export const Route = createFileRoute("/staff/customization")({
   head: () =>
     pageHead(
       "Customization",
-      "Homepage copy, featured products, announcement, WhatsApp, delivery fees and ordering.",
+      "Homepage copy, featured products, announcement, WhatsApp and ordering.",
     ),
   component: CustomizationPage,
 });
 
-/** Panes that share `catalogue.saveSettings`, plus the one that owns a mutation. */
-type TabId = StorefrontTab | "delivery";
-
-const TABS: { id: TabId; label: string }[] = [
+/** Panes that all save through `catalogue.saveSettings`. */
+const TABS: { id: StorefrontTab; label: string }[] = [
   { id: "homepage", label: "Homepage" },
   { id: "featured", label: "Featured" },
   { id: "trust", label: "Trust strip" },
   { id: "announcement", label: "Announcement" },
   { id: "contact", label: "Contact" },
   { id: "ordering", label: "Ordering" },
-  { id: "delivery", label: "Delivery fees" },
 ];
 
 function CustomizationPage() {
   const store = useQuery(storeQuery);
   const role = useQuery({ ...convexQueryOptions(api.users.myRole, {}) });
-  // One tab holds every pane that saves through `saveSettings`; the other
-  // swaps in the delivery-fee mutation. `StorefrontSettings` stays mounted
+  // Every pane saves through `saveSettings`. `StorefrontSettings` stays mounted
   // across the whole run so a half-filled form survives a tab change.
-  const [tab, setTab] = useState<TabId>("homepage");
+  const [tab, setTab] = useState<StorefrontTab>("homepage");
 
   if (store.isPending)
     return <p className="text-sm text-muted-foreground">Loading store settings…</p>;
@@ -48,7 +44,7 @@ function CustomizationPage() {
       <h2 className="page-title">Customization</h2>
       <p className="page-lead">
         Everything customers see — homepage copy, featured picks, the announcement bar, contact
-        details, delivery fees and the ordering switch.
+        details and the ordering switch.
       </p>
 
       <div
@@ -96,16 +92,14 @@ function CustomizationPage() {
       >
         {/* Stays mounted for every storefront pane (see StorefrontSettings). */}
         <StorefrontSettings tab={tab} settings={settings} products={products} />
-
-        {tab === "delivery" && <DeliverySettings settings={settings} />}
       </div>
 
       {/* On error the alert below speaks alone — showing "signed in as staff"
           alongside it would be a guess about a role that never loaded. */}
       {!role.isPending && !role.isError && (
         <p className="mt-8 text-xs text-muted-foreground">
-          Signed in as {role.data === "admin" ? "an admin" : "staff"} — delivery fees and all
-          storefront copy are yours to edit.
+          Signed in as {role.data === "admin" ? "an admin" : "staff"} — all storefront copy is yours
+          to edit.
         </p>
       )}
       {role.isError && (

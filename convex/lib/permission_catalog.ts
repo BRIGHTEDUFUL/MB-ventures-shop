@@ -55,6 +55,7 @@ export const PERMISSION_CATALOG: Record<PermissionKey, PermissionSpec> = {
   "orders.view": { label: "view orders", group: "Orders", floor: "staff" },
   "orders.create": { label: "record orders at the counter", group: "Orders", floor: "staff" },
   "orders.update": { label: "update orders", group: "Orders", floor: "staff" },
+  "orders.discount": { label: "apply a discount", group: "Orders", floor: "staff" },
   "reports.view": { label: "view reports", group: "Reporting", floor: "staff" },
   "activity.view": { label: "view the activity feed", group: "Reporting", floor: "staff" },
   "uploads.create": { label: "upload product photos", group: "Media", floor: "staff" },

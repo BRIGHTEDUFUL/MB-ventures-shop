@@ -1,9 +1,10 @@
 # Paystack online payments — design & operations
 
-**Status: implemented, local only (no deploys).** Checkout can take money online
-through [Paystack](https://paystack.com) while the pay-on-delivery /
-pay-at-shop options stay available. Nothing goes live until two steps are done
-later: the secret key is configured and the staff toggle is switched on.
+**Status: LIVE on production (19 October 2026).** Checkout can take money
+online through [Paystack](https://paystack.com) while the pay-on-delivery /
+pay-at-shop options stay available. The go-live record (secret key on the
+production deployment, staff switch on, dashboard callback + webhook URLs,
+live smoke test) is in §4.
 
 ---
 
@@ -13,6 +14,14 @@ later: the secret key is configured and the staff toggle is switched on.
   Checkout step 2 offers "Pay online now" only when the store settings switch
   (`store_settings.paystack_enabled`) is on; the default is off, so every
   existing flow, test and email behaves exactly as before.
+- **Outside Accra, delivery is prepay-only.** A checkout with
+  `zone: "nationwide"` + `fulfillment: "delivery"` refuses
+  `payment: "offline"` — in the UI (the cash option is withdrawn and the
+  choice moves to "Pay online now") and authoritatively in `orders.place`
+  via `offlinePaymentProblem` (`convex/lib/rules.ts`). Accra
+  (`central`/`greater`) delivery and shop pickup keep cash-on-delivery and
+  pay-at-shop. Counter orders (`orders.staffCreate`) are exempt: the sale
+  is already happening in person.
 - **The gateway is configured entirely by environment.** While
   `PAYSTACK_SECRET_KEY` is unset the backend refuses to start a payment with a
   clear message — same dry-run philosophy as Web3Forms email. No code changes
@@ -88,29 +97,34 @@ New order fields (all optional, so every existing row keeps validating):
 `paystack_access_code`, `paystack_authorization_url`, `payment_amount_pesewas`,
 `paid_at`, `payment_channel`, `paystack_transaction_id`.
 
-## 4. Configuration (when the keys arrive)
+## 4. Configuration — done, live 19 October 2026
 
-```sh
-# Convex dev deployment (local work)
-npx convex env set PAYSTACK_SECRET_KEY sk_test_…        # dev deployment
-# Convex production (later, when deploying)
-npx convex env set PAYSTACK_SECRET_KEY sk_live_… --env-file .env.prod.local
-```
+**Production go-live record (19 Oct 2026):**
 
-Then `/staff → Customization → Ordering` → tick **Accept online payments
-(Paystack)** and save.
+1. Secret on the production deployment (set via CLI only — never written to a
+   repo file):
+   `npx convex env set PAYSTACK_SECRET_KEY sk_live_… --env-file .env.prod.local`
+2. Staff switch on: `/staff → Customization → Ordering` → **Accept online
+   payments (Paystack)** ticked → saved (verified server-side:
+   `store:get` → `paystack_enabled: true`).
+3. Paystack dashboard (Developers → API configuration, Live mode):
+   - **Live callback URL** → `https://mbventuresgh.com/paystack/return`
+   - **Live webhook URL** → `https://necessary-newt-861.convex.site/webhooks/paystack`
+4. Smoke test: a live `POST /transaction/initialize` (GH₵1, GHS, the callback
+   URL above) returned an authorization URL — key, currency and callback all
+   accepted. The webhook route answers **401** to unsigned bodies (it answered
+   503 only while the key was unset).
 
-Optional: set the return URL in the Paystack dashboard to
-`https://mbventuresgh.com/paystack/return` (in production Paystack redirects
-there with `?reference=…` appended). When `SITE_URL` is an https origin the
-backend also passes `callback_url` on every initialisation; localhost is left
-to the dashboard default because Paystack does not accept http callbacks.
+The same procedure with a `sk_test_…` key (no `--env-file`) sets up the dev
+deployment. When `SITE_URL` is an https origin the backend also passes
+`callback_url` on every initialisation; localhost is left to the dashboard
+default because Paystack does not accept http callbacks.
 
 The webhook endpoint is the Convex HTTP route
 `<CONVEX_SITE_URL>/webhooks/paystack` (production:
-`https://necessary-newt-861.convex.site/webhooks/paystack`) — register it in
-the Paystack dashboard so payments confirm even when a shopper's browser
-never returns. It verifies `x-paystack-signature` before believing anything.
+`https://necessary-newt-861.convex.site/webhooks/paystack`) — registered in
+the Paystack dashboard so payments confirm even when a shopper's browser never
+returns. It verifies `x-paystack-signature` before believing anything.
 
 Environment variables (documented in `.env.example`):
 
@@ -134,6 +148,10 @@ Environment variables (documented in `.env.example`):
    `applyStockChange` with operation keys.
 5. **The secret never leaves the server.** No Paystack call is made from the
    browser; the client only receives an `authorization_url` to redirect to.
+6. **Nationwide delivery never ships unpaid.** `orders.place` refuses
+   `payment: "offline"` for `zone: "nationwide"` + delivery
+   (`offlinePaymentProblem`) and checkout withdraws the cash choice — a
+   long-haul courier order is always prepaid. Counter orders are exempt.
 
 ## 6. Testing locally (before any deploy)
 

@@ -14,7 +14,7 @@ import {
 import { ProductGallery } from "@/components/product-gallery";
 import { VariantPicker } from "@/components/variant-picker";
 import { buildGallery, images } from "@/lib/store-images";
-import { storeQuery, pageHead, money, specs, delivery, zones, whatsappHref } from "@/lib/store";
+import { storeQuery, pageHead, money, specs, zones, whatsappHref } from "@/lib/store";
 import { findVariantByOptions } from "../../convex/lib/variants";
 import { toast } from "sonner";
 export const Route = createFileRoute("/product/$slug")({
@@ -253,9 +253,11 @@ function ProductPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-3 text-sm">
-              {money(delivery(settings, zone, price * effectiveQty))} ·{" "}
-              {zones.find((z) => z.id === zone)?.time}
+            <p className="mt-3 text-sm">{zones.find((z) => z.id === zone)?.time}</p>
+            {/* No fee figure: the rider quotes and collects the delivery fee
+                straight from the customer. */}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Delivery fee is paid directly to your rider.
             </p>
             <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="size-4" />

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useConvexMutation } from "@convex-dev/react-query";
 import { toast } from "sonner";
-import { storeQuery, pageHead, money, displayFees, whatsappHref, errorMessage } from "@/lib/store";
+import { storeQuery, pageHead, whatsappHref, errorMessage } from "@/lib/store";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { PageNotFound } from "@/components/store-ui";
@@ -33,10 +33,7 @@ function Content() {
   const { page } = Route.useParams(),
     { data } = useQuery(storeQuery),
     s = data?.settings;
-  // Fees come from settings once loaded and from the published defaults before;
-  // a saved 0 is a real "free" value and must not be replaced by a default.
-  const fees = displayFees(s),
-    whatsapp = s ? whatsappHref(s) : null;
+  const whatsapp = s ? whatsappHref(s) : null;
   return (
     <div className="page-content wrap">
       <h1 className="page-title">{titles[page]}</h1>
@@ -61,22 +58,22 @@ function Content() {
               <tbody>
                 <tr>
                   <th>Accra Central & Abelenkpe</th>
-                  <td>{money(fees.central_fee)} · Same or next day</td>
+                  <td>Same or next day</td>
                 </tr>
                 <tr>
                   <th>Greater Accra</th>
-                  <td>{money(fees.greater_fee)} · 1–2 business days</td>
+                  <td>1–2 business days</td>
                 </tr>
                 <tr>
                   <th>Other regions</th>
-                  <td>{money(fees.nationwide_fee)} · 2–4 business days</td>
+                  <td>2–4 business days</td>
                 </tr>
               </tbody>
             </table>
             <p>
-              Greater Accra includes Tema, Kasoa, Adenta and Teshie. Free delivery on orders over{" "}
-              {money(fees.free_threshold)}. Timing is an estimate, subject to location and courier
-              availability.
+              Greater Accra includes Tema, Kasoa, Adenta and Teshie. Delivery fee is paid directly
+              to your rider — the shop never charges it online. Timing is an estimate, subject to
+              location and courier availability.
             </p>
             <h2 className="text-xl text-foreground">Abelenkpe in-store pickup</h2>
             <p>
@@ -111,7 +108,7 @@ function Content() {
             },
             {
               q: "Do you offer nationwide delivery?",
-              a: `Yes. Delivery fees depend on your zone, with free delivery on orders over ${money(fees.free_threshold)}.`,
+              a: "Yes. Delivery is available across Ghana; the delivery fee is paid directly to your rider, so the shop never charges it online.",
             },
             {
               q: "Why are items marked sample?",
@@ -158,8 +155,9 @@ function Content() {
             </p>
             <p>
               No payment is taken online. Delivery orders pay the courier in cash when the order
-              arrives. Pickup orders pay at the Abelenkpe shop counter when collecting. An order may
-              be cancelled before it is dispatched; contact the shop with your order reference.
+              arrives — this includes the delivery fee the rider collects directly. Pickup orders
+              pay at the Abelenkpe shop counter when collecting. An order may be cancelled before it
+              is dispatched; contact the shop with your order reference.
             </p>
             <p>
               Delivery timelines are estimates. Contact the shop for changes, cancellation, returns

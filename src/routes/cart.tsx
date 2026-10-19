@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCart } from "@/components/store-provider";
-import { CartLines, FreeDelivery } from "@/components/store-ui";
+import { CartLines } from "@/components/store-ui";
 import { money, pageHead } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -31,13 +31,13 @@ function CartPage() {
           </div>
           <aside className="solid-panel h-fit">
             <h2 className="text-xl">Order summary</h2>
-            <FreeDelivery />
             <div className="summary-row summary-total">
               <span>Subtotal</span>
               <span>{money(cart.subtotal, true)}</span>
             </div>
             <p className="my-5 text-xs text-muted-foreground">
-              Delivery calculated at checkout. Payments are always confirmed by our shop team.
+              Delivery fee is paid directly to your rider. Payments are always confirmed by our shop
+              team.
             </p>
             <p className="notice mb-4">
               Placing an order needs an MB Ventures GH account — it is how we link the order to you

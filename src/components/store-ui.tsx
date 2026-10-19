@@ -5,9 +5,8 @@ import { Plus, Minus, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
 import { lineKey } from "@/lib/cart";
-import { type Product, money, specs, storeQuery, displayFees } from "@/lib/store";
+import { type Product, money, specs, storeQuery } from "@/lib/store";
 import { images, imageSize } from "@/lib/store-images";
-import { remainingForFreeDelivery } from "../../convex/lib/rules";
 export function ProductCard({ product: p }: { product: Product }) {
   const { add } = useCart();
   // Badge color carries the information: green in stock, solid green shouts
@@ -207,29 +206,6 @@ export function CartLines() {
         );
       })}
     </>
-  );
-}
-export function FreeDelivery() {
-  const { subtotal } = useCart(),
-    { data } = useQuery(storeQuery);
-  // A saved threshold of 0 means "free delivery is on"; `|| 5000` would have
-  // resurrected the default and shown a progress bar for a perk already earned.
-  const threshold = displayFees(data?.settings).free_threshold;
-  return (
-    <div className="mt-6 text-xs text-muted-foreground">
-      <p>
-        {subtotal > threshold
-          ? "Your order qualifies for free delivery"
-          : `${money(remainingForFreeDelivery(threshold, subtotal))} away from free delivery`}
-      </p>
-      <progress
-        className="mt-3 h-1 w-full accent-link"
-        max={threshold + 1}
-        value={Math.min(subtotal, threshold + 1)}
-        aria-label="Free delivery progress"
-      />
-      <p className="mt-2 text-[10px]">Free delivery on orders over {money(threshold)}</p>
-    </div>
   );
 }
 export function SectionHeading({ title, category }: { title: string; category?: string }) {
