@@ -85,8 +85,12 @@ rider-fee feature from the parallel session (two commits).
 
 - New permission **`orders.discount`** (floor staff; granted to staff + admin
   by default; revocable per person in `/staff` → Team).
-  `orders.staffCreate` accepts a `discount`, validated server-side (finite,
-  ≥ 0, ≤ the server-priced subtotal) and stamped on the order timeline.
+  `orders.staffCreate` accepts an optional `discount` — blank means none
+  (full-price sale, no Discount row, no timeline entry); when given it is
+  validated server-side (finite, ≥ 0, ≤ the server-priced subtotal) and
+  stamped on the order timeline. The form warns live while typing (same
+  wording as the server) and never previews a negative total — the estimate
+  clamps at GH₵ 0.
 - `/staff/orders/new` shows a discount field when the permission is granted,
   with a live totals preview; receipts, the staff order page and the
   `order-received` / `adminNewOrder` emails show a Discount row only when > 0.

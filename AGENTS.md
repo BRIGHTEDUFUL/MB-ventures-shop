@@ -433,7 +433,11 @@ and `orders.staffCreate` keep working regardless.
   remain as inert legacy — no UI reaches them.
 - **Counter discounts** (`orders.discount` — floor **staff**, on by default for
   staff and admin, revocable per person in `/staff` → Team): `orders.staffCreate`
-  accepts `discount`, rejected if NaN/negative (in `validateManualOrder`) or
+  accepts an **optional** `discount` — the field is skippable end to end (the
+  input has no `required`, an empty value sends no `discount` key at all, and
+  the server's `v.optional` treats absent as none), so leaving it blank records
+  a plain full-price sale with no Discount row and no timeline entry. When
+  given, it is rejected if NaN/negative (in `validateManualOrder`) or
   larger than the server-priced subtotal, and stamped on the order timeline.
   Receipts, the staff order page and the `order-received` / `adminNewOrder`
   emails show a Discount row only when > 0; `stats` sums `order.total`, so

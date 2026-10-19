@@ -592,6 +592,16 @@ function NewOrder() {
                   />
                 </label>
               )}
+              {canDiscount &&
+                discount.trim() !== "" &&
+                (!Number.isFinite(discountNumber) || discountNumber < 0) && (
+                  <p className="text-sm text-destructive">Enter a discount of zero or more.</p>
+                )}
+              {canDiscount && discountNumber > subtotal && (
+                <p className="text-sm text-destructive">
+                  The discount can't be bigger than the order.
+                </p>
+              )}
               {discountValue > 0 && (
                 <div className="summary-row">
                   <span>Discount</span>
@@ -600,7 +610,7 @@ function NewOrder() {
               )}
               <div className="summary-row font-semibold">
                 <span>Total (estimate)</span>
-                <span>{money(subtotal - discountValue, true)}</span>
+                <span>{money(Math.max(0, subtotal - discountValue), true)}</span>
               </div>
             </div>
           </div>
