@@ -5,6 +5,113 @@ still open is listed under **Open**.
 
 ---
 
+## Full-stack live test of production (20 October 2026)
+
+**Status:** Complete — every layer exercised against live production (backend
+API, browser UI, payments, email, staff console); no application defects
+found; one real mobile layout defect on `/catalogue` at 320px found by the
+audit and fixed; test-matrix stock restored to the exact pre-test baseline.
+The dev-deployment e2e suites remain gated on `npx convex login` (listed
+under **Open** in the migration section below).
+
+### What was asked
+
+Run a comprehensive full-stack test of the production store — accounts,
+permissions, functions, payments, products, inventory, everything — fix any
+bugs found, and leave the stack updated and deployed.
+
+### What was tested (all against `mbventuresgh.com` + `earnest-fennec-109`)
+
+**API battery — 24/24 pass.** All four staff accounts sign in; roles and
+permission floors correct (staff floor = orders+products, attendant floor =
+orders+inventory, neither can manage team); team roster intact (6 members,
+2 admins, both real staff gmail accounts preserved with their overrides);
+`stats:overview` + `trends`; `health:report` (one benign finding: past orders
+keep their stock snapshots); email log queryable, 0 suppressed; full
+inventory write cycle on the hidden demo `gaming-desk` via the attendant
+token (adjust +10 → history rows → reverse → net 0); `payments:status`
+answers gracefully for unknown references.
+
+**Storefront browser sweep (Playwright, live) — 15/15 routes, zero JS
+errors.** Every route 200 with an h1 (incl. the styled 404); catalogue
+search/filter/sort; product page (price, og:image, canonical); variant chips
+toggle and flip `aria-pressed`; cart add → qty ± → remove round-trip clears
+`localStorage["mb-cart"]`; contact form submit (toast + message landed in the
+`/staff` inbox); track page graceful empty-state for a bogus reference.
+
+**Purchase use case — the full journey.** Customer account created through
+the real UI signup form; UI sign-in; product → cart → 2-step checkout →
+**order placed** (confirmation page shows the `MB-…` reference); the order
+appears in the account history and in guest tracking (reference + phone).
+Staff drove it `received → processing → completed` with payment confirmed
+(completion correctly refuses while payment is pending —
+`validateStatusChange`), and the shelf decremented exactly. **Cancel +
+restock:** a reserved order's cancellation returns its units exactly.
+**Paystack online:** `orders.place(payment:"online")` locked the
+server-computed pesewas amount; `payments.initialize` produced a real hosted
+checkout URL (`checkout.paystack.com/…`); `payments:status` = pending; staff
+cancellation of the unpaid order restocked exactly, and the money gate held —
+a cancelled order stays cancelled.
+
+**Staff console sweep (browser, entered through the app's own admin-unlock
+flow).** Manager (admin): `/admin-hub/<token>` sessionStorage unlock → all
+10 staff routes render real content; orders list shows references; search
+narrows to a reference; order detail renders customer + money; messages
+inbox shows the contact-form probe. Attendant (staff): dashboard, orders,
+products and inventory all load at their permission floor; the team roster is
+visible **by design** (`team.view` floor is staff) with zero management
+controls (admin-only in the UI) and zero server rights (`team.manage`
+mutations are refused).
+
+**Email pipeline + webhook.** Per order: `admin-new-order` +
+`order-received` on placement, `order-cancelled` / `order-completed` on
+transitions — 5/5 recent sends all `sent`, 0 suppressed. `POST` to the new
+`webhooks/paystack` route answers **401 to unsigned bodies** — the signature
+gate is live on the new deployment and the Paystack dashboard now points at
+it, so real charges confirm server-side.
+
+### Findings (all design, not bugs)
+
+- The staff console is gated for **admin** accounts behind
+  `/admin-hub/<token>` (sessionStorage unlock, cleared when the tab closes) —
+  direct URL visits show "Access restricted". Staff accounts are unaffected.
+  The owner sees the redirect once per new session — intended behaviour.
+- `team.view` is staff-floor: every staff member can see who else has access;
+  only admins get management controls and only admins pass the server guard.
+- Raw REST error envelopes redact plain errors (`Server Error` + `errorData`);
+  the app's `errorMessage()` unwraps `ConvexError.data.message` correctly in
+  every UI path tested (wrong password, out of stock, order terms, etc.).
+
+### Test residue (documented, not hidden)
+
+Four test orders exist under customer "MB Test Shopper"
+(`info@mbventuresgh.com`), each carrying a "Full-stack test…" staff note:
+`MB-4549…` cancelled + restocked · `MB-399C…` completed + paid (GH₵90 — the
+fulfilment proof; completed orders are immutable by design) · `MB-7B95…`
+cancelled + restocked · `MB-DB99…` cancelled online order (its Paystack
+transaction simply expires). The test product
+(`360-adjustable-rotating-phone-tablet-stand-silver`) was returned to its
+exact pre-test baseline (stock 2, reserved 0) with one documented
+`inventory:adjust`.
+
+### Mobile audit + fix
+
+The live mobile audit (14 routes × 320/375/414px) flagged one real defect: on
+`/catalogue` at 320px the toolbar's inner control row didn't wrap, so the
+search box's min-width crushed the sort select to ~26px and overflowed the
+page by ~32px (plus two undersized tap targets at 375px). Fixed in
+`src/routes/catalogue.tsx` (control row now wraps and centres) and
+`src/styles.css` (scoped `≤767px` rules: the search/sort share rows with
+`flex: 1 1 <basis>`, the select keeps a 120px floor). All other 13 routes were
+clean; the audit re-run after redeploy reports CLEAN across the full matrix.
+
+### Gates
+
+tsc 0 · lint 0 errors (7 pre-existing warnings) · vitest 326/326 · prettier
+clean · production build green — before and after the mobile fix.
+
+---
+
 ## Convex account migration + full-stack repoint (20 October 2026)
 
 **Status:** Complete on production — backend, data, images and frontend all

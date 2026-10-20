@@ -339,7 +339,7 @@ function Catalogue() {
           {filtered.length} product{filtered.length === 1 ? "" : "s"}
           {q ? ` for “${q}”` : ""}
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="toolbar-search">
             <label className="sr-only" htmlFor="catalogue-search">
               Search products
