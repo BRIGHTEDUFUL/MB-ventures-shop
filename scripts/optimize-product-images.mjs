@@ -13,6 +13,7 @@
  *   node scripts/optimize-product-images.mjs                  # dry run (report only)
  *   node scripts/optimize-product-images.mjs --apply          # upload + repoint
  *   node scripts/optimize-product-images.mjs --apply --only k-desk --limit 3
+ *   node scripts/optimize-product-images.mjs --apply --concurrency 8
  *   node scripts/optimize-product-images.mjs --delete-old     # sweep replaced originals
  *
  * Env:
@@ -44,9 +45,20 @@ const APPLY = has("--apply");
 const DELETE_OLD = has("--delete-old");
 const ONLY = opt("--only", null);
 const LIMIT = Number(opt("--limit", "0")) || 0;
+const CONCURRENCY = Number(opt("--concurrency", "6")) || 6;
 
 const kb = (bytes) => Math.round(bytes / 1024);
 const STORAGE_RE = /^https:\/\/[^/]+\/api\/storage\/[A-Za-z0-9-]+$/;
+
+/** Replacements recorded by earlier runs (empty when there is no manifest yet). */
+function readManifest() {
+  try {
+    const parsed = JSON.parse(readFileSync(MANIFEST, "utf8"));
+    return Array.isArray(parsed.replaced) ? parsed.replaced : [];
+  } catch {
+    return [];
+  }
+}
 
 function convexUrl() {
   if (process.env.CONVEX_URL) return process.env.CONVEX_URL;
@@ -120,10 +132,12 @@ async function signIn(client) {
     provider: "password",
     params: { flow: "signIn", email, password },
   });
-  if (!raw?.token) {
+  // Convex Auth answers `{ tokens: { token, refreshToken } }`.
+  const token = raw?.tokens?.token ?? raw?.token;
+  if (!token) {
     throw new Error("Sign-in returned no session token — check the manager credentials.");
   }
-  client.setAuth(raw.token);
+  client.setAuth(token);
   console.log(`signed in as ${email}\n`);
 }
 
@@ -199,7 +213,27 @@ async function main() {
 
   const replaced = [];
   let savedBytes = 0;
-  for (const t of heavy) {
+
+  const saveManifest = () =>
+    writeFileSync(
+      MANIFEST,
+      `${JSON.stringify(
+        {
+          run_at: new Date().toISOString(),
+          // Merge with any earlier run so a later `--delete-old` sweep still
+          // knows about every original this script replaced.
+          replaced: [
+            ...readManifest().filter((item) => !replaced.some((r) => r.old_url === item.old_url)),
+            ...replaced,
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+  /** One image: download → re-encode → upload → repoint. Errors stay local. */
+  async function optimizeOne(t) {
     try {
       const original = Buffer.from(await (await fetch(t.url)).arrayBuffer());
       const out = await sharp(original)
@@ -210,17 +244,16 @@ async function main() {
         console.log(
           `  skip ${t.slug} (${t.field}) — no gain (${kb(original.length)} -> ${kb(out.length)} KB)`,
         );
-        continue;
+        return;
       }
       const newUrl = await uploadWebp(client, out);
-      const patchArgs = { field: t.field, new_url: newUrl };
+      const patchArgs = { field: t.field, slug: t.slug, new_url: newUrl };
       if (t.field === "gallery") patchArgs.gallery_index = t.gallery_index;
       if (t.field === "variant_image") patchArgs.variant_key = t.variant_key;
-      patchArgs.slug = t.slug;
       const result = await client.mutation("photos:retargetImage", patchArgs);
       if (!result?.changed) {
         console.log(`  skip ${t.slug} (${t.field}) — retarget reported no change`);
-        continue;
+        return;
       }
       savedBytes += original.length - out.length;
       replaced.push({
@@ -233,12 +266,9 @@ async function main() {
         old_kb: original.length,
         new_kb: out.length,
       });
+      saveManifest();
       console.log(
         `  OK   ${String(kb(original.length)).padStart(5)} -> ${String(kb(out.length)).padStart(4)} KB  ${t.slug} (${t.field})`,
-      );
-      writeFileSync(
-        MANIFEST,
-        `${JSON.stringify({ run_at: new Date().toISOString(), replaced }, null, 2)}\n`,
       );
     } catch (err) {
       const message = err?.message ?? String(err);
@@ -248,6 +278,20 @@ async function main() {
       }
     }
   }
+
+  // Downloads dominate (a ~2 MB original takes seconds on a shop connection),
+  // so a small pool keeps the pipe full without hammering the deployment.
+  const queue = [...heavy];
+  const workers = Math.max(1, Math.min(CONCURRENCY, queue.length));
+  await Promise.all(
+    Array.from({ length: workers }, async () => {
+      for (;;) {
+        const target = queue.shift();
+        if (target === undefined) return;
+        await optimizeOne(target);
+      }
+    }),
+  );
 
   console.log(
     `\nreplaced ${replaced.length}/${heavy.length} images — saved ${(savedBytes / 1024 / 1024).toFixed(1)} MB`,

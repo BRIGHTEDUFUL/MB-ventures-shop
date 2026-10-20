@@ -56,6 +56,7 @@ import type * as lib_variants from "../lib/variants.js";
 import type * as migrations from "../migrations.js";
 import type * as orders from "../orders.js";
 import type * as payments from "../payments.js";
+import type * as photos from "../photos.js";
 import type * as seed from "../seed.js";
 import type * as stats from "../stats.js";
 import type * as store from "../store.js";
@@ -117,6 +118,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   orders: typeof orders;
   payments: typeof payments;
+  photos: typeof photos;
   seed: typeof seed;
   stats: typeof stats;
   store: typeof store;
