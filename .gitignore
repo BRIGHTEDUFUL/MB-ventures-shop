@@ -7,6 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Agent scratch files (never commit temporary probes/manifests)
+.tmp-*
+
 node_modules
 dist
 dist-ssr
