@@ -17,8 +17,8 @@
 
 ### 2. Backend (Convex Cloud)
 
-- **Production URL:** https://necessary-newt-861.convex.cloud
-- **Dashboard:** https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+- **Production URL:** https://earnest-fennec-109.convex.cloud
+- **Dashboard:** https://dashboard.convex.dev
 - **Status:** Deployed and configured ✅
 - **Email System:** Live (Web3Forms) ✅
 - **Environment Variables:** Set correctly ✅
@@ -113,7 +113,7 @@ certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 ### On Hostinger VPS (.env.local)
 
 ```env
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
@@ -256,7 +256,7 @@ As admin at /staff:
 
 ### Convex Dashboard
 
-Monitor at: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+Monitor at: https://dashboard.convex.dev
 
 - Function logs (real-time)
 - Email queue (emailLogs table)
@@ -294,7 +294,7 @@ free -m
 
 ### Dashboards
 
-- **Convex:** https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+- **Convex:** https://dashboard.convex.dev
 - **GitHub:** https://github.com/BRIGHTEDUFUL/MB-ventures-shop
 
 ### Scripts

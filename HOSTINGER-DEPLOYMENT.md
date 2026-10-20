@@ -126,9 +126,9 @@ nano .env.local
 
 ```env
 # Production Convex Deployment
-CONVEX_DEPLOYMENT=prod:necessary-newt-861
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+CONVEX_DEPLOYMENT=prod:earnest-fennec-109
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 
 # Domain (must match actual domain)
 VITE_SITE_URL=https://mbventuresgh.com
@@ -743,7 +743,7 @@ dpkg-reconfigure --priority=low unattended-upgrades
 **Backend (Convex):**
 
 - Dashboard: https://dashboard.convex.dev
-- Deployment: prod:necessary-newt-861
+- Deployment: prod:earnest-fennec-109
 
 **Repository:**
 

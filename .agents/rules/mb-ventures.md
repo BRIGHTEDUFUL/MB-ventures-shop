@@ -46,7 +46,7 @@ git add -A; git push origin main
 ## Live store facts
 
 - Site: https://mbventuresgh.com
-- Convex prod: necessary-newt-861
+- Convex prod: earnest-fennec-109
 - Ordering: ENABLED
 - Real products: 11 (see AGENTS.md §8)
 - Hero image key: `hero-workspace` → `public/images/hero-workspace.webp`

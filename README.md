@@ -86,8 +86,8 @@ Read `AGENTS.md` for the full set of invariants before changing anything in `con
 
 ## Deployments
 
-- **Dev:** `npm run dev` targets dev deployment `dev:stoic-elephant-714` (configured in `.env.local`).
-- **Prod Convex:** `npx convex deploy --env-file .env.prod.local` targets `prod:necessary-newt-861`.
+- **Dev:** `npm run dev` targets dev deployment `dev:wonderful-porpoise-243` (configured in `.env.local`).
+- **Prod Convex:** `npx convex deploy --env-file .env.prod.local` targets `prod:earnest-fennec-109`.
 - **Prod Frontend:** GitHub Actions (`deploy-hostinger.yml`) builds and deploys to Hostinger VPS on every push to `main`.
 - **Inventory migration:** `npx convex run inventory_import:apply --env-file .env.prod.local` (idempotent — safe to re-run).
 

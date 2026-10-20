@@ -57,8 +57,8 @@
 cd /var/www/mbventuresgh
 
 cat > .env.local << 'EOF'
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
@@ -107,8 +107,8 @@ cat .env.local
 **Should show:**
 
 ```
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418

@@ -51,8 +51,8 @@ All previously blocked items are now **COMPLETE**:
 ### Deployments
 
 ```
-Dev:  dev:stoic-elephant-714        ✅ Email live
-Prod: prod:necessary-newt-861       ✅ Fully configured
+Dev:  dev:wonderful-porpoise-243        ✅ Email live
+Prod: prod:earnest-fennec-109       ✅ Fully configured
 ```
 
 ### Email Configuration
@@ -87,7 +87,7 @@ Ready to go live in 6 steps:
 npx convex deploy --prod
 ```
 
-This deploys all Convex functions to `prod:necessary-newt-861`
+This deploys all Convex functions to `prod:earnest-fennec-109`
 
 ### 2. Build Frontend
 
@@ -232,8 +232,8 @@ Before announcing to customers:
 
 **Convex Dashboard:**
 
-- Production: https://dashboard.convex.dev (prod:necessary-newt-861)
-- Development: https://dashboard.convex.dev (dev:stoic-elephant-714)
+- Production: https://dashboard.convex.dev (prod:earnest-fennec-109)
+- Development: https://dashboard.convex.dev (dev:wonderful-porpoise-243)
 
 ### Support Commands
 

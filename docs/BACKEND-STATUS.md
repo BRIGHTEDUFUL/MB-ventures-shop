@@ -7,15 +7,15 @@
 
 ### Development Deployment
 
-- **URL:** https://stoic-elephant-714.convex.cloud
-- **Dashboard:** https://dashboard.convex.dev/t/synthxos/shop/stoic-elephant-714
+- **URL:** https://wonderful-porpoise-243.convex.cloud
+- **Dashboard:** https://dashboard.convex.dev
 - **Status:** ✅ Deployed and synced (as of 17:16:36)
 - **Last Deploy:** Successfully compiled and pushed all functions
 
 ### Production Deployment
 
-- **URL:** https://necessary-newt-861.convex.cloud
-- **Dashboard:** https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+- **URL:** https://earnest-fennec-109.convex.cloud
+- **Dashboard:** https://dashboard.convex.dev
 - **Status:** ✅ Deployed and synced
 - **Recent Changes:** Added `products.by_barcode` and `products.by_sku` indexes
 - **Schema:** Validated successfully
@@ -352,7 +352,7 @@
 
 ### Monitoring
 
-- Dashboard: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+- Dashboard: https://dashboard.convex.dev
 - Function logs available in dashboard
 - Email log table tracks all sends
 - Activity feed logs all admin actions

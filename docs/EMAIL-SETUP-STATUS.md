@@ -1,7 +1,7 @@
 # Email System Setup Status
 
 **Date:** October 9, 2026  
-**Deployment:** dev:stoic-elephant-714  
+**Deployment:** dev:wonderful-porpoise-243  
 **Last verified:** October 19, 2026 — end-to-end send through the real
 production path on both deployments (see **Verification** below).
 
@@ -94,7 +94,7 @@ Maximum allowed: 5000 emails/day
 
 ### For Production Deployment
 
-Production (`prod:necessary-newt-861`) is already deployed. To re-apply:
+Production (`prod:earnest-fennec-109`) is already deployed. To re-apply:
 
 1. **Set the production site URL:**
 

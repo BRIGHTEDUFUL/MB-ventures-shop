@@ -12,11 +12,12 @@ import { waitForHydration } from "./helpers";
  * test:e2e:live` (which sets E2E_LIVE=1) or `E2E_LIVE=1 npx playwright test
  * e2e/variants.spec.ts`. A plain `npm run test:e2e` never touches it.
  *
- * Two fixtures are used. `gaming-desk` is a hidden demo product, so giving it
- * options cannot surface anywhere public — it is where the editor's create
- * path is proven. `luminous-rgb-mouse-pad` is a live two-axis product that
- * already sells in Black/White × Standard/XL; the shopper buys one combination
- * and the order is cancelled at the end, which restocks the option, so the run
+ * Two fixtures are used, both in the dev deployment. `gaming-desk` is a
+ * hidden demo product, so giving it options cannot surface anywhere public —
+ * it is where the editor's create path is proven. `luminous-rgb-mouse-pad` is
+ * a prepared fixture product selling in Black/White × Standard/XL (the live
+ * catalogue dropped the original); the shopper buys one combination and the
+ * order is cancelled at the end, which restocks the option, so the run
  * leaves dev stock as it found it.
  */
 const STAFF_EMAIL = process.env.E2E_STAFF_EMAIL ?? "e2e.staff@example.com";

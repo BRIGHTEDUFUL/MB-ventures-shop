@@ -26,7 +26,9 @@ const WIDTHS = [320, 375, 414];
 const ROUTES = [
   "/",
   "/catalogue",
-  "/product/monitor-light-bar",
+  // The one product slug shared by the dev fixture catalogue (inventory_import)
+  // and the live catalogue, so this audit reads the same page either way.
+  "/product/electric-standing-desk-rgb-160",
   "/cart",
   "/checkout",
   "/track",

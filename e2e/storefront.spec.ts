@@ -166,7 +166,7 @@ test.describe("Storefront badges & contact", () => {
     // nothing to look at.
     test.skip(
       (await group.count()) === 0,
-      "no options fixture in dev yet — run `npm run test:e2e:live` once",
+      "no options fixture in dev yet — run the live suite once",
     );
     const chips = group.getByRole("button");
     expect(await chips.count(), "the Colour axis should offer its values").toBeGreaterThan(1);

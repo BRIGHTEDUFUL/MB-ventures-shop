@@ -6,7 +6,7 @@
 ## Quick orientation
 
 - **Live store:** https://mbventuresgh.com — ordering is enabled, real products in stock
-- **Backend:** Convex (`convex/`) — `prod:necessary-newt-861`
+- **Backend:** Convex (`convex/`) — `prod:earnest-fennec-109`
 - **Frontend:** TanStack Start SSR → Hostinger VPS via GitHub Actions
 - **Auth:** Email + password only (Convex Auth). No OAuth.
 - **Email:** Web3Forms. No Resend.

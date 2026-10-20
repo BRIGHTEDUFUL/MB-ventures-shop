@@ -10,8 +10,8 @@
 
 ```env
 # MB Ventures GH - Production Environment
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
@@ -75,8 +75,8 @@ WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
 cd /var/www/mbventuresgh
 
 cat > .env.local << 'EOF'
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
@@ -119,8 +119,8 @@ rm -rf node_modules .output .vinxi .tanstack
 
 # 5. Create environment file
 cat > .env.local << 'EOF'
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
 WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
@@ -177,8 +177,8 @@ curl https://mbventuresgh.com
 ### Production URLs:
 
 - **Site**: https://mbventuresgh.com
-- **Convex Backend**: https://necessary-newt-861.convex.cloud
-- **Convex Dashboard**: https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+- **Convex Backend**: https://earnest-fennec-109.convex.cloud
+- **Convex Dashboard**: https://dashboard.convex.dev
 
 ### Email:
 

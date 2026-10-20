@@ -5,6 +5,100 @@ still open is listed under **Open**.
 
 ---
 
+## Convex account migration + full-stack repoint (20 October 2026)
+
+**Status:** Complete on production — backend, data, images and frontend all
+served from the new Convex account; every SSR route answers 200 again. Two
+follow-ups are user/dashboard actions (below under **Open**).
+
+### What was asked
+
+The old Convex account (`necessary-newt-861`) was disabled, taking the whole
+store down with it (every SSR route 500'd). Migrate the backend — functions,
+data and Convex-hosted images — to the user's new Convex account with zero
+loss, repoint the full stack (backend + Hostinger frontend), deploy, and
+verify auth, roles, email, products and payments end to end.
+
+### What changed
+
+**Backend (`earnest-fennec-109`, prod deploy key in `.env.prod.local`):**
+
+- Full `convex export` of the disabled deployment (backed up first:
+  `prod-snapshot.zip` + env dump, kept outside the repo) → `convex import`
+  into the new account: **1,161 documents across 22 tables + all 232 `_storage`
+  files**, byte-faithful. File IDs survive the import, so product photos were
+  migrated by importing `_storage` and rewriting the hostname in every
+  reference (`internal.migrations.rewriteStorageHost`, idempotent, dry-run
+  capable — real run rewrote 109 documents / 218 refs; a verification dry run
+  afterwards reports 0).
+- Functions redeployed (34 indexes), all 8 env vars re-set on the new
+  deployment and verified value-for-value; one stray garbage variable removed.
+- Verified: `store:get` serves the catalogue with 0 old-host references, a
+  storage file GET returns 200, `auth:signIn` (manager@) returns session
+  tokens on the new backend.
+
+**Frontend (Hostinger, `mbventuresgh.com`):**
+
+- Root cause of the persistent 500s found and fixed: **vite gives
+  `process.env` priority over the committed `.env` files**, and the Hostinger
+  panel still carried the old `VITE_CONVEX_URL`/`VITE_CONVEX_SITE_URL` — the
+  server build baked the disabled backend's URL, so every SSR route streamed
+  a 500 while static assets stayed 200. Fixed by replacing the panel env
+  (full-set PUT, 8 keys) and rebuilding. Documented as the "panel-env gotcha"
+  in AGENTS.md.
+- New permanent tool: `scripts/deploy-hostinger-api.mjs` — deploys through the
+  public Hostinger API (upload → from-archive build → publish → restart →
+  smoke-check), token from `$HOSTINGER_API_TOKEN` or the opencode config,
+  never printed. AGENTS.md's deploy section now leads with it.
+- Verified live: `/`, `/catalogue` (incl. `?q=` search SSR), `/cart`,
+  `/checkout`, `/account`, `/track`, `/confirmation`, `/paystack/return`,
+  `/sitemap.xml`, `/robots.txt` all 200; the served bundle matches the local
+  build byte for byte.
+
+**Catalogue reality + test fixtures:**
+
+- The migrated data revealed the old deployment's catalogue had been replaced
+  (19 Oct) with a **~79-product supplier catalogue** — only
+  `electric-standing-desk-rgb-160` kept its slug from the original 11.
+  74/74 sitemap product pages verified 200 on production. Docs repointed
+  (AGENTS §8 marked historical, §11 "add a product" now staff-panel-first)
+  and `convex/inventory_import.ts` carries a do-not-re-run-against-prod
+  warning (it would resurrect ten superseded slugs as visible duplicates).
+- The read-only Playwright suite keeps its original fixture slugs on purpose:
+  it runs against **dev** (via `.env.local`), which is seeded by
+  `inventory_import` with light, locally-hosted images. Running it against
+  production instead times out — the supplier photos are ~2MB each at
+  ~425KB/s, so a catalogue page pulls ~24MB (`load` never settles inside the
+  90s budget). 15 checks still passed against prod (badges incl. the Sale
+  logic, og:image resolution, heading outlines, robots, noindex, tel links,
+  option-chip states). `scripts/mobile-audit.mjs` now audits
+  `/product/electric-standing-desk-rgb-160` — the one slug shared by the dev
+  fixture catalogue and the live one, so the audit reads the same page either
+  way.
+
+**Gate:** tsc 0 errors · lint 0 errors (7 known warnings) · 326/326 vitest ·
+prettier clean · production build green · live probes as above.
+
+### Open
+
+- **Dev deployment `wonderful-porpoise-243` not yet linked** — the stored CLI
+  token belongs to the disabled account. Needs one interactive
+  `npx convex login` on this machine (browser OAuth), then
+  `npx convex dev --once` + `seed:seed` + `inventory_import:apply` against
+  dev, after which `npm run test:e2e` (36/36 read-only) and
+  `npm run test:e2e:live` (purchase + options journeys) run normally.
+  `.env.local` already points at the new dev deployment (old values backed
+  up to Temp).
+- **Paystack webhook** still targets the old deployment — update it in the
+  Paystack dashboard (Developers → API configuration) to
+  `https://earnest-fennec-109.convex.site/webhooks/paystack`. Until then
+  online orders confirm only via the return page's `payments.verify` path.
+- **Performance recommendation:** the supplier photos are unoptimised (~2MB
+  PNG/JPG each); a downscale/WebP pass over the 232 storage files would cut
+  catalogue page weight by ~90% for Ghana mobile connections.
+
+---
+
 ## Paystack online payments live + nationwide prepay rule (19 October 2026)
 
 **Status:** Complete — live keys configured, dashboard verified, rules shipped

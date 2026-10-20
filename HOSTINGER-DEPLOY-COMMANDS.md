@@ -44,7 +44,7 @@ cat .env.local
 
 **Should show:**
 
-- VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
+- VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 - VITE_SITE_URL=https://mbventuresgh.com
 - WEB3FORMS_ACCESS_KEY=ab22e273...
 - And other production variables

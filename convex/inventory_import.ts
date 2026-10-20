@@ -3,6 +3,18 @@ import type { Doc } from "./_generated/dataModel";
 import { HOME_CONTENT_DEFAULTS } from "./lib/dto";
 import { applyStockChange } from "./lib/stock";
 
+/**
+ * ⚠️ CATALOGUE SUPERSEDED (20 Oct 2026): the live store no longer sells this
+ * list. Before the Convex account migration the old deployment's catalogue was
+ * replaced with a ~79-product supplier catalogue (AOC, ASUS, Royalstar, …)
+ * whose photos live in Convex storage; only `electric-standing-desk-rgb-160`
+ * kept its slug from this file. The data now lives in Convex, not in this
+ * file — so **do not run `inventory_import:apply` against production**: it
+ * would re-add ten vanished slugs as visible duplicates. The import remains
+ * valid (idempotent, safe to re-run) for seeding a fresh DEV deployment, which
+ * is what the read-only Playwright suite expects (light, locally-hosted
+ * fixture images).
+ */
 export const DEMO_SLUGS = [
   "standing-desk",
   "gaming-desk",

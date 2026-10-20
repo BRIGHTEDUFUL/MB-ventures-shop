@@ -3,7 +3,7 @@
 This file is the single source of truth for any AI IDE, agent, or collaborator
 working in this repository. Read it in full before touching `convex/` or any route file.
 
-**Last audited against the codebase: 19 October 2026.**
+**Last audited against the codebase: 20 October 2026.**
 
 ---
 
@@ -36,17 +36,17 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 
 ## 2. Tech stack
 
-| Layer       | Choice                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------ |
-| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                                                          |
-| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono                                          |
-| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions                                         |
-| Auth        | Convex Auth · email + password only · no OAuth · no email verify                                             |
-| Client data | TanStack Query via `@convex-dev/react-query`                                                                 |
-| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                                                      |
-| Payments    | Paystack online (opt-in, gated on `PAYSTACK_SECRET_KEY` + staff switch) · pay-on-delivery / pay-at-shop stay |
-| Tests       | Vitest (316 tests, 20 files) + Playwright (36 read-only + 11 live checks)                                    |
-| CI/CD       | Hostinger Node.js hosting via MCP deploys · GitHub Actions (secrets missing, skips)                          |
+| Layer       | Choice                                                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Framework   | TanStack Start (file routes, SSR) · React 19 · Vite                                                                     |
+| Styling     | Tailwind CSS v4 · shadcn/ui · Archivo / Public Sans / IBM Plex Mono                                                     |
+| Backend     | Convex (`convex/`) — schema, queries, mutations, scheduled functions                                                    |
+| Auth        | Convex Auth · email + password only · no OAuth · no email verify                                                        |
+| Client data | TanStack Query via `@convex-dev/react-query`                                                                            |
+| Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                                                                 |
+| Payments    | Paystack online (opt-in, gated on `PAYSTACK_SECRET_KEY` + staff switch) · pay-on-delivery / pay-at-shop stay            |
+| Tests       | Vitest (326 tests, 20 files) + Playwright (36 read-only + 11 live checks)                                               |
+| CI/CD       | Hostinger Node.js hosting via API script (`scripts/deploy-hostinger-api.mjs`) · GitHub Actions (secrets missing, skips) |
 
 ---
 
@@ -202,6 +202,7 @@ scripts/
   audit-screenshots.mjs        Screenshot audit helper
   run-live-e2e.mjs             Live e2e runner (places real orders)
   deploy-hostinger.sh          Manual SSH deploy script
+  deploy-hostinger-api.mjs     Hostinger API deploy (upload -> build -> poll)
   setup-production-env.sh      VPS environment setup
   pack-deploy.mjs              Build artifact packaging
 
@@ -484,7 +485,7 @@ from `@convex-dev/auth`.
 npm run dev   # runs vite dev + convex dev together
 ```
 
-`.env.local` (gitignored) → dev deployment `dev:stoic-elephant-714`.
+`.env.local` (gitignored) → dev deployment `dev:wonderful-porpoise-243`.
 
 ### Convex production deploy
 
@@ -492,35 +493,60 @@ npm run dev   # runs vite dev + convex dev together
 npx convex deploy --env-file .env.prod.local
 ```
 
-Targets `prod:necessary-newt-861`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` — never commit it.
+Targets `prod:earnest-fennec-109`. `.env.prod.local` holds `CONVEX_DEPLOY_KEY` — never commit it.
+
+> **Convex account migration (completed 20 Oct 2026):** the whole backend moved
+> off the disabled old account (`prod:necessary-newt-861`, dev
+> `dev:stoic-elephant-714`) onto this account (`earnest-fennec-109`, dev
+> `wonderful-porpoise-243`) with zero loss — all 1161 documents across 22 tables
+> and all 232 `_storage` files came over via `convex import`, image URLs were
+> rewritten old-host → new-host with `internal.migrations.rewriteStorageHost`
+> (dry-run capable; see `convex/migrations.ts`), and the 8 env secrets were
+> re-set from backup. The dashboard link for both deployments is
+> https://dashboard.convex.dev (the old `t/synthxos/shop/…` deep links died with
+> the old account). The **Paystack webhook** had to be re-registered by hand in
+> the Paystack dashboard (see `docs/PAYMENTS-PAYSTACK.md`).
 
 ### Frontend production deploy
 
 Deploys target the **new Hostinger account** (verified 15 Oct 2026): client
 `1023530876`, hosting user `u963034723`, Node.js site `mbventuresgh.com`
 (root `/home/u963034723/domains/mbventuresgh.com/public_html`, nitro app,
-Node 20, output `.output`). The Hostinger MCP token for this account lives in
+Node 20, output `.output`). The Hostinger API token for this account lives in
 `~/.config/opencode/opencode.jsonc` (never commit it).
 
-Deployed via **Hostinger MCP** (`hosting_deploy-js-application`): pack source
-with `node scripts/pack-deploy.mjs` (creates `deploy.zip` via `git archive HEAD`),
-then upload and trigger a server-side build through the MCP tool. The server runs
-`npm run build` with the environment variables set in the Hostinger control panel,
-publishes `.output`, and restarts the Node.js process. Poll
-`hosting_list-js-deployments` until the build state is `completed`.
+Deployed via **`scripts/deploy-hostinger-api.mjs`** (public Hostinger API, no
+MCP/SSH needed): pack source with `node scripts/pack-deploy.mjs` (creates
+`deploy.zip` via `git archive HEAD` — **commit first**), then run the script.
+It uploads `deploy.zip` (TUS), auto-detects build settings from the archive,
+starts a server-side build (Node 20, nitro) and polls until `completed`.
+The server runs `npm run build`, publishes `.output`, and restarts the Node.js
+process. The API token comes from `$HOSTINGER_API_TOKEN` or
+`~/.config/opencode/opencode.jsonc` (never commit either).
+
+> **Manual deploy:**
+>
+> ```powershell
+> node scripts/pack-deploy.mjs          # creates deploy.zip (git HEAD)
+> node scripts/deploy-hostinger-api.mjs # upload -> build -> poll -> smoke-check
+> ```
+
+> **Panel-env gotcha (bit us on 20 Oct 2026):** the server build inherits the
+> Node.js env vars set in the Hostinger control panel, and **vite gives
+> `process.env` priority over the committed `.env` files** when baking `VITE_*`
+> values. A stale panel value silently wins even when the archive carries the
+> right one — SSR then talks to the wrong Convex deployment: every SSR route
+> returns 500 (with `[Request ID: …] Server Error` in the stream) while
+> `/robots.txt` and static assets stay 200. When changing any committed
+> `VITE_*` value, also update the panel env
+> (`PUT /api/hosting/v1/accounts/{u}/websites/{d}/nodejs/builds/settings/env`
+> — a **full replace**: resend all keys — `VITE_CONVEX_URL`,
+> `VITE_CONVEX_SITE_URL`, `VITE_SITE_URL`, `NODE_ENV`, `PORT=3000`,
+> `WEB3FORMS_ACCESS_KEY`, `EMAIL_REPLY_TO`, `ADMIN_ALERT_EMAIL`) and rebuild.
 
 GitHub Actions (`.github/workflows/deploy-hostinger.yml`) also deploys on every
 push to `main` — but the `HOSTINGER_*` secrets are not configured in the repo,
-so the SSH deploy step skips. Use the MCP method above for frontend deploys until
-the secrets are added.
-
-> **Manual deploy (Hostinger MCP — recommended until GitHub secrets are set up):**
->
-> ```powershell
-> node scripts/pack-deploy.mjs   # creates deploy.zip
-> # Then use Hostinger MCP tool: hosting_deploy-js-application
-> # domain: mbventuresgh.com, archivePath: <absolute path to deploy.zip>
-> ```
+so the SSH deploy step skips. Use the API script above for frontend deploys.
 
 ### Full production deploy (both layers)
 
@@ -567,7 +593,7 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 316/316 across 20 test files
+npm test                  # 326/326 across 20 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 36/36 Playwright checks (read-only)
@@ -591,6 +617,18 @@ node scripts/mobile-audit.mjs https://mbventuresgh.com --email=… --password=�
 ---
 
 ## 8. Live store state (as of 15 Oct 2026)
+
+> **Catalogue change (19–20 Oct 2026):** between this snapshot and the Convex
+> account migration the old deployment's catalogue was replaced with a
+> **~79-product supplier catalogue** (AOC / ASUS / Royalstar / Lenovo / …)
+> whose photos live in Convex storage; only `electric-standing-desk-rgb-160`
+> kept its slug. The 5 hidden demo products are still preserved. The table
+> below is therefore **historical** — query `store:get` for current live
+> state. Two practical consequences: the live product pages serve ~2MB photos
+> per image (consider a downscale/WebP pass), and the read-only Playwright
+> suite keeps its fixture slugs because it runs against **dev**, which is
+> seeded from `inventory_import` (light local images) — never re-run
+> `inventory_import:apply` against production (see the warning in that file).
 
 ### Real products — all visible, active, 10 units each
 
@@ -678,6 +716,12 @@ Never log CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY, or JWKS.
 
 ### Add a new product
 
+Since the 19 Oct 2026 catalogue replacement, live products are managed in the
+staff panel (`/staff` → Products — photos upload to Convex storage). The
+`inventory_import` flow below is **historical**: it seeds the dev fixture
+catalogue and must not be run against production (it would re-add superseded
+slugs — see the warning in `convex/inventory_import.ts`).
+
 1. Add image to `public/images/products/<slug>.webp`
 2. Register key in `src/lib/store-images.ts` (base map + sizes map)
 3. Add entry to `REAL_PRODUCTS` in `convex/inventory_import.ts`
@@ -710,7 +754,7 @@ Already in place (verify rather than re-do):
 2. `/staff` → Customization → Ordering → **Accept online payments (Paystack)** ticked
 3. Paystack dashboard (Developers → API configuration, Live): callback URL
    `https://mbventuresgh.com/paystack/return`, webhook URL
-   `https://necessary-newt-861.convex.site/webhooks/paystack`
+   `https://earnest-fennec-109.convex.site/webhooks/paystack`
    (i.e. `<CONVEX_SITE_URL>/webhooks/paystack`) — details in
    `docs/PAYMENTS-PAYSTACK.md`
 

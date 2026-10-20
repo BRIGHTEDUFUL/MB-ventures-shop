@@ -109,7 +109,7 @@ New order fields (all optional, so every existing row keeps validating):
    `store:get` → `paystack_enabled: true`).
 3. Paystack dashboard (Developers → API configuration, Live mode):
    - **Live callback URL** → `https://mbventuresgh.com/paystack/return`
-   - **Live webhook URL** → `https://necessary-newt-861.convex.site/webhooks/paystack`
+   - **Live webhook URL** → `https://earnest-fennec-109.convex.site/webhooks/paystack`
 4. Smoke test: a live `POST /transaction/initialize` (GH₵1, GHS, the callback
    URL above) returned an authorization URL — key, currency and callback all
    accepted. The webhook route answers **401** to unsigned bodies (it answered
@@ -122,7 +122,7 @@ default because Paystack does not accept http callbacks.
 
 The webhook endpoint is the Convex HTTP route
 `<CONVEX_SITE_URL>/webhooks/paystack` (production:
-`https://necessary-newt-861.convex.site/webhooks/paystack`) — registered in
+`https://earnest-fennec-109.convex.site/webhooks/paystack`) — registered in
 the Paystack dashboard so payments confirm even when a shopper's browser never
 returns. It verifies `x-paystack-signature` before believing anything.
 

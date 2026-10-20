@@ -3,7 +3,7 @@
 **Date:** October 9, 2026  
 **Domain:** `https://mbventuresgh.com`  
 **Email:** `info@mbventuresgh.com`  
-**Deployment:** `prod:necessary-newt-861`
+**Deployment:** `prod:earnest-fennec-109`
 
 ---
 
@@ -25,8 +25,8 @@ All production environment variables have been set and verified.
 
 | Variable               | Value                                     | Purpose                          |
 | ---------------------- | ----------------------------------------- | -------------------------------- |
-| `VITE_CONVEX_URL`      | `https://necessary-newt-861.convex.cloud` | Production Convex API endpoint   |
-| `VITE_CONVEX_SITE_URL` | `https://necessary-newt-861.convex.site`  | Convex site URL                  |
+| `VITE_CONVEX_URL`      | `https://earnest-fennec-109.convex.cloud` | Production Convex API endpoint   |
+| `VITE_CONVEX_SITE_URL` | `https://earnest-fennec-109.convex.site`  | Convex site URL                  |
 | `VITE_SITE_URL`        | `https://mbventuresgh.com`                | Public storefront origin for SEO |
 
 ---
@@ -233,7 +233,7 @@ Displayed in:
 
 ### Development Testing
 
-Currently configured for `dev:stoic-elephant-714`:
+Currently configured for `dev:wonderful-porpoise-243`:
 
 ```powershell
 # Check dev email mode
@@ -349,8 +349,8 @@ npm start
 **Store Hours:** Monday to Saturday, 8:00 AM to 6:00 PM
 
 **Domain:** mbventuresgh.com  
-**Production Deployment:** prod:necessary-newt-861  
-**Development Deployment:** dev:stoic-elephant-714
+**Production Deployment:** prod:earnest-fennec-109  
+**Development Deployment:** dev:wonderful-porpoise-243
 
 ---
 

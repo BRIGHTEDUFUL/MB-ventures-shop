@@ -13,7 +13,7 @@ revoked on 2026-10-10 — the account now has no role row.
 
 ---
 
-## 1. Development — `dev:stoic-elephant-714`
+## 1. Development — `dev:wonderful-porpoise-243`
 
 Storefront: `http://localhost:5173` (`npm run dev`).
 
@@ -32,7 +32,7 @@ The two known passwords are the ones recorded in `e2e/purchase.spec.ts`
 (`STAFF_PASSWORD` / the shopper sign-up fill). `E2E_STAFF_PASSWORD` overrides the
 staff default when set — no `.env*` file sets it today, so the default stands.
 
-## 2. Production — `prod:necessary-newt-861`
+## 2. Production — `prod:earnest-fennec-109`
 
 Storefront: `https://mbventuresgh.com`.
 

@@ -3,7 +3,7 @@
 **Date:** 2025-01-10  
 **Project:** MB Ventures GH  
 **Domain:** mbventuresgh.com  
-**Backend:** Convex Cloud (necessary-newt-861.convex.cloud)
+**Backend:** Convex Cloud (earnest-fennec-109.convex.cloud)
 
 ---
 
@@ -92,7 +92,7 @@ cat .env.local
 
 **Expected variables in .env.local:**
 
-- ✓ `VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud`
+- ✓ `VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud`
 - ✓ `VITE_SITE_URL=https://mbventuresgh.com`
 - ✓ `NODE_ENV=production`
 - ✓ `WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418`
@@ -632,7 +632,7 @@ systemctl start fail2ban
 
 **Convex Dashboard:**
 
-- https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861
+- https://dashboard.convex.dev
 
 **GitHub Repository:**
 
