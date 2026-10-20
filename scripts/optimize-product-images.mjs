@@ -171,6 +171,7 @@ async function main() {
     }
     let deleted = 0;
     let kept = 0;
+    const problems = [];
     for (const item of manifest.replaced ?? []) {
       const r = await client.mutation("photos:deleteStorageIfUnreferenced", {
         url: item.old_url,
@@ -178,12 +179,21 @@ async function main() {
       if (r?.deleted) {
         deleted += 1;
         console.log(`  deleted ${kb(item.old_kb)} KB original of ${item.slug} (${item.field})`);
+      } else if (r?.error) {
+        problems.push({ item, error: r.error });
+        console.log(`  PROBLEM ${item.slug} (${item.field}) — ${r.error}`);
+      } else if (r?.missing) {
+        kept += 1;
+        console.log(`  kept ${item.slug} (${item.field}) — file already gone`);
       } else {
         kept += 1;
         console.log(`  kept ${item.slug} (${item.field}) — still referenced (${r?.refs ?? "?"})`);
       }
     }
-    console.log(`\nsweep done: ${deleted} originals deleted, ${kept} kept`);
+    console.log(
+      `\nsweep done: ${deleted} originals deleted, ${kept} kept, ${problems.length} problems`,
+    );
+    if (problems.length > 0) process.exitCode = 1;
     return;
   }
 

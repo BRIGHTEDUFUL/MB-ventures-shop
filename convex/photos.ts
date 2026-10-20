@@ -129,7 +129,14 @@ export const retargetImage = mutation({
 });
 
 /** Tables that can carry a storage URL on some field (same set as migrations). */
-type ImageTable = "products" | "product_variants" | "categories" | "orders" | "store_settings";
+const IMAGE_TABLES = [
+  "products",
+  "product_variants",
+  "categories",
+  "orders",
+  "store_settings",
+] as const;
+type ImageTable = (typeof IMAGE_TABLES)[number];
 
 /** How many rows in one table still mention `url` anywhere in their JSON.
  *  An order carries its own photo snapshot, so it counts as a reference too.
@@ -149,10 +156,23 @@ async function countReferences<T extends ImageTable>(
   return refs;
 }
 
+/** The `_storage` row whose served URL is exactly `url`, or null. */
+async function resolveStorageId(ctx: MutationCtx, url: string): Promise<Id<"_storage"> | null> {
+  const files = await ctx.db.system.query("_storage").take(REFERENCE_SCAN_LIMIT);
+  for (const file of files) {
+    if ((await ctx.storage.getUrl(file._id)) === url) return file._id;
+  }
+  return null;
+}
+
 /**
  * Delete one storage file, but only once no row references it any more.
  * Returns `{ deleted: false, refs }` when something still points at it — the
  * caller keeps the original and can retry after the remaining references move.
+ *
+ * Never throws for a storage problem: the sweep reports `{ deleted: false,
+ * error }` instead, so one odd file cannot stop a 200-file run and the caller
+ * gets the reason rather than a bare "Server Error".
  */
 export const deleteStorageIfUnreferenced = mutation({
   args: { url: v.string() },
@@ -162,20 +182,33 @@ export const deleteStorageIfUnreferenced = mutation({
       throw new ConvexError({ message: "That is not a Convex-storage URL." });
     }
 
-    const refs =
-      (await countReferences(ctx, "products", args.url)) +
-      (await countReferences(ctx, "product_variants", args.url)) +
-      (await countReferences(ctx, "categories", args.url)) +
-      (await countReferences(ctx, "orders", args.url)) +
-      (await countReferences(ctx, "store_settings", args.url));
+    let refs = 0;
+    for (const table of IMAGE_TABLES) {
+      try {
+        refs += await countReferences(ctx, table, args.url);
+      } catch (error) {
+        return { deleted: false, refs, error: `scan ${table}: ${String(error).slice(0, 300)}` };
+      }
+    }
     if (refs > 0) return { deleted: false, refs };
 
     const storageId = args.url.split("/api/storage/")[1];
-    // A row can outlive its file (an old deployment's host, a manual delete).
-    // Asking the storage table is cheap and keeps the sweep from throwing.
-    const file = await ctx.db.system.get(storageId as Id<"_storage">);
-    if (file === null) return { deleted: false, refs: 0, missing: true };
-    await ctx.storage.delete(storageId as Id<"_storage">);
-    return { deleted: true, refs: 0 };
+    try {
+      // New uploads carry a short base32 id that `delete` takes directly.
+      await ctx.storage.delete(storageId as Id<"_storage">);
+      return { deleted: true, refs: 0 };
+    } catch {
+      // Files imported from the old Convex account keep UUID-shaped URLs that
+      // the typed id helpers cannot decode. Resolve the real `_storage` row by
+      // matching the URL Convex reports for each file, then delete that id.
+      const resolved = await resolveStorageId(ctx, args.url);
+      if (resolved === null) return { deleted: false, refs: 0, missing: true };
+      try {
+        await ctx.storage.delete(resolved);
+        return { deleted: true, refs: 0, legacy: true };
+      } catch (error) {
+        return { deleted: false, refs: 0, error: `delete: ${String(error).slice(0, 300)}` };
+      }
+    }
   },
 });
