@@ -95,8 +95,12 @@ Read `AGENTS.md` for the full set of invariants before changing anything in `con
 - **Dev:** `npm run dev` targets dev deployment `dev:wonderful-porpoise-243` (configured in `.env.local`).
 - **Prod Convex:** `npx convex deploy --env-file .env.prod.local` targets `prod:earnest-fennec-109`.
 - **Prod Frontend:** `node scripts/pack-deploy.mjs` then `node scripts/deploy-hostinger-api.mjs`
-  (Hostinger API: upload → server-side build → publish). The GitHub Actions deploy step skips —
-  its `HOSTINGER_*` secrets are not configured.
+  (Hostinger API: upload → server-side build → publish). The script sends the Nitro build
+  settings explicitly and fails the deploy if the live CSS/JS does not answer 200. The GitHub
+  Actions deploy step skips — its `HOSTINGER_*` secrets are not configured.
+- **Product photos** live in Convex storage and are optimised (217 files, ~24 MB total, ~114 KB
+  average). Re-encode with `node scripts/optimize-product-images.mjs` (`--apply`, then
+  `--delete-old`); see AGENTS.md §8.
 - **Dev fixture catalogue:** `npx convex run inventory_import:apply` — **dev only**. Production
   carries the ~79-product supplier catalogue; never re-apply the fixture there.
 

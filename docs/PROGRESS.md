@@ -5,6 +5,59 @@ still open is listed under **Open**.
 
 ---
 
+## Audit fixes, image diet, and a deploy that can fail loudly (20 October 2026)
+
+**Status:** Complete — every defect from the multi-agent audit is fixed and
+shipped, production is rebuilt and verified, and the catalogue shrank from
+**438 MB to 24.2 MB** of photography. Additions to the deploy script mean a
+broken publish can no longer pass silently.
+
+### Shipped
+
+- **Audit fixes** (`7f99893` and follow-ups): 59 files across orders, payments,
+  inventory, catalogue, email and staff UI. New tests for the Paystack
+  `initialize`/`verify` happy paths (canned gateway reply + idempotency);
+  fixed the live e2e runner (`scripts/run-live-e2e.mjs` spawned an undefined
+  `cli`) and the live counter-order locators.
+- **Quality gates:** tsc 0 · lint 0 errors (7 known react-refresh warnings) ·
+  vitest **331/331** · prettier clean · build ok · Playwright read-only
+  **36/36** · live suite **12/12**.
+- **Deploy script** (`scripts/deploy-hostinger-api.mjs`): sends the Nitro build
+  settings explicitly (`app_type: nitro`, `output_directory: .output`,
+  `build_script: build`, `entry_file: server/index.mjs`,
+  `package_manager: npm`, node 20), logs panel drift, and after publishing
+  checks `/` + `/catalogue` **and** every referenced CSS/JS file — a broken
+  publish now exits non-zero instead of looking green.
+- **Image optimisation:** all 215 heavy storage photos re-encoded to WebP
+  through the real staff upload path (`uploads:savePhoto` →
+  `photos:retargetImage`), then the originals retired through
+  `photos:deleteStorageIfUnreferenced` (reference-scanned). Result, measured on
+  the live site: **217 images, 0 broken, 24.2 MB total, ~114 KB average**
+  (was ~2 MB per image).
+
+### Why the deploy broke (and the fix)
+
+The Hostinger build settings endpoint returned nothing, so the platform fell
+back to _publish_ mode with `build_script: none`: it published the raw source
+tree, synced `public_html` (deleting the built `/assets/*`) and the site served
+unstyled HTML with every CSS/JS request returning 500. Three separate API
+details had to be right: the output directory is `.output` (not
+`.output/public`), `build_script` is the **npm script name** (`build`, not
+`npm run build` — the API rejects that with HTTP 422), and `entry_file` is
+**relative to the output directory** (`server/index.mjs`). All three are now
+sent by the script and documented in AGENTS.md §6.
+
+### Storage sweep gotcha
+
+Files imported during the Convex account migration serve **UUID-shaped**
+storage URLs, while `_storage` rows use short base32 ids, so
+`ctx.storage.delete(urlTail)` cannot decode them. The sweep now falls back to
+matching `ctx.storage.getUrl()` and deletes the real row; 212 originals were
+retired, 3 kept because an order/store setting still references them, and any
+per-file problem is returned as `{ deleted: false, error }` instead of a bare 500.
+
+---
+
 ## Full-stack live test of production (20 October 2026)
 
 **Status:** Complete — every layer exercised against live production (backend

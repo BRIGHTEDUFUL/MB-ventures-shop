@@ -524,11 +524,14 @@ Node 20, output `.output`). The Hostinger API token for this account lives in
 Deployed via **`scripts/deploy-hostinger-api.mjs`** (public Hostinger API, no
 MCP/SSH needed): pack source with `node scripts/pack-deploy.mjs` (creates
 `deploy.zip` via `git archive HEAD` — **commit first**), then run the script.
-It uploads `deploy.zip` (TUS), auto-detects build settings from the archive,
-starts a server-side build (Node 20, nitro) and polls until `completed`.
-The server runs `npm run build`, publishes `.output`, and restarts the Node.js
-process. The API token comes from `$HOSTINGER_API_TOKEN` or
-`~/.config/opencode/opencode.jsonc` (never commit either).
+It uploads `deploy.zip` (TUS), sends the build settings **explicitly**, starts a
+server-side build (Node 20, nitro) and polls until `completed`. The server runs
+`npm run build`, publishes `.output`, and restarts the Node.js process. It then
+verifies the live site: `/` and `/catalogue` must answer 200 **and** every
+CSS/JS file the page references must be 200, so a broken publish fails the
+script instead of passing silently. The API token comes from
+`$HOSTINGER_API_TOKEN` or `~/.config/opencode/opencode.jsonc` (never commit
+either).
 
 > **Manual deploy:**
 >
@@ -536,6 +539,27 @@ process. The API token comes from `$HOSTINGER_API_TOKEN` or
 > node scripts/pack-deploy.mjs          # creates deploy.zip (git HEAD)
 > node scripts/deploy-hostinger-api.mjs # upload -> build -> poll -> smoke-check
 > ```
+
+> **Build-settings gotcha (bit us on 20 Oct 2026):** the platform must be told
+> how to build. When the settings come back empty the build runs in _publish_
+> mode (`build_script: none`), publishes the raw source tree and **syncs
+> `public_html`** — deleting the previously built `/assets/*`. The site then
+> serves unstyled HTML and every CSS/JS request returns 500. The values that
+> work for this app (sent explicitly by the script, verified from a green build
+> log; override with `HOSTINGER_*` env vars only if the layout changes):
+>
+> - `app_type: nitro`
+> - `output_directory: .output`
+> - `build_script: build` — the **npm script name**, not `npm run build`
+>   (the API rejects the full command with HTTP 422)
+> - `entry_file: server/index.mjs` — **relative to the output directory**
+>   (`.output/server/index.mjs` fails with "Entry file not found")
+> - `package_manager: npm`, `node_version: 20`
+>
+> The saved panel settings can drift from this; the script logs the drift and
+> sends the correct values anyway. If a deploy ever looks wrong, read the build
+> log (`GET …/nodejs/builds/{uuid}/logs`) before retrying — the build usually
+> says exactly what it did.
 
 > **Panel-env gotcha (bit us on 20 Oct 2026):** the server build inherits the
 > Node.js env vars set in the Hostinger control panel, and **vite gives
@@ -644,12 +668,31 @@ node scripts/mobile-audit.mjs https://mbventuresgh.com --email=… --password=�
 > whose photos live in Convex storage; only `electric-standing-desk-rgb-160`
 > kept its slug. The 10 hidden demo products are still preserved. The table
 > below is therefore **historical** — query `store:get` for current live
-> state. Two practical consequences: the live product pages serve ~2MB photos
-> per image (regression measured 215 MB / 109 images on 20 Oct 2026 — use
-> `scripts/optimize-product-images.mjs` to re-encode them), and the read-only
-> Playwright suite keeps its fixture slugs because it runs against **dev**,
-> which is seeded from `inventory_import` (light local images) — never re-run
-> `inventory_import:apply` against production (see the warning in that file).
+> state. The read-only Playwright suite keeps its fixture slugs because it runs
+> against **dev**, which is seeded from `inventory_import` (light local images) —
+> never re-run `inventory_import:apply` against production (see the warning in
+> that file).
+
+> **Images optimised 20 Oct 2026.** The supplier catalogue used to serve ~2 MB
+> photos per image (438 MB across 217 storage files). Every one is now a WebP
+> re-encode through the real staff upload path: **217 images, 24.2 MB total,
+> ~114 KB average, 0 broken** (re-measured live). The tool is
+> `scripts/optimize-product-images.mjs` — dry-run by default, `--apply` uploads
+> replacements and retargets `products` / `product_variants` / `categories` /
+> `store_settings` through `photos:retargetImage`, `--delete-old` then retires
+> the originals via `photos:deleteStorageIfUnreferenced` (reference-scanned, so
+> an order snapshot keeps its file). Re-running is safe: it skips files already
+> under the size threshold. Notes for the next run:
+>
+> - it signs in as a staff account with `catalogue.edit` + `catalogue.delete`;
+>   pass `MB_MANAGER_EMAIL` / `MB_MANAGER_PASSWORD` (or read them from the
+>   gitignored `docs/PRODUCTION-CREDENTIALS.md`) — never inline a password;
+> - imported files carry **UUID-shaped** storage URLs from the account
+>   migration while `_storage` rows use short base32 ids, so the sweep resolves
+>   the row by matching `ctx.storage.getUrl()` — that is why it does not simply
+>   `delete` the URL tail;
+> - check the result with `node scripts/optimize-product-images.mjs` (dry-run):
+>   it should report `heavy images (>350 KB): 0`.
 
 ### Real products — all visible, active, 10 units each
 
