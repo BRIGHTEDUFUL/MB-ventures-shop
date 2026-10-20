@@ -121,32 +121,38 @@ if (patched.status !== 204)
   );
 log(`uploaded ${ARCHIVE} (upload-offset=${patched.headers.get("upload-offset")})`);
 
-// 4. Use the site's SAVED Node.js settings — never guess.
+// 4. Build settings — sent explicitly on every build.
 //
-// `…/builds/settings/from-archive` can answer with nothing for a perfectly good
-// archive. When it does, the platform runs the build in "publish" mode with
-// `build_script: none`, publishes the raw source tree and *syncs public_html*,
-// which wipes the previously built `/assets/*` — the site then serves unstyled
-// HTML and every CSS/JS request 500s. So: read the saved settings and refuse to
-// continue without a build script.
+// Two ways this has gone wrong in production:
+//  - `…/settings/from-archive` can answer with nothing, and the platform then
+//    runs in "publish" mode with `build_script: none`, publishing the raw
+//    source and syncing public_html — which wipes `/assets/*` and leaves the
+//    site serving unstyled HTML.
+//  - a saved `output_directory` of `.output/public` hides `.output/server`
+//    from the publisher, which then fails with "Entry file not found".
+//
+// So the values below are the ones that work for this Nitro app (verified from
+// a green build log). Override with env vars only if the app layout changes.
+const BUILD_SETTINGS = {
+  app_type: process.env.HOSTINGER_APP_TYPE ?? "nitro",
+  output_directory: process.env.HOSTINGER_OUTPUT_DIR ?? ".output",
+  build_script: process.env.HOSTINGER_BUILD_SCRIPT ?? "npm run build",
+  entry_file: process.env.HOSTINGER_ENTRY_FILE ?? ".output/server/index.mjs",
+  package_manager: process.env.HOSTINGER_PACKAGE_MANAGER ?? "npm",
+};
+const detected = BUILD_SETTINGS;
+
 const saved = unwrap(
-  await api("GET", `${API}/accounts/${username}/websites/${DOMAIN}/nodejs/builds/settings`),
+  await api("GET", `${API}/accounts/${username}/websites/${DOMAIN}/nodejs/builds/settings`).catch(
+    () => null,
+  ),
 );
-const detected = {};
-for (const k of [
-  "app_type",
-  "root_directory",
-  "output_directory",
-  "build_script",
-  "entry_file",
-  "package_manager",
-]) {
-  if (saved?.[k] != null && saved[k] !== "") detected[k] = saved[k];
-}
-if (!detected.build_script) {
-  throw new Error(
-    `The site has no build_script configured (got ${JSON.stringify(saved)}). ` +
-      "Set it in hPanel → Node.js before deploying — publishing raw sources breaks the site.",
+const drift = Object.entries(BUILD_SETTINGS).filter(
+  ([k, v]) => saved?.[k] != null && saved[k] !== v,
+);
+if (drift.length > 0) {
+  log(
+    `note: panel settings differ (${drift.map(([k, v]) => `${k}=${JSON.stringify(saved[k])} → ${JSON.stringify(v)}`).join(", ")}); sending the values below.`,
   );
 }
 log(`build settings: ${JSON.stringify(detected)}`);
