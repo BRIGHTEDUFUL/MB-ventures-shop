@@ -121,12 +121,16 @@ if (patched.status !== 204)
   );
 log(`uploaded ${ARCHIVE} (upload-offset=${patched.headers.get("upload-offset")})`);
 
-// 4. Auto-detect build settings from the archive.
-const settings = unwrap(
-  await api(
-    "GET",
-    `${API}/accounts/${username}/websites/${DOMAIN}/nodejs/builds/settings/from-archive?archive_path=${encodeURIComponent(ARCHIVE)}`,
-  ),
+// 4. Use the site's SAVED Node.js settings — never guess.
+//
+// `…/builds/settings/from-archive` can answer with nothing for a perfectly good
+// archive. When it does, the platform runs the build in "publish" mode with
+// `build_script: none`, publishes the raw source tree and *syncs public_html*,
+// which wipes the previously built `/assets/*` — the site then serves unstyled
+// HTML and every CSS/JS request 500s. So: read the saved settings and refuse to
+// continue without a build script.
+const saved = unwrap(
+  await api("GET", `${API}/accounts/${username}/websites/${DOMAIN}/nodejs/builds/settings`),
 );
 const detected = {};
 for (const k of [
@@ -137,9 +141,15 @@ for (const k of [
   "entry_file",
   "package_manager",
 ]) {
-  if (settings?.[k] != null && settings[k] !== "") detected[k] = settings[k];
+  if (saved?.[k] != null && saved[k] !== "") detected[k] = saved[k];
 }
-log(`detected settings: ${JSON.stringify(detected)}`);
+if (!detected.build_script) {
+  throw new Error(
+    `The site has no build_script configured (got ${JSON.stringify(saved)}). ` +
+      "Set it in hPanel → Node.js before deploying — publishing raw sources breaks the site.",
+  );
+}
+log(`build settings: ${JSON.stringify(detected)}`);
 
 // 5. Start the build from the uploaded archive.
 const build = unwrap(
@@ -186,13 +196,46 @@ for (;;) {
   await new Promise((r) => setTimeout(r, POLL_MS));
 }
 
-// Smoke-check the live site.
+// Smoke-check the live site: HTML plus the CSS/JS it actually references.
+// A published-but-unbuilt deployment still answers 200 on `/`, so the asset
+// check is the one that proves the build shipped.
+let failed = false;
 for (const pathName of ["/", "/catalogue"]) {
   try {
     const res = await fetch(`https://${DOMAIN}${pathName}`, { redirect: "follow" });
     log(`live https://${DOMAIN}${pathName} -> HTTP ${res.status}`);
+    if (res.status !== 200) failed = true;
   } catch (e) {
     log(`live check ${pathName} failed: ${e.message}`);
+    failed = true;
   }
+}
+
+try {
+  const html = await (await fetch(`https://${DOMAIN}/`)).text();
+  const assets = [
+    ...new Set([...html.matchAll(/(?:href|src)="([^"]+\.(?:css|js))"/g)].map((m) => m[1])),
+  ];
+  const bad = [];
+  for (const asset of assets.slice(0, 6)) {
+    const res = await fetch(new URL(asset, `https://${DOMAIN}/`), { method: "HEAD" });
+    if (res.status !== 200) bad.push(`${asset} -> ${res.status}`);
+  }
+  log(`asset check: ${assets.length} referenced, ${bad.length} broken`);
+  if (bad.length > 0) {
+    bad.forEach((line) => console.error(`[hostinger] BROKEN ASSET ${line}`));
+    failed = true;
+  }
+} catch (e) {
+  log(`asset check failed: ${e.message}`);
+  failed = true;
+}
+
+if (failed) {
+  console.error(
+    "[hostinger] deploy finished but the live site is not healthy — check the build logs " +
+      `(node .tmp-build-logs.mjs, or hPanel → Node.js → build history).`,
+  );
+  process.exit(1);
 }
 log("deploy complete");

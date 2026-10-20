@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, type MutationCtx } from "./_generated/server";
 import { requirePermission } from "./lib/permissions";
 
@@ -131,21 +132,20 @@ export const retargetImage = mutation({
 type ImageTable = "products" | "product_variants" | "categories" | "orders" | "store_settings";
 
 /** How many rows in one table still mention `url` anywhere in their JSON.
- *  Paginated so the scan never stops short on a big table (an order holds its
- *  own photo snapshot, and those must count as references). */
+ *  An order carries its own photo snapshot, so it counts as a reference too.
+ *  The cap is generous (the whole catalogue is ~80 products and orders are in
+ *  the tens); if a table ever grows past it the sweep stops deleting rather
+ *  than guessing — `refs` tops out and the file is kept. */
+const REFERENCE_SCAN_LIMIT = 20_000;
+
 async function countReferences<T extends ImageTable>(
   ctx: MutationCtx,
   table: T,
   url: string,
 ): Promise<number> {
+  const rows = await ctx.db.query(table).take(REFERENCE_SCAN_LIMIT);
   let refs = 0;
-  let cursor: string | null = null;
-  for (;;) {
-    const page = await ctx.db.query(table).paginate({ cursor, numItems: 200 });
-    for (const row of page.page) if (JSON.stringify(row).includes(url)) refs += 1;
-    if (page.isDone) break;
-    cursor = page.continueCursor;
-  }
+  for (const row of rows) if (JSON.stringify(row).includes(url)) refs += 1;
   return refs;
 }
 
@@ -171,7 +171,11 @@ export const deleteStorageIfUnreferenced = mutation({
     if (refs > 0) return { deleted: false, refs };
 
     const storageId = args.url.split("/api/storage/")[1];
-    await ctx.storage.delete(storageId as Parameters<typeof ctx.storage.delete>[0]);
+    // A row can outlive its file (an old deployment's host, a manual delete).
+    // Asking the storage table is cheap and keeps the sweep from throwing.
+    const file = await ctx.db.system.get(storageId as Id<"_storage">);
+    if (file === null) return { deleted: false, refs: 0, missing: true };
+    await ctx.storage.delete(storageId as Id<"_storage">);
     return { deleted: true, refs: 0 };
   },
 });
