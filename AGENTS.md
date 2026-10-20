@@ -757,6 +757,13 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 Full credentials and recovery steps: `docs/TEST-ACCOUNTS.md` and `docs/PRODUCTION-CREDENTIALS.md`.
 Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.
 
+> **Credentials stay as they are (owner decision, 20 Oct 2026).** The Web3Forms
+> access key, the four staff passwords and the admin-hub token are **not** to be
+> rotated, replaced or "hardened" as a cleanup task. Do not generate new keys,
+> reset passwords, change `ADMIN_HUB_TOKEN`, or open an issue asking for it —
+> only act when the owner explicitly asks. Rotation procedures exist in
+> `docs/DOMAIN-MIGRATION.md` §9 and `docs/EMAIL.md` §7 for that day.
+
 Admin-only consoles (e.g. `/admin/emails`) additionally require a
 sessionStorage unlock: visit `/admin-hub/<ADMIN_HUB_TOKEN>` once per browser
 session. Staff-floor accounts bypass the hub. The token value lives in the
