@@ -308,7 +308,7 @@ test.describe("Live options journey", () => {
     await expect(
       page
         .locator("span")
-        .filter({ hasText: /^cancelled$/ })
+        .filter({ hasText: /^cancelled$/i })
         .first(),
     ).toBeVisible({ timeout: 20_000 });
 
@@ -342,7 +342,9 @@ test.describe("Live options journey", () => {
       await page.goto("/staff/orders");
       await waitForHydration(page);
       await page.getByLabel("Search orders").fill("E2E Options Shopper");
-      const rows = page.locator('a[href^="/staff/orders/"]');
+      // `:not(.../new)` skips the "Record an order" link — its text names no
+      // customer, so it would poison the every-row-belongs-to-this-run poll.
+      const rows = page.locator('a[href^="/staff/orders/"]:not([href$="/new"])');
       const empty = page.getByText("No orders match these filters");
       await expect(rows.first().or(empty)).toBeVisible({ timeout: 20_000 });
       await expect
@@ -379,7 +381,7 @@ test.describe("Live options journey", () => {
       await expect(
         page
           .locator("span")
-          .filter({ hasText: /^cancelled$/ })
+          .filter({ hasText: /^cancelled$/i })
           .first(),
       ).toBeVisible({ timeout: 20_000 });
     }

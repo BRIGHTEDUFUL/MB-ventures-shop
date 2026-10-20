@@ -128,11 +128,15 @@ test.describe("Live purchase journey", () => {
     // Playwright dismisses by default — dismissing would abort the save.
     page.on("dialog", (dialog) => void dialog.accept());
 
-    /** The status/payment pills on the order header are the server's own answer. */
+    /**
+     * The status/payment pills on the order header are the server's own answer.
+     * Matched case-insensitively: the pills render the shared Title-Case label
+     * map ("Confirmed", "Cancelled"), never the raw lowercase value.
+     */
     const pill = (text: string) =>
       page
         .locator("span")
-        .filter({ hasText: new RegExp(`^${text}$`) })
+        .filter({ hasText: new RegExp(`^${text}$`, "i") })
         .first();
 
     // 1. Sign in with the granted staff account.
@@ -226,7 +230,9 @@ test.describe("Live purchase journey", () => {
       await page.goto("/staff/orders");
       await waitForHydration(page);
       await page.getByLabel("Search orders").fill("E2E Shopper");
-      const rows = page.locator('a[href^="/staff/orders/"]');
+      // `:not(.../new)` skips the "Record an order" link — its text names no
+      // customer, so it would poison the every-row-belongs-to-this-run poll.
+      const rows = page.locator('a[href^="/staff/orders/"]:not([href$="/new"])');
       const empty = page.getByText("No orders match these filters");
       await expect(rows.first().or(empty)).toBeVisible({ timeout: 20_000 });
       // The search debounces for 300ms; reading the list before it settles
@@ -268,7 +274,7 @@ test.describe("Live purchase journey", () => {
       await expect(
         page
           .locator("span")
-          .filter({ hasText: /^cancelled$/ })
+          .filter({ hasText: /^cancelled$/i })
           .first(),
       ).toBeVisible({ timeout: 20_000 });
     }
