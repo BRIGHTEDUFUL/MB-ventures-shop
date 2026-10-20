@@ -1,5 +1,11 @@
 # Domain migration — mbventuresghana.com → mbventuresgh.com
 
+> **Historical — superseded 20 Oct 2026.** The domain cutover is complete and the
+> Convex backend has since moved to a new account (prod `earnest-fennec-109`, dev
+> `wonderful-porpoise-243`) with zero data loss. Frontend deploys now run through
+> `scripts/deploy-hostinger-api.mjs`; the Hostinger MCP deploy path described
+> below is retired. Kept for the record.
+
 **Status:** 🟢 **CUTOVER COMPLETE (verified 15 Oct 2026)** — production serves
 `https://mbventuresgh.com` from the new Hostinger account (client `1023530876`,
 hosting user `u963034723`, Node.js site). Verified: hPanel domain portfolio

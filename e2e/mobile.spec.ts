@@ -35,6 +35,14 @@ test.describe("Horizontal overflow", () => {
       await page.setViewportSize(size);
       const routes = await routesFor(page);
       expect(routes.length).toBeGreaterThan(10);
+      // The sweep's whole point is the product pages, and `productRoutes`
+      // degrades to `[]` when the sitemap cannot be fetched — the static list
+      // alone would sail past the check above. Require the parsed routes too,
+      // so a broken sitemap fails loudly instead of shrinking the sweep.
+      expect(
+        routes.length - STATIC_ROUTES.length,
+        "the sitemap must yield at least 11 product routes",
+      ).toBeGreaterThanOrEqual(11);
 
       const failures: string[] = [];
       for (const route of routes) {

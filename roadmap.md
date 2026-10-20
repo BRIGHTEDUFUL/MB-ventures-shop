@@ -46,7 +46,7 @@
 
 ## Completed Setup (9 October 2026)
 
-- ✅ **Email**: Web3Forms access key configured (`ab22e273-6536-4ae8-af7d-0b8c5013e418`)
+- ✅ **Email**: Web3Forms access key configured (`ab22e273-…`, value lives in the Convex env)
   - Development: Live mode enabled at `dev:wonderful-porpoise-243`
   - Production: Fully configured at `prod:earnest-fennec-109`
   - Reply-to: `info@mbventuresgh.com`

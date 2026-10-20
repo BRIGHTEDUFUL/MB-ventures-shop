@@ -49,6 +49,10 @@ function Index() {
     products.find((p) => p.id === selected) ??
     products.find((p) => p.id === hotspots[0]) ??
     products[0];
+  // A product with option axes cannot be carted blind: the server refuses a
+  // variant-less line and the cart offers no way to pick an option. Like
+  // ProductCard, the button becomes a link to the product page instead.
+  const featuredNeedsOptions = (featured?.axes?.length ?? 0) >= 1;
 
   const stepHotspot = (direction: 1 | -1) => {
     const count = hotspots.length;
@@ -150,8 +154,21 @@ function Index() {
                 )}
               </div>
             </div>
-            <Button className="mt-4 h-9 w-full text-xs" onClick={() => add(featured)}>
-              Add to cart <Plus className="size-3" />
+            <Button
+              className="mt-4 h-9 w-full text-xs"
+              asChild={featuredNeedsOptions}
+              title={featuredNeedsOptions ? "Choose options" : "Add to cart"}
+              onClick={featuredNeedsOptions ? undefined : () => add(featured)}
+            >
+              {featuredNeedsOptions ? (
+                <Link to="/product/$slug" params={{ slug: featured.id }}>
+                  Choose options <ArrowRight className="size-3" />
+                </Link>
+              ) : (
+                <>
+                  Add to cart <Plus className="size-3" />
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -231,26 +248,58 @@ function Index() {
             <h2 className="mt-4">{settings.home_setup_heading}</h2>
             <p>{settings.home_setup_body}</p>
             <div className="mt-6 divide-y divide-border">
-              {rail.slice(0, 3).map((p) => (
-                <div className="flex items-center justify-between py-3" key={p.id}>
-                  <Link to="/product/$slug" params={{ slug: p.id }} className="min-h-10 text-sm">
-                    {p.name}
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    aria-label={`Add ${p.name} to setup`}
-                    onClick={() => add(p)}
-                    className="h-11 gap-3 px-3 text-xs"
-                  >
-                    <span style={{ color: "var(--price-ink)" }}>{money(p.price)}</span>{" "}
-                    <Plus className="size-3" />
-                  </Button>
-                </div>
-              ))}
+              {rail.slice(0, 3).map((p) => {
+                // Same rule as the hero: option products open their page so the
+                // shopper picks a variant, instead of carting a line the server
+                // would refuse.
+                const needsOptions = (p.axes?.length ?? 0) >= 1;
+                return (
+                  <div className="flex items-center justify-between py-3" key={p.id}>
+                    <Link to="/product/$slug" params={{ slug: p.id }} className="min-h-10 text-sm">
+                      {p.name}
+                    </Link>
+                    {needsOptions ? (
+                      <Button asChild variant="ghost" className="h-11 gap-3 px-3 text-xs">
+                        <Link
+                          to="/product/$slug"
+                          params={{ slug: p.id }}
+                          aria-label={`Choose options for ${p.name}`}
+                        >
+                          <span style={{ color: "var(--price-ink)" }}>{money(p.price)}</span> Choose
+                          options <ArrowRight className="size-3" />
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        aria-label={`Add ${p.name} to setup`}
+                        onClick={() => add(p)}
+                        className="h-11 gap-3 px-3 text-xs"
+                      >
+                        <span style={{ color: "var(--price-ink)" }}>{money(p.price)}</span>{" "}
+                        <Plus className="size-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <Button className="mt-5" onClick={() => rail.slice(0, 3).forEach((p) => add(p))}>
-              Add the setup <ArrowRight />
-            </Button>
+            {/* Only the options-free picks can be carted in one tap; anything
+                with option axes is chosen from its product page (links above),
+                so a blind bulk add can never queue a line the server refuses. */}
+            {rail.slice(0, 3).some((p) => (p.axes?.length ?? 0) === 0) && (
+              <Button
+                className="mt-5"
+                onClick={() =>
+                  rail
+                    .slice(0, 3)
+                    .filter((p) => (p.axes?.length ?? 0) === 0)
+                    .forEach((p) => add(p))
+                }
+              >
+                Add the setup <ArrowRight />
+              </Button>
+            )}
           </div>
         </section>
         {settings.home_brands.length > 0 && (

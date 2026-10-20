@@ -8,6 +8,18 @@
 
 set -e
 
+# ---------------------------------------------------------------------------
+# Secrets are never committed. The Web3Forms access key must be exported from
+# a local, untracked source (docs/PRODUCTION-CREDENTIALS.md / the Convex env:
+# `npx convex env get WEB3FORMS_ACCESS_KEY`) before running this script.
+# ---------------------------------------------------------------------------
+if [ -z "${WEB3FORMS_ACCESS_KEY:-}" ]; then
+    echo "Error: WEB3FORMS_ACCESS_KEY is not set."
+    echo "Export it from a local, untracked source before running:"
+    echo "  export WEB3FORMS_ACCESS_KEY=<value from docs/PRODUCTION-CREDENTIALS.md or Convex env>"
+    exit 1
+fi
+
 echo "================================================"
 echo "MB Ventures GH - Production Environment Setup"
 echo "================================================"
@@ -44,8 +56,9 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 # Create the .env.local file
+# (unquoted EOF so ${WEB3FORMS_ACCESS_KEY} is interpolated from the environment)
 echo -e "${GREEN}Creating production .env.local file...${NC}"
-cat > "$ENV_FILE" << 'EOF'
+cat > "$ENV_FILE" << EOF
 # ============================================
 # MB Ventures GH - Production Environment
 # Generated: 2025-01-10
@@ -61,7 +74,7 @@ NODE_ENV=production
 # ============================================
 # Email Configuration (Web3Forms)
 # ============================================
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=${WEB3FORMS_ACCESS_KEY}
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -103,7 +116,7 @@ echo "The following must be set in Convex dashboard for prod deployment:"
 echo "https://dashboard.convex.dev/ (deployment: prod:earnest-fennec-109)"
 echo ""
 echo "Required Convex Env Vars:"
-echo "  • WEB3FORMS_ACCESS_KEY = ab22e273-6536-4ae8-af7d-0b8c5013e418"
+echo "  • WEB3FORMS_ACCESS_KEY = (set from the environment; value lives in docs/PRODUCTION-CREDENTIALS.md / Convex env — never committed)"
 echo "  • EMAIL_REPLY_TO = info@mbventuresgh.com"
 echo "  • ADMIN_ALERT_EMAIL = info@mbventuresgh.com"
 echo "  • EMAIL_DAILY_LIMIT = 250"

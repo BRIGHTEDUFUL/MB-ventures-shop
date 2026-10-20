@@ -1,6 +1,8 @@
 # Production Environment Setup - Copy & Paste Ready
 
-**All real production credentials - Ready for fresh deployment**
+**Secrets are placeholders — never committed.** Real values (Web3Forms key,
+account passwords) live in the local-only `docs/PRODUCTION-CREDENTIALS.md`
+(gitignored) and the Convex env.
 
 ---
 
@@ -14,12 +16,15 @@ VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 SITE_URL=https://mbventuresgh.com
 ```
+
+> Replace `<WEB3FORMS_ACCESS_KEY>` from a local, untracked source:
+> `docs/PRODUCTION-CREDENTIALS.md` or `npx convex env get WEB3FORMS_ACCESS_KEY`.
 
 ---
 
@@ -37,10 +42,10 @@ npx convex env list --prod
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 EMAIL_REPLY_TO=info@mbventuresgh.com
-JWKS={"keys":[{"use":"sig","kty":"RSA","n":"7GRdtbc95L3RX0PJDWe4Ggn51duri6PVobRDlcLU_l5nWmD2lro8MVwjQVp7giK9nuRR0selzAj7Rw_dIYIlG9rxDIZEXtKadi7yqwJ-B7T0g4TPRjUt9brUs8xxddogYFIvxnlG4hp26BuDHyYGKvypJ6HCvsVWtIyWZMGmTtjN0aL1jWTcu1EDezyI8OYpq4Y8fee2GviHkZtMvRxiX5HAbYAQz67FtKrSvErt86mns-d2raqB3zHmPNvdGwjoCCnSIvDDB-dfXHqtOQdMe5ioDv9fezQ8NLz7QF8K8KRwwsY3-miwCdrPISd5AGZlu2Zhz1couXY7p5qoNGaS7Q","e":"AQAB"}]}
-JWT_PRIVATE_KEY=-----BEGIN PRIVATE KEY----- [REDACTED] -----END PRIVATE KEY-----
+JWKS=<redacted — JWKS is set on the Convex deployment; never committed to git>
+JWT_PRIVATE_KEY=<redacted — set on the Convex deployment; never committed to git>
 SITE_URL=https://mbventuresgh.com
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=ab22e273-… (redacted; in Convex env)
 ```
 
 ---
@@ -79,7 +84,7 @@ VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -118,12 +123,13 @@ pm2 delete all
 rm -rf node_modules .output .vinxi .tanstack
 
 # 5. Create environment file
+# (replace <WEB3FORMS_ACCESS_KEY> from docs/PRODUCTION-CREDENTIALS.md / Convex env)
 cat > .env.local << 'EOF'
 VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -183,7 +189,7 @@ curl https://mbventuresgh.com
 ### Email:
 
 - **Provider**: Web3Forms
-- **Access Key**: `ab22e273-6536-4ae8-af7d-0b8c5013e418`
+- **Access Key**: `ab22e273-…` (redacted — lives in the Convex env / local `docs/PRODUCTION-CREDENTIALS.md`)
 - **Reply To**: info@mbventuresgh.com
 - **Admin Alerts**: info@mbventuresgh.com
 - **Daily Limit**: 250 emails
@@ -191,12 +197,12 @@ curl https://mbventuresgh.com
 ### Admin Account (Register First):
 
 - **Email**: admin@mbventuresgh.com
-- **Password**: MBVentures2025!Admin#Secure
+- **Password**: see local `docs/PRODUCTION-CREDENTIALS.md` (not in git)
 
 ### Staff Account (Register First):
 
 - **Email**: staff@mbventuresgh.com
-- **Password**: MBVentures2025!Staff#Secure
+- **Password**: see local `docs/PRODUCTION-CREDENTIALS.md` (not in git)
 
 ### After Registration, Grant Privileges:
 

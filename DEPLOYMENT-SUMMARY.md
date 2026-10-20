@@ -45,7 +45,7 @@
 
 ```
 Email: admin@mbventuresgh.com
-Password: MBVentures2025!Admin#Secure
+Password: see local docs/PRODUCTION-CREDENTIALS.md (not in git)
 Role: Administrator (Full Access)
 ```
 
@@ -53,7 +53,7 @@ Role: Administrator (Full Access)
 
 ```
 Email: staff@mbventuresgh.com
-Password: MBVentures2025!Staff#Secure
+Password: see local docs/PRODUCTION-CREDENTIALS.md (not in git)
 Role: Staff (Standard Permissions)
 ```
 
@@ -116,7 +116,8 @@ certbot --nginx -d mbventuresgh.com -d www.mbventuresgh.com
 VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+# Placeholder — real key lives in the Convex env / local docs/PRODUCTION-CREDENTIALS.md
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250

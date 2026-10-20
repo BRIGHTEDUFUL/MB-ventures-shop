@@ -96,6 +96,17 @@ function OrderView({
     setPayment(order.payment_status);
   }, [order.status, order.payment_status]);
 
+  // The customer fields follow the server too — but never while this tab's own
+  // editor is open, or a half-typed correction would be overwritten mid-edit.
+  useEffect(() => {
+    if (editingCustomer) return;
+    setCustomer({
+      customer_name: order.customer_name,
+      phone: order.phone,
+      address: order.address,
+    });
+  }, [editingCustomer, order.customer_name, order.phone, order.address]);
+
   const update = useConvexMutation(api.orders.staffUpdate);
   const addNote = useConvexMutation(api.orders.staffNote);
   const fixContact = useConvexMutation(api.orders.staffFixContact);

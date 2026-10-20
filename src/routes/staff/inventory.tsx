@@ -95,8 +95,8 @@ function InventoryPage() {
 
     // An untouched box reads `""`, which `Number()` would turn into 0 — and in
     // counted mode 0 is a legal count, so one absent keystroke would silently
-    // wipe the shelf. Refuse the empty box before any conversion; the box's
-    // grey placeholder shows the current count as a hint, it is not a value.
+    // wipe the shelf. Refuse the empty box before any conversion; the grey
+    // placeholder is only a hint, never a value.
     if (text === "") {
       toast.error(
         mode === "counted" ? "Enter the number you counted." : "Enter the change (e.g. 12 or -3).",
@@ -199,6 +199,17 @@ function InventoryPage() {
         </div>
       </div>
 
+      {mode === "counted" && (
+        // The count takes the SHELF number (what is physically in the room) and
+        // the server stores it as-is; the "on hand" figure on each row is what is
+        // sellable, which is lower whenever open orders hold units. Without this
+        // sentence the two numbers read as the same one.
+        <p className="mt-3 text-sm text-muted-foreground">
+          Type the number actually on the shelf. The “on hand” figure below is what is free to sell
+          — units promised to open orders are subtracted from your count, so it can be lower.
+        </p>
+      )}
+
       <QueryState pending={store.isPending} error={store.isError} label="Inventory" />
 
       {store.isPending ? null : products.length === 0 ? (
@@ -259,17 +270,18 @@ function InventoryPage() {
                             </span>
                           </span>
                           <label className="w-32">
-                            {mode === "change" ? "Change by" : "Counted now"}
+                            {mode === "change" ? "Change by" : "Counted on shelf"}
                             <input
                               id={`delta-${p.id}:${v.key}`}
                               type="number"
                               step="1"
                               min={mode === "counted" ? 0 : undefined}
                               placeholder={
-                                // "e.g." keeps the hint of the system count without the empty
-                                // box reading as a pre-filled, ready-to-save number.
+                                // No number hint here on purpose: the system's
+                                // "on hand" figure is the SELLABLE count, which
+                                // can sit below the shelf count this box takes.
                                 mode === "counted"
-                                  ? `e.g. ${v.stock}`
+                                  ? "On-shelf count"
                                   : v.stock === 0
                                     ? "+12"
                                     : "12 / -3"
@@ -302,14 +314,16 @@ function InventoryPage() {
               ) : (
                 <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
                   <label className="w-32">
-                    {mode === "change" ? "Change by" : "Counted now"}
+                    {mode === "change" ? "Change by" : "Counted on shelf"}
                     <input
                       id={`delta-${p.id}`}
                       type="number"
                       step="1"
                       min={mode === "counted" ? 0 : undefined}
                       placeholder={
-                        mode === "counted" ? `e.g. ${p.stock}` : p.stock === 0 ? "+12" : "12 / -3"
+                        // Same as the option rows: the box takes the shelf
+                        // count, and the sellable "on hand" number can be lower.
+                        mode === "counted" ? "On-shelf count" : p.stock === 0 ? "+12" : "12 / -3"
                       }
                     />
                   </label>

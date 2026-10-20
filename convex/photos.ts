@@ -1,0 +1,177 @@
+import { ConvexError, v } from "convex/values";
+import { mutation, type MutationCtx } from "./_generated/server";
+import { requirePermission } from "./lib/permissions";
+
+/**
+ * Photo maintenance for storage-backed images.
+ *
+ * Staff uploads land in Convex storage and the owning row keeps the absolute
+ * `https://<deployment>.convex.cloud/api/storage/<id>` URL (see `uploads.ts`).
+ * `scripts/optimize-product-images.mjs` re-encodes oversized originals with
+ * sharp, uploads the smaller file through the normal upload path, then calls
+ * `retargetImage` to swap the reference. Retiring originals is a *separate*
+ * `deleteStorageIfUnreferenced` sweep, run only after the new sizes verify.
+ *
+ * Both are guarded and idempotent:
+ * - `retargetImage` only ever replaces a value that is already a storage URL
+ *   on the same deployment (local keys such as `hero-workspace` are refused),
+ *   so a stray call can never point a product at a local asset by accident.
+ * - `deleteStorageIfUnreferenced` re-scans every image-bearing table and
+ *   refuses to delete a file any row still mentions — order snapshots
+ *   included — so history can never lose a photo.
+ */
+
+/** Absolute Convex-storage URL, exactly the shape `uploads.savePhoto` returns. */
+const STORAGE_URL = /^https:\/\/[^/]+\/api\/storage\/[A-Za-z0-9-]+$/;
+
+const TARGET_FIELD = v.union(
+  v.literal("image_key"),
+  v.literal("gallery"),
+  v.literal("variant_image"),
+  v.literal("category_image"),
+);
+
+const isStorageUrl = (value: unknown): value is string =>
+  typeof value === "string" && STORAGE_URL.test(value);
+
+/** Same origins only: a product must keep pointing at *this* deployment. */
+function assertSameOrigin(oldUrl: string, newUrl: string) {
+  const oldOrigin = new URL(oldUrl).origin;
+  if (new URL(newUrl).origin !== oldOrigin) {
+    throw new ConvexError({ message: "The replacement photo belongs to a different deployment." });
+  }
+}
+
+export const retargetImage = mutation({
+  args: {
+    slug: v.string(),
+    field: TARGET_FIELD,
+    gallery_index: v.optional(v.number()),
+    variant_key: v.optional(v.string()),
+    new_url: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "catalogue.edit");
+    if (!isStorageUrl(args.new_url)) {
+      throw new ConvexError({ message: "That is not a Convex-storage URL." });
+    }
+
+    switch (args.field) {
+      case "image_key": {
+        const product = await ctx.db
+          .query("products")
+          .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+          .unique();
+        if (product === null) throw new ConvexError({ message: `No product ${args.slug}.` });
+        if (!isStorageUrl(product.image_key)) {
+          return { changed: false, old_url: product.image_key };
+        }
+        assertSameOrigin(product.image_key, args.new_url);
+        await ctx.db.patch(product._id, { image_key: args.new_url });
+        return { changed: true, old_url: product.image_key };
+      }
+
+      case "gallery": {
+        const product = await ctx.db
+          .query("products")
+          .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+          .unique();
+        if (product === null) throw new ConvexError({ message: `No product ${args.slug}.` });
+        const index = args.gallery_index;
+        if (index === undefined || index < 0 || index >= product.gallery.length) {
+          throw new ConvexError({ message: "That gallery position does not exist." });
+        }
+        const oldUrl = product.gallery[index];
+        if (!isStorageUrl(oldUrl)) return { changed: false, old_url: oldUrl };
+        assertSameOrigin(oldUrl, args.new_url);
+        const gallery = product.gallery.map((url, i) => (i === index ? args.new_url : url));
+        await ctx.db.patch(product._id, { gallery });
+        return { changed: true, old_url: oldUrl };
+      }
+
+      case "variant_image": {
+        if (args.variant_key === undefined) {
+          throw new ConvexError({ message: "A variant key is required." });
+        }
+        // Variants are addressed by their stable key (unique per product) rather
+        // than their internal id, so the storefront DTO never has to expose ids.
+        const siblings = await ctx.db
+          .query("product_variants")
+          .withIndex("by_product", (q) => q.eq("product_slug", args.slug))
+          .collect();
+        const variant = siblings.find((row) => row.key === args.variant_key) ?? null;
+        if (variant === null) {
+          throw new ConvexError({ message: "That variant does not belong to this product." });
+        }
+        const oldUrl = variant.image_key ?? null;
+        if (!isStorageUrl(oldUrl)) return { changed: false, old_url: oldUrl };
+        assertSameOrigin(oldUrl, args.new_url);
+        await ctx.db.patch(variant._id, { image_key: args.new_url });
+        return { changed: true, old_url: oldUrl };
+      }
+
+      case "category_image": {
+        const category = await ctx.db
+          .query("categories")
+          .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+          .unique();
+        if (category === null) throw new ConvexError({ message: `No category ${args.slug}.` });
+        if (!isStorageUrl(category.image_key)) {
+          return { changed: false, old_url: category.image_key };
+        }
+        assertSameOrigin(category.image_key, args.new_url);
+        await ctx.db.patch(category._id, { image_key: args.new_url });
+        return { changed: true, old_url: category.image_key };
+      }
+    }
+  },
+});
+
+/** Tables that can carry a storage URL on some field (same set as migrations). */
+type ImageTable = "products" | "product_variants" | "categories" | "orders" | "store_settings";
+
+/** How many rows in one table still mention `url` anywhere in their JSON.
+ *  Paginated so the scan never stops short on a big table (an order holds its
+ *  own photo snapshot, and those must count as references). */
+async function countReferences<T extends ImageTable>(
+  ctx: MutationCtx,
+  table: T,
+  url: string,
+): Promise<number> {
+  let refs = 0;
+  let cursor: string | null = null;
+  for (;;) {
+    const page = await ctx.db.query(table).paginate({ cursor, numItems: 200 });
+    for (const row of page.page) if (JSON.stringify(row).includes(url)) refs += 1;
+    if (page.isDone) break;
+    cursor = page.continueCursor;
+  }
+  return refs;
+}
+
+/**
+ * Delete one storage file, but only once no row references it any more.
+ * Returns `{ deleted: false, refs }` when something still points at it — the
+ * caller keeps the original and can retry after the remaining references move.
+ */
+export const deleteStorageIfUnreferenced = mutation({
+  args: { url: v.string() },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "catalogue.delete");
+    if (!isStorageUrl(args.url)) {
+      throw new ConvexError({ message: "That is not a Convex-storage URL." });
+    }
+
+    const refs =
+      (await countReferences(ctx, "products", args.url)) +
+      (await countReferences(ctx, "product_variants", args.url)) +
+      (await countReferences(ctx, "categories", args.url)) +
+      (await countReferences(ctx, "orders", args.url)) +
+      (await countReferences(ctx, "store_settings", args.url));
+    if (refs > 0) return { deleted: false, refs };
+
+    const storageId = args.url.split("/api/storage/")[1];
+    await ctx.storage.delete(storageId as Parameters<typeof ctx.storage.delete>[0]);
+    return { deleted: true, refs: 0 };
+  },
+});

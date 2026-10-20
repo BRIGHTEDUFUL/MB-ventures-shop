@@ -95,7 +95,7 @@ cat .env.local
 - ✓ `VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud`
 - ✓ `VITE_SITE_URL=https://mbventuresgh.com`
 - ✓ `NODE_ENV=production`
-- ✓ `WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418`
+- ✓ `WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>` (placeholder — set the real value from a local, untracked source: docs/PRODUCTION-CREDENTIALS.md / Convex env)
 - ✓ `EMAIL_REPLY_TO=info@mbventuresgh.com`
 - ✓ `ADMIN_ALERT_EMAIL=info@mbventuresgh.com`
 - ✓ `EMAIL_DAILY_LIMIT=250`
@@ -347,7 +347,7 @@ curl -I https://mbventuresgh.com
 - Name: `MB Ventures Admin`
 - Email: `admin@mbventuresgh.com`
 - Phone: `+233 24 000 0001`
-- Password: `MBVentures2025!Admin#Secure`
+- Password: see local `docs/PRODUCTION-CREDENTIALS.md` (not in git)
 
 **Status:** ⏸️ Waiting for registration
 
@@ -362,7 +362,7 @@ curl -I https://mbventuresgh.com
 - Name: `MB Ventures Staff`
 - Email: `staff@mbventuresgh.com`
 - Phone: `+233 24 000 0002`
-- Password: `MBVentures2025!Staff#Secure`
+- Password: see local `docs/PRODUCTION-CREDENTIALS.md` (not in git)
 
 **Status:** ⏸️ Waiting for registration
 

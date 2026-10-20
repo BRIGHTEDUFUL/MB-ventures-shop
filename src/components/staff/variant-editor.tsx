@@ -19,6 +19,28 @@ import {
 
 type AxisDraft = { name: string; values: string[] };
 
+/**
+ * Do the axes the form holds match the axes the rows actually carry?
+ *
+ * Save serialises `rows`, which only change via "Build combinations" — so an
+ * axis added, removed or renamed afterwards would be silently dropped by a
+ * save. Compared by name and value set, case-insensitively (the same rule the
+ * add-value checks use) and order-insensitively, because `deriveAxes` floats
+ * the colour axis to the front while the form keeps the staff member's own
+ * order.
+ */
+const sameAxes = (form: readonly AxisDraft[], fromRows: readonly AxisDraft[]): boolean => {
+  if (form.length !== fromRows.length) return false;
+  const signature = (axis: { name: string; values: string[] }): string =>
+    `${axis.name.trim().toLowerCase()}::${axis.values
+      .map((v) => v.trim().toLowerCase())
+      .sort()
+      .join("\u0000")}`;
+  const formKeys = form.map(signature).sort();
+  const rowKeys = fromRows.map(signature).sort();
+  return formKeys.every((key, i) => key === rowKeys[i]);
+};
+
 /** One option row as the editor holds it — strings, because forms take text. */
 type RowDraft = {
   key: string;
@@ -108,6 +130,12 @@ export function VariantEditor({ slug, basePrice }: Props) {
 
   const setRow = (key: string, patch: Partial<RowDraft>): void =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+
+  // The axes implied by the laid-out rows, against the axes the form holds.
+  // Any drift (add / remove / rename) means the last "Build combinations" is
+  // stale — saving now would throw the axis change away without a word.
+  const rowsAxes = deriveAxes(rows.map((row) => ({ options: row.options })));
+  const axesDirty = !sameAxes(axes, rowsAxes);
 
   /**
    * Upload a photo for one option and hold it on the draft — like every
@@ -241,6 +269,12 @@ export function VariantEditor({ slug, basePrice }: Props) {
   const save = async (): Promise<void> => {
     if (rows.length === 0) {
       toast.error("Build your combinations first — an empty list would clear every option.");
+      return;
+    }
+    // Defence in depth: the button is already disabled while the axes drift,
+    // but a save here would persist rows that ignore the axis edits.
+    if (axesDirty) {
+      toast.error("Press “Build combinations” first — your option changes are not laid out yet.");
       return;
     }
 
@@ -444,119 +478,127 @@ export function VariantEditor({ slug, basePrice }: Props) {
             out here.
           </p>
         ) : (
-          <ul className="space-y-3">
-            {rows.map((row) => {
-              const colour = Object.entries(row.options).find(([axis]) =>
-                axis.trim().toLowerCase().startsWith("colo"),
-              )?.[1];
-              const swatch = swatchFor(colour ?? "");
-              return (
-                <li key={row.key} className="rounded-xl border border-border p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {swatch !== null ? (
-                      <span
-                        aria-hidden="true"
-                        className="inline-block size-4 shrink-0 rounded-full border border-border"
-                        style={{ backgroundColor: swatch }}
+          <>
+            {axesDirty && (
+              <p className="mb-2 text-sm text-muted-foreground">
+                You changed the option types above — press <strong>Build combinations</strong> to
+                update this list before saving.
+              </p>
+            )}
+            <ul className="space-y-3">
+              {rows.map((row) => {
+                const colour = Object.entries(row.options).find(([axis]) =>
+                  axis.trim().toLowerCase().startsWith("colo"),
+                )?.[1];
+                const swatch = swatchFor(colour ?? "");
+                return (
+                  <li key={row.key} className="rounded-xl border border-border p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {swatch !== null ? (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block size-4 shrink-0 rounded-full border border-border"
+                          style={{ backgroundColor: swatch }}
+                        />
+                      ) : null}
+                      <input
+                        aria-label={`Label for ${row.name}`}
+                        value={row.name}
+                        onChange={(e) => setRow(row.key, { name: e.target.value })}
+                        className="min-w-0 flex-1 font-semibold"
                       />
-                    ) : null}
-                    <input
-                      aria-label={`Label for ${row.name}`}
-                      value={row.name}
-                      onChange={(e) => setRow(row.key, { name: e.target.value })}
-                      className="min-w-0 flex-1 font-semibold"
-                    />
-                  </div>
+                    </div>
 
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <label className="text-sm">
-                      Price
-                      <input
-                        aria-label={`Price for ${row.name}`}
-                        inputMode="decimal"
-                        placeholder={money(basePrice)}
-                        value={row.price}
-                        onChange={(e) => setRow(row.key, { price: e.target.value })}
-                      />
-                    </label>
-                    <label className="text-sm">
-                      SKU
-                      <input
-                        aria-label={`SKU for ${row.name}`}
-                        maxLength={40}
-                        placeholder="Optional"
-                        value={row.sku}
-                        onChange={(e) => setRow(row.key, { sku: e.target.value })}
-                      />
-                    </label>
-                    <label className="text-sm">
-                      On hand
-                      <input
-                        aria-label={`Stock for ${row.name}`}
-                        inputMode="numeric"
-                        placeholder="0"
-                        value={row.stock}
-                        onChange={(e) => setRow(row.key, { stock: e.target.value })}
-                      />
-                    </label>
-                  </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <label className="text-sm">
+                        Price
+                        <input
+                          aria-label={`Price for ${row.name}`}
+                          inputMode="decimal"
+                          placeholder={money(basePrice)}
+                          value={row.price}
+                          onChange={(e) => setRow(row.key, { price: e.target.value })}
+                        />
+                      </label>
+                      <label className="text-sm">
+                        SKU
+                        <input
+                          aria-label={`SKU for ${row.name}`}
+                          maxLength={40}
+                          placeholder="Optional"
+                          value={row.sku}
+                          onChange={(e) => setRow(row.key, { sku: e.target.value })}
+                        />
+                      </label>
+                      <label className="text-sm">
+                        On hand
+                        <input
+                          aria-label={`Stock for ${row.name}`}
+                          inputMode="numeric"
+                          placeholder="0"
+                          value={row.stock}
+                          onChange={(e) => setRow(row.key, { stock: e.target.value })}
+                        />
+                      </label>
+                    </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    {row.image_key !== null && (
-                      <img
-                        src={images[row.image_key]}
-                        alt=""
-                        className="size-16 rounded-lg object-cover"
-                      />
-                    )}
-                    <label className="text-sm">
-                      {uploading === row.key
-                        ? "Uploading…"
-                        : row.image_key !== null
-                          ? "Replace photo"
-                          : "Add photo"}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        aria-label={`Photo for ${row.name}`}
-                        disabled={busy || uploading !== null}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-                          e.target.value = "";
-                          void setRowPhoto(row.key, file);
-                        }}
-                      />
-                    </label>
-                    {row.image_key !== null && uploading !== row.key && (
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="h-auto p-0 text-xs"
-                        onClick={() => setRow(row.key, { image_key: null })}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      {row.image_key !== null && (
+                        <img
+                          src={images[row.image_key]}
+                          alt=""
+                          className="size-16 rounded-lg object-cover"
+                        />
+                      )}
+                      <label className="text-sm">
+                        {uploading === row.key
+                          ? "Uploading…"
+                          : row.image_key !== null
+                            ? "Replace photo"
+                            : "Add photo"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          aria-label={`Photo for ${row.name}`}
+                          disabled={busy || uploading !== null}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] ?? null;
+                            e.target.value = "";
+                            void setRowPhoto(row.key, file);
+                          }}
+                        />
+                      </label>
+                      {row.image_key !== null && uploading !== row.key && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto p-0 text-xs"
+                          onClick={() => setRow(row.key, { image_key: null })}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
 
-                  <label className="mt-3 flex min-h-[44px] items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={row.visible}
-                      onChange={(e) => setRow(row.key, { visible: e.target.checked })}
-                      className="size-5"
-                    />
-                    Sell this option on the storefront
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+                    <label className="mt-3 flex min-h-[44px] items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={row.visible}
+                        onChange={(e) => setRow(row.key, { visible: e.target.checked })}
+                        className="size-5"
+                      />
+                      Sell this option on the storefront
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button type="button" onClick={save} disabled={busy || rows.length === 0}>
+        <Button type="button" onClick={save} disabled={busy || rows.length === 0 || axesDirty}>
           {busy ? "Saving…" : "Save options"}
         </Button>
         <p className="self-center text-xs text-muted-foreground">

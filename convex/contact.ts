@@ -16,6 +16,16 @@ import type { Doc } from "./_generated/dataModel";
 
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+/**
+ * Sender-independent ceiling for the whole form.
+ *
+ * The per-sender limit below keys on the address the sender *supplies*, so one
+ * fresh alias per tap walks straight past it. This second count reads what
+ * actually landed in the inbox instead — whichever email it was sent from —
+ * and refuses with a friendly sentence once the shop is drowning. 40/hour is
+ * far above any real hour of trade and far below what spam automation wants.
+ */
+const GLOBAL_RATE_LIMIT = 40;
 
 export const submit = mutation({
   args: {
@@ -58,6 +68,25 @@ export const submit = mutation({
       throw new ConvexError({
         message:
           "You have sent several messages recently. Please wait a little before writing again.",
+      });
+    }
+
+    // Sender-independent ceiling: how many messages the shop itself received
+    // in this window, whatever address each one came from. There is no
+    // created-at index on `contact_messages`, so this reads the newest rows in
+    // creation order (the default order) — a take of the cap plus one, never
+    // an unbounded scan — and counts only the ones still inside the window.
+    const recentMessages = await ctx.db
+      .query("contact_messages")
+      .order("desc")
+      .take(GLOBAL_RATE_LIMIT + 1);
+    const withinHour = recentMessages.filter(
+      (row) => now - row._creationTime < RATE_WINDOW_MS,
+    ).length;
+    if (withinHour >= GLOBAL_RATE_LIMIT) {
+      throw new ConvexError({
+        message:
+          "We have received a lot of messages in the last hour. Please try again a little later, or call the shop directly.",
       });
     }
 

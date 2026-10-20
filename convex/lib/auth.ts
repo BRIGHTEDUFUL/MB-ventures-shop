@@ -8,7 +8,15 @@ type Ctx = QueryCtx | MutationCtx;
 /** The signed-in Convex Auth user, or `null` for anonymous visitors. */
 export async function currentUserId(ctx: Ctx): Promise<Id<"users"> | null> {
   const userId = await getAuthUserId(ctx as unknown as Parameters<typeof getAuthUserId>[0]);
-  return userId as Id<"users"> | null;
+  if (userId === null) return null;
+  // A session can outlive its account: `users.deleteUser` drops the `users`
+  // row, while `authSessions` belongs to the auth framework and is not ours to
+  // delete (AGENTS.md §12) — so the cookie keeps resolving to an id nothing
+  // points at. Answer `null` instead: every caller already reads `null` as
+  // "not signed in", which is exactly the truth, and no write can go through
+  // on behalf of an account that no longer exists.
+  const user = await ctx.db.get(userId as Id<"users">);
+  return user === null ? null : (userId as Id<"users">);
 }
 
 /** Replaces "must be authenticated" RLS policies. */

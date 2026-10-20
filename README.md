@@ -10,34 +10,40 @@ Ghana cedis, and order for delivery across Ghana or collection from the Abelenkp
 
 **Ordering is LIVE.** Real inventory is stocked and customers can place orders now.
 
-- 11 real products live with actual photos
+- Production carries a ~79-product supplier catalogue with real photos in Convex storage
 - 10 demo products hidden from the storefront (kept as drafts)
 - Hero background is a cinematic workspace scene built from real product photos
 - Staff/admin accounts provisioned and verified on production
 
 ## Payments and fulfilment
 
-No payment is taken online — money always changes hands in person:
+Two ways to settle offline, both chosen at checkout:
 
-1. **Pay at the shop** — pickup orders from the Abelenkpe taxi rank shop are paid at the
-   counter (cash or Mobile Money in person) when the order is collected.
-2. **Cash on delivery** — delivery orders pay the courier in cash when the order arrives.
+1. **Pay at the shop** — pickup orders are paid at the counter (cash or Mobile Money in
+   person) when the order is collected.
+2. **Cash on delivery** — delivery orders pay the rider in cash when the order arrives.
 
-The payment method is derived server-side from the fulfilment choice. Staff record receipt in
-`/staff`; completing an order requires the payment to be marked as received. Three delivery
-zones are available (Accra Central, Greater Accra, Nationwide) alongside in-store pickup.
+**Online payment (Paystack) is live as an opt-in**: when the staff switch is on, checkout
+offers "Pay online now" and a charge confirms the order only after Paystack's signed
+confirmation. Nationwide delivery is prepay-only. The shop never adds a delivery fee —
+riders collect theirs from the customer directly. Staff record offline receipt in `/staff`;
+completing an order requires the payment to be marked as received. Full flow:
+`docs/PAYMENTS-PAYSTACK.md`.
+
+Delivery zones are recorded on orders (Accra Central, Greater Accra, Nationwide) alongside
+in-store pickup; they no longer carry a shop-side fee.
 
 ## Stack
 
-| Layer       | Choice                                                               |
-| ----------- | -------------------------------------------------------------------- |
-| Framework   | TanStack Start (file routes, SSR) on React 19 + Vite                 |
-| Styling     | Tailwind CSS v4, shadcn/ui, Archivo / Public Sans / IBM Plex Mono    |
-| Data        | Convex — schema, queries/mutations, file storage                     |
-| Auth        | Convex Auth, email + password only (no OAuth, no email verification) |
-| Client data | TanStack Query via `@convex-dev/react-query`                         |
-| Tests       | Vitest + Testing Library + Playwright                                |
-| Hosting     | Hostinger VPS (Node/PM2) + GitHub Actions CI/CD                      |
+| Layer       | Choice                                                                              |
+| ----------- | ----------------------------------------------------------------------------------- |
+| Framework   | TanStack Start (file routes, SSR) on React 19 + Vite                                |
+| Styling     | Tailwind CSS v4, shadcn/ui, Archivo / Public Sans / IBM Plex Mono                   |
+| Data        | Convex — schema, queries/mutations, file storage                                    |
+| Auth        | Convex Auth, email + password only (no OAuth, no email verification)                |
+| Client data | TanStack Query via `@convex-dev/react-query`                                        |
+| Tests       | Vitest + Testing Library + Playwright                                               |
+| Hosting     | Hostinger managed Node.js hosting (deployed via `scripts/deploy-hostinger-api.mjs`) |
 
 ## Development
 
@@ -54,9 +60,9 @@ Other commands:
 npm run build    # production build
 npm start         # run the built server
 npm run lint      # eslint
-npm test          # vitest (216 tests)
+npm test          # vitest — unit + convex integration tests
 npm run format    # prettier
-npm run test:e2e  # Playwright — 32 checks (head, outline, mobile overflow matrix)
+npm run test:e2e  # Playwright read-only suite (boots its own dev server)
 ```
 
 Environment variables are documented in `.env.example` — copy it to `.env.local`
@@ -88,15 +94,19 @@ Read `AGENTS.md` for the full set of invariants before changing anything in `con
 
 - **Dev:** `npm run dev` targets dev deployment `dev:wonderful-porpoise-243` (configured in `.env.local`).
 - **Prod Convex:** `npx convex deploy --env-file .env.prod.local` targets `prod:earnest-fennec-109`.
-- **Prod Frontend:** GitHub Actions (`deploy-hostinger.yml`) builds and deploys to Hostinger VPS on every push to `main`.
-- **Inventory migration:** `npx convex run inventory_import:apply --env-file .env.prod.local` (idempotent — safe to re-run).
+- **Prod Frontend:** `node scripts/pack-deploy.mjs` then `node scripts/deploy-hostinger-api.mjs`
+  (Hostinger API: upload → server-side build → publish). The GitHub Actions deploy step skips —
+  its `HOSTINGER_*` secrets are not configured.
+- **Dev fixture catalogue:** `npx convex run inventory_import:apply` — **dev only**. Production
+  carries the ~79-product supplier catalogue; never re-apply the fixture there.
 
 See `AGENTS.md` for seed and staff-grant commands, and `docs/TEST-ACCOUNTS.md`
 for the staff/admin test sign-ins.
 
 ## Live inventory
 
-11 real products, 10 units each, prices in Ghana cedis (GH₵):
+The original 11-product fixture catalogue (dev seed — production now carries the
+supplier catalogue; see AGENTS.md §8), 10 units each, prices in Ghana cedis (GH₵):
 
 | Product                                                   | Price  |
 | --------------------------------------------------------- | ------ |

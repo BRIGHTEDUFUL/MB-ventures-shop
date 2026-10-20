@@ -15,7 +15,7 @@ revoked on 2026-10-10 — the account now has no role row.
 
 ## 1. Development — `dev:wonderful-porpoise-243`
 
-Storefront: `http://localhost:5173` (`npm run dev`).
+Storefront: `http://localhost:8080` (`npm run dev`).
 
 | Email                                 | Role     | Password        | Notes                                   |
 | ------------------------------------- | -------- | --------------- | --------------------------------------- |
@@ -37,21 +37,21 @@ staff default when set — no `.env*` file sets it today, so the default stands.
 Storefront: `https://mbventuresgh.com`.
 
 > **Live as of 15 Oct 2026.** All four `@mbventuresgh.com` accounts are active
-> on production with correct roles. The legacy `@mbventuresgh.com` accounts
-> remain until the domain cutover revokes them (`docs/DOMAIN-MIGRATION.md` §6).
+> on production with correct roles. The legacy `@mbventuresghana.com` accounts
+> are obsolete since the domain cutover (`docs/DOMAIN-MIGRATION.md` §6).
 
-| Email                        | Role    | Password                         | Notes                                     |
-| ---------------------------- | ------- | -------------------------------- | ----------------------------------------- |
-| `manager@mbventuresgh.com`   | `admin` | `MBVentures2025!Manager#Admin`   | New Store Manager (Full admin rights)     |
-| `attendant@mbventuresgh.com` | `staff` | `MBVentures2025!Attendant#Staff` | New Shop Attendant (Orders & inventory)   |
-| `admin@mbventuresgh.com`     | `admin` | `MBVentures2025!Admin#Secure`    | Full store admin (team, fees, settings)   |
-| `staff@mbventuresgh.com`     | `staff` | `MBVentures2025!Staff#Secure`    | Store staff (orders, products, inventory) |
-| `e2e.staff@example.com`      | `admin` | `E2eStaff!2026`                  | E2E test admin account                    |
-| `smoke-prod@example.com`     | `admin` | unknown                          |                                           |
+| Email                        | Role     | Password                                                | Notes                                                          |
+| ---------------------------- | -------- | ------------------------------------------------------- | -------------------------------------------------------------- |
+| `manager@mbventuresgh.com`   | `admin`  | see local `docs/PRODUCTION-CREDENTIALS.md` (not in git) | New Store Manager (Full admin rights)                          |
+| `attendant@mbventuresgh.com` | `staff`  | see local `docs/PRODUCTION-CREDENTIALS.md` (not in git) | New Shop Attendant (Orders & inventory)                        |
+| `admin@mbventuresgh.com`     | `admin`  | see local `docs/PRODUCTION-CREDENTIALS.md` (not in git) | Full store admin (team, fees, settings)                        |
+| `staff@mbventuresgh.com`     | `staff`  | see local `docs/PRODUCTION-CREDENTIALS.md` (not in git) | Store staff (orders, products, inventory)                      |
+| `e2e.staff@example.com`      | customer | `E2eStaff!2026`                                         | Test signup — **no role** on production (verified 20 Oct 2026) |
+| `smoke-prod@example.com`     | customer | unknown                                                 | Test signup — no role (verified 20 Oct 2026)                   |
 
 Staff sign in at `/account` (or via the footer **Staff access** link). When signed in with staff privileges, `/account` shows the **Open the store hub** card linking to `/staff`.
 
-**Admin authentication is strictly gated**: admin accounts cannot sign in via `/account` or the footer staff link. Admins must authenticate through the private administrator URL: `/admin-hub/mbvg-admin-2026` (which unlocks the session in `sessionStorage` and routes to `/staff`). Direct unauthorized attempts on `/staff` or public login display an access restriction notice.
+**Admin authentication is strictly gated**: admin accounts cannot sign in via `/account` or the footer staff link. Admins must authenticate through the private administrator URL: `/admin-hub/<ADMIN_HUB_TOKEN>` (which unlocks the session in `sessionStorage` and routes to `/staff`). Direct unauthorized attempts on `/staff` or public login display an access restriction notice. The token is **not** in git — it lives in the local `docs/PRODUCTION-CREDENTIALS.md` (the code constant is `src/lib/admin-token.ts`).
 
 To provision additional staff/admin accounts:
 
@@ -71,8 +71,11 @@ definitive check — it either returns session tokens or throws
 "Invalid email or password":
 
 ```powershell
-npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresgh.com\",\"password\":\"MBVentures2025!Admin#Secure\"}}' --prod
+npx convex run auth:signIn '{\"provider\":\"password\",\"params\":{\"flow\":\"signIn\",\"email\":\"admin@mbventuresgh.com\",\"password\":\"<ADMIN_PASSWORD>\"}}' --prod
 ```
+
+(Use the real password from the local-only `docs/PRODUCTION-CREDENTIALS.md` —
+it is not in git.)
 
 The returned tokens are short-lived and session-scoped: never paste them into a ticket, doc or log.
 
@@ -105,7 +108,8 @@ back:
 - Grant roles only after the account exists: `grantStaff` looks the user up by
   email and fails if they have never signed up.
 
-> These are throwaway test credentials for a demo shop, which is the only reason
-> they are written down in a tracked file. The owner's real account must use a
-> unique password that appears nowhere in this repository — and `E2eStaff!2026`
-> / `Shopper!2026` must never be reused outside testing.
+> Passwords for production accounts are **not** written down in this tracked
+> file any more — see the local, gitignored `docs/PRODUCTION-CREDENTIALS.md`.
+> The two dev-only passwords here (`E2eStaff!2026` / `Shopper!2026`) are
+> throwaway fixtures for the dev deployment and must never be reused anywhere
+> else — especially not on production.

@@ -23,6 +23,7 @@ import {
 } from "./lib/rules";
 import { applyStockChange, stockStateOf, type MovementSource, type StockState } from "./lib/stock";
 import { cancelUnpaidOrder } from "./lib/orderCancel";
+import { fail } from "./lib/errors";
 import { pesewas } from "./lib/paystack";
 import { validators } from "./schema";
 import {
@@ -69,7 +70,10 @@ async function uniqueReference(ctx: QueryCtx): Promise<string> {
       .first();
     if (existing === null) return reference;
   }
-  throw new Error("Could not generate an order reference. Try again.");
+  // Ten colliding candidates means the orders table's current state is in the
+  // way, not the caller's input — a typed error so the browser still gets the
+  // sentence (plain `Error` messages are redacted to "Server Error").
+  fail("STATE_CONFLICT", "Could not generate an order reference. Try again.");
 }
 
 async function historyFor(ctx: QueryCtx, orderId: Id<"orders">) {
@@ -341,7 +345,7 @@ export const place = mutation({
     });
 
     const order = await ctx.db.get(orderId);
-    if (order === null) throw new Error("Order could not be saved.");
+    if (order === null) fail("NOT_FOUND", "Order could not be saved.");
 
     // Notifications only: a failure here is swallowed inside
     // `scheduleEmail`, so the order itself always commits.
@@ -656,7 +660,7 @@ export const staffCreate = mutation({
     }
 
     const order = await ctx.db.get(orderId);
-    if (order === null) throw new Error("Order could not be saved.");
+    if (order === null) fail("NOT_FOUND", "Order could not be saved.");
 
     // Notifications only: a failure here is swallowed inside `scheduleEmail`,
     // so the order itself always commits (same contract as `place`).

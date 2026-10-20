@@ -61,13 +61,17 @@ VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 SITE_URL=https://mbventuresgh.com
 EOF
 ```
+
+> Replace `<WEB3FORMS_ACCESS_KEY>` with the real value from a local, untracked
+> source (`docs/PRODUCTION-CREDENTIALS.md`, gitignored, or the Convex env:
+> `npx convex env get WEB3FORMS_ACCESS_KEY`) — secrets are never committed.
 
 ### Option B: Download from GitHub
 
@@ -111,12 +115,15 @@ VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
 SITE_URL=https://mbventuresgh.com
 ```
+
+(`WEB3FORMS_ACCESS_KEY` will show the real key only after you substituted it
+from `docs/PRODUCTION-CREDENTIALS.md` / the Convex env before upload.)
 
 ---
 

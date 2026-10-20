@@ -223,7 +223,7 @@ Verify afterwards: `/admin/emails` → send a test message and confirm it
 arrives at the **new** inbox; the payload's `replyto` should match too.
 
 **Record — 19 Oct 2026:** a fresh form was created in the Web3Forms dashboard
-(`My Form mbventuresgh`, access key `ab22e273-6536-4ae8-af7d-0b8c5013e418`),
+(`My Form mbventuresgh`, access key `ab22e273-…`),
 replacing the old key, and its Recipient Emails set to
 `info@mbventuresgh.com`. The new key was applied to both deployments with
 `npx convex env set WEB3FORMS_ACCESS_KEY …` (prod with

@@ -117,7 +117,7 @@ export function StorefrontSettings({
       set(field, await uploadImage(file));
       toast.success("Photo uploaded");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed.");
+      toast.error(errorMessage(err, "The photo could not be uploaded."));
     }
     setBusy(false);
   };

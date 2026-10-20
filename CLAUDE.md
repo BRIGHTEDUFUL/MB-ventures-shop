@@ -7,10 +7,10 @@
 
 - **Live store:** https://mbventuresgh.com — ordering is enabled, real products in stock
 - **Backend:** Convex (`convex/`) — `prod:earnest-fennec-109`
-- **Frontend:** TanStack Start SSR → Hostinger VPS via GitHub Actions
+- **Frontend:** TanStack Start SSR → Hostinger managed Node.js hosting (deploy via `scripts/deploy-hostinger-api.mjs`; the GitHub Actions deploy step is not configured)
 - **Auth:** Email + password only (Convex Auth). No OAuth.
 - **Email:** Web3Forms. No Resend.
-- **Tests:** 216 Vitest (15 files) + 32 Playwright e2e checks
+- **Tests:** Vitest + Playwright suites — current counts in `AGENTS.md` §7
 
 ## The rules to remember
 
@@ -31,7 +31,9 @@
 npx tsc --noEmit; npm run lint; npm test; npm run build
 ```
 
-All must pass. Then push — GitHub Actions handles the rest.
+All must pass. Then commit. Pushing does **not** deploy the frontend — the
+GitHub Actions Hostinger secrets are not configured; run
+`node scripts/pack-deploy.mjs` then `node scripts/deploy-hostinger-api.mjs`.
 
 ## Windows PowerShell
 

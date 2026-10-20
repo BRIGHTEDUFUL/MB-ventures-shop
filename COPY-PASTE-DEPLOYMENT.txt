@@ -1,6 +1,7 @@
 ================================================================================
 MB VENTURES GH - PRODUCTION DEPLOYMENT
-COPY & PASTE READY - ALL REAL CREDENTIALS
+COPY & PASTE READY - SECRETS ARE PLACEHOLDERS (never committed; real values
+live in the local-only docs/PRODUCTION-CREDENTIALS.md and the Convex env)
 ================================================================================
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -9,12 +10,16 @@ STEP 1: CREATE .env.local ON HOSTINGER SERVER
 
 cd /var/www/mbventuresgh
 
+# NOTE: secrets are never committed. Before running, replace the
+# <WEB3FORMS_ACCESS_KEY> placeholder below with the real value from a local,
+# untracked source (docs/PRODUCTION-CREDENTIALS.md, gitignored) or the Convex
+# env (`npx convex env get WEB3FORMS_ACCESS_KEY`).
 cat > .env.local << 'EOF'
 VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 VITE_SITE_URL=https://mbventuresgh.com
 NODE_ENV=production
-WEB3FORMS_ACCESS_KEY=ab22e273-6536-4ae8-af7d-0b8c5013e418
+WEB3FORMS_ACCESS_KEY=<WEB3FORMS_ACCESS_KEY>
 EMAIL_REPLY_TO=info@mbventuresgh.com
 ADMIN_ALERT_EMAIL=info@mbventuresgh.com
 EMAIL_DAILY_LIMIT=250
@@ -66,7 +71,7 @@ ADMIN ACCOUNT (Register at: mbventuresgh.com/auth/signup)
 Name: MB Ventures Admin
 Email: admin@mbventuresgh.com
 Phone: +233 24 000 0001
-Password: MBVentures2025!Admin#Secure
+Password: see local docs/PRODUCTION-CREDENTIALS.md (not in git)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -76,7 +81,7 @@ STAFF ACCOUNT (Register at: mbventuresgh.com/auth/signup)
 Name: MB Ventures Staff
 Email: staff@mbventuresgh.com
 Phone: +233 24 000 0002
-Password: MBVentures2025!Staff#Secure
+Password: see local docs/PRODUCTION-CREDENTIALS.md (not in git)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -95,12 +100,12 @@ Production Site: https://mbventuresgh.com
 Convex Backend: https://earnest-fennec-109.convex.cloud
 Convex Dashboard: https://dashboard.convex.dev
 
-Web3Forms Key: ab22e273-6536-4ae8-af7d-0b8c5013e418
+Web3Forms Key: <WEB3FORMS_ACCESS_KEY> (value lives in the Convex env / local docs/PRODUCTION-CREDENTIALS.md — never committed)
 Email: info@mbventuresgh.com
 Email Daily Limit: 250
 
-Admin: admin@mbventuresgh.com / MBVentures2025!Admin#Secure
-Staff: staff@mbventuresgh.com / MBVentures2025!Staff#Secure
+Admin: admin@mbventuresgh.com / see local docs/PRODUCTION-CREDENTIALS.md (not in git)
+Staff: staff@mbventuresgh.com / see local docs/PRODUCTION-CREDENTIALS.md (not in git)
 
 
 ================================================================================

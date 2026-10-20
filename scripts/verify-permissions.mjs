@@ -1,5 +1,26 @@
 import { chromium } from "@playwright/test";
 
+/**
+ * Verifies the staff permission system on the live site as an admin.
+ *
+ * SECRETS ARE NEVER COMMITTED. Required environment variable (set it from a
+ * local, untracked source — docs/PRODUCTION-CREDENTIALS.md, gitignored):
+ *
+ *   MB_ADMIN_PASSWORD (admin@mbventuresgh.com)
+ *
+ * The script exits with an error naming the variable if it is missing.
+ */
+
+const ADMIN_PASSWORD = process.env["MB_ADMIN_PASSWORD"] ?? "";
+if (!ADMIN_PASSWORD) {
+  console.error(
+    "Missing required environment variable MB_ADMIN_PASSWORD. " +
+      "Passwords are never committed; set it from a local, untracked source " +
+      "(docs/PRODUCTION-CREDENTIALS.md) before running this script.",
+  );
+  process.exit(1);
+}
+
 async function testPermissions() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -11,7 +32,7 @@ async function testPermissions() {
     timeout: 45000,
   });
   await page.locator('input[type="email"]').fill("admin@mbventuresgh.com");
-  await page.locator('input[type="password"]').fill("MBVentures2025!Admin#Secure");
+  await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
   await page.locator("form.auth-form button").click();
   await page.waitForSelector("text=Sign out", { timeout: 20000 });
   console.log("✅ Sign in successful.");

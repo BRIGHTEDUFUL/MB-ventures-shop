@@ -57,9 +57,15 @@ function ProductPage() {
 
   // Merge chosen over first-variant defaults so any axis the user has
   // explicitly clicked is respected, and axes not yet touched fall back to the
-  // first visible variant's value. Fully determined on first render. Hoisted
-  // above the early return so the effects below can watch the selection.
-  const defaultOptions = variants.find((v) => v.visible)?.options ?? variants[0]?.options ?? {};
+  // first *buyable* variant — visible and in stock — so the default selection
+  // lands on something that can actually be added to the cart. Fully
+  // determined on first render. Hoisted above the early return so the effects
+  // below can watch the selection.
+  const defaultOptions =
+    variants.find((v) => v.visible && v.stock > 0)?.options ??
+    variants.find((v) => v.visible)?.options ??
+    variants[0]?.options ??
+    {};
   const selectedOptions = axes.length > 0 ? { ...defaultOptions, ...chosen } : defaultOptions;
 
   // The chosen options resolve to a variant by matching the options
@@ -71,11 +77,10 @@ function ProductPage() {
   // between products. TanStack Router reuses the same component instance for
   // different slugs, so without an explicit reset the previous product's
   // choices survive in state. Keyed on slug: fires once per product, not on
-  // every re-render. Seeds chosen from the first visible variant so the
-  // picker is never blank.
+  // every re-render. Seeds chosen from the same first-buyable-variant default
+  // above so the picker is never blank.
   useEffect(() => {
-    const firstVisible = variants.find((v) => v.visible);
-    setChosen(firstVisible?.options ?? {});
+    setChosen(defaultOptions);
     setQuantity(1);
     setGallery(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -60,6 +60,9 @@ function Checkout() {
     [error, setError] = useState(""),
     // True from the moment an order lands — see the empty-cart effect below.
     [placed, setPlaced] = useState(false),
+    // The reference of an already-placed online order. Kept so a payment that
+    // fails to open can be retried without placing a second order.
+    [payRef, setPayRef] = useState<string | null>(null),
     [form, setForm] = useState<CheckoutForm>(() => {
       const fields = { ...draft };
       delete fields["step"];
@@ -119,24 +122,74 @@ function Checkout() {
 
   if (loading || !data) return <div className="page-content wrap">Loading checkout…</div>;
   if (!session) return <div className="page-content wrap">Taking you to sign in…</div>;
-  // The shop never charges delivery: riders collect their fee straight from
-  // the customer, so the order total is the cart subtotal and no fee number
-  // is ever shown.
-  const total = cart.subtotal;
-  const unavailable = cart.lines.some((l) => {
-    const p = data.products.find((p) => p.id === l.product.id);
-    if (!p?.verified) return true;
-    // A line that carries an option is filled from that option's shelf, so the
-    // option's stock — not the product's aggregate — decides this line.
-    const stock = l.variant ? l.variant.stock : p.stock;
-    return stock < l.quantity;
+  // Prices and stock are reconciled against the live catalogue exactly like
+  // the cart drawer does (CartLines): the option is looked up by its key on
+  // the live product, falling back to the cart's snapshot while data loads.
+  // The browser still shows estimates only — the server recomputes every
+  // number authoritatively when the order is placed.
+  const lines = cart.lines.map((l) => {
+    const live = data.products.find((p) => p.id === l.product.id);
+    const liveVariant = l.variant
+      ? live?.variants?.find((v) => v.key === l.variant!.key)
+      : undefined;
+    return {
+      line: l,
+      live,
+      price:
+        (l.variant ? (liveVariant?.price ?? l.variant.price) : null) ??
+        live?.price ??
+        l.product.price,
+      stock: l.variant ? (liveVariant?.stock ?? l.variant.stock) : (live?.stock ?? l.product.stock),
+    };
   });
-  const canOrder = data.settings.ordering_enabled && !unavailable;
-  const place = async () => {
+  // The shop never charges delivery: riders collect their fee straight from
+  // the customer, so the order total is the subtotal and no fee number is
+  // ever shown.
+  const subtotal = lines.reduce((sum, { line, price }) => sum + price * line.quantity, 0);
+  const total = subtotal;
+  // One reason per offending line — a sample product cannot be ordered at
+  // all, a short shelf only needs a smaller quantity. Same wording family as
+  // the cart drawer's "Only N left". (A missing product is also a sample —
+  // there is nothing verified behind it to sell.)
+  const issues = lines.flatMap(({ line: l, live, stock }) => {
+    const label = l.variant ? `${l.product.name} (${l.variant.name})` : l.product.name;
+    const issue = (reason: string) => [{ key: lineKey(l), label, reason }];
+    if (!live || !live.verified) return issue("Sample item — not orderable yet");
+    if (stock === 0) return issue("Out of stock");
+    if (stock < l.quantity) return issue(`Only ${stock} left`);
+    return [];
+  });
+  const canOrder = data.settings.ordering_enabled && issues.length === 0;
+  /**
+   * Hand an already-placed online order to Paystack. Split out from `place`
+   * so a gateway failure is never reported as an order failure: the order
+   * EXISTS at this point (its stock is held), and `payRef` lets the retry
+   * re-open the same reference instead of placing a second order.
+   */
+  const pay = async (reference: string) => {
     setBusy(true);
     setError("");
     try {
-      const order = await placeOrder({
+      // The cart stays intact until the payment is verified on the way back
+      // (/paystack/return), so an abandoned gateway page never loses work.
+      const { authorization_url } = await startPayment({ reference });
+      window.location.assign(authorization_url);
+    } catch (e) {
+      setError(
+        errorMessage(
+          e,
+          "Your order is saved, but the payment page could not open. Please try the payment again or contact the shop.",
+        ),
+      );
+      setBusy(false);
+    }
+  };
+  const place = async () => {
+    setBusy(true);
+    setError("");
+    let order: Awaited<ReturnType<typeof placeOrder>>;
+    try {
+      order = await placeOrder({
         ...form,
         // The browser sends identities only — product, option, quantity. The
         // price, the stock check and the label are all recomputed server-side.
@@ -146,26 +199,25 @@ function Checkout() {
           ...(l.variant ? { variant_key: l.variant.key } : {}),
         })),
       });
-      if (form.payment === "online") {
-        // The order and its stock hold already exist; now hand the shopper to
-        // Paystack's hosted checkout. The cart stays intact until the payment
-        // is verified on the way back (/paystack/return), so an abandoned
-        // gateway page never loses the shopper's work.
-        const { authorization_url } = await startPayment({ reference: order.reference });
-        window.location.assign(authorization_url);
-        return;
-      }
-      sessionStorage.setItem("mb-receipt", JSON.stringify(order));
-      sessionStorage.removeItem(DRAFT_KEY);
-      // Flag before clearing: the emptied cart must not bounce the shopper to
-      // /cart on the very render that should carry them to the receipt.
-      setPlaced(true);
-      cart.clear();
-      navigate({ to: "/confirmation", search: { ref: order.reference } });
     } catch (e) {
       setError(errorMessage(e, "Order could not be placed. Please try again."));
       setBusy(false);
+      return;
     }
+    if (form.payment === "online") {
+      // The order and its stock hold already exist; now open the payment
+      // page. Failures here are handled by `pay` with the honest message.
+      setPayRef(order.reference);
+      await pay(order.reference);
+      return;
+    }
+    sessionStorage.setItem("mb-receipt", JSON.stringify(order));
+    sessionStorage.removeItem(DRAFT_KEY);
+    // Flag before clearing: the emptied cart must not bounce the shopper to
+    // /cart on the very render that should carry them to the receipt.
+    setPlaced(true);
+    cart.clear();
+    navigate({ to: "/confirmation", search: { ref: order.reference } });
   };
   return (
     <div className="page-content wrap">
@@ -206,6 +258,9 @@ function Checkout() {
                   e.preventDefault();
                   setError("");
                   if (step < 2) setStep(step + 1);
+                  // An order already exists behind `payRef` — retry its
+                  // payment rather than placing a second order.
+                  else if (form.payment === "online" && payRef !== null) void pay(payRef);
                   else place();
                 }}
               >
@@ -424,18 +479,22 @@ function Checkout() {
                         : "Placing order…"
                       : step < 2
                         ? "Continue"
-                        : canOrder
-                          ? form.payment === "online"
-                            ? `Pay ${money(total, true)} online`
-                            : "Place order"
-                          : "Ordering not open yet"}
+                        : !canOrder
+                          ? data.settings.ordering_enabled
+                            ? "Fix your cart to order"
+                            : "Ordering not open yet"
+                          : form.payment === "online"
+                            ? payRef !== null
+                              ? "Try payment again"
+                              : `Pay ${money(total, true)} online`
+                            : "Place order"}
                   </Button>
                 </div>
               </form>
             </div>
             <aside className="solid-panel h-fit">
               <h2 className="mb-5 text-xl">Your order</h2>
-              {cart.lines.map((l) => (
+              {lines.map(({ line: l, price }) => (
                 // The line key, not the product id: Black and White are two
                 // rows, and React would collapse them onto one otherwise.
                 <div key={lineKey(l)} className="mb-4 flex items-center gap-3">
@@ -449,14 +508,12 @@ function Checkout() {
                     {l.variant && <p className="text-muted-foreground">{l.variant.name}</p>}
                     <p className="text-muted-foreground">Qty {l.quantity}</p>
                   </div>
-                  <span className="text-xs">
-                    {money((l.variant?.price ?? l.product.price) * l.quantity, true)}
-                  </span>
+                  <span className="text-xs">{money(price * l.quantity, true)}</span>
                 </div>
               ))}
               <div className="summary-row">
                 <span>Subtotal</span>
-                <span>{money(cart.subtotal, true)}</span>
+                <span>{money(subtotal, true)}</span>
               </div>
               {form.fulfillment === "delivery" ? (
                 // No number here on purpose: riders charge the customer
@@ -475,10 +532,31 @@ function Checkout() {
                   : `${form.fulfillment === "pickup" ? "Pay at the shop when you collect your order." : "Pay cash when your order arrives."} `}{" "}
                 Prices are rechecked by the store when your order is placed.
               </p>
-              {!canOrder && (
+              {/* "Temporarily closed" is only honest when the ordering switch
+                  is off — a sample item or a short shelf is a cart problem,
+                  not a closed shop, and gets its own per-line list below. */}
+              {!data.settings.ordering_enabled && (
                 <p className="notice mt-4">
                   Orders are temporarily closed. Contact the Abelenkpe shop or check back soon.
                 </p>
+              )}
+              {issues.length > 0 && (
+                <div className="mt-4 rounded-xl border border-offer/40 bg-offer/10 p-4 text-sm">
+                  <p className="font-semibold">Fix these before ordering:</p>
+                  <ul className="mt-2 space-y-1">
+                    {issues.map((i) => (
+                      <li key={i.key}>
+                        {i.label} — <span className="text-offer">{i.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to="/cart"
+                    className="mt-3 inline-flex min-h-10 items-center text-sm font-medium text-link underline"
+                  >
+                    Adjust your cart
+                  </Link>
+                </div>
               )}
             </aside>
           </div>

@@ -1,5 +1,33 @@
 import { chromium } from "@playwright/test";
 
+/**
+ * Live auth smoke test for the production admin and staff accounts.
+ *
+ * SECRETS ARE NEVER COMMITTED. Required environment variables (set them from a
+ * local, untracked source — docs/PRODUCTION-CREDENTIALS.md, gitignored):
+ *
+ *   MB_ADMIN_PASSWORD (admin@mbventuresgh.com)
+ *   MB_STAFF_PASSWORD (staff@mbventuresgh.com)
+ *
+ * The script exits with an error naming any missing variable.
+ */
+
+const ADMIN_PASSWORD = process.env["MB_ADMIN_PASSWORD"] ?? "";
+const STAFF_PASSWORD = process.env["MB_STAFF_PASSWORD"] ?? "";
+for (const [name, value] of [
+  ["MB_ADMIN_PASSWORD", ADMIN_PASSWORD],
+  ["MB_STAFF_PASSWORD", STAFF_PASSWORD],
+]) {
+  if (!value) {
+    console.error(
+      `Missing required environment variable ${name}. ` +
+        "Passwords are never committed; set it from a local, untracked source " +
+        "(docs/PRODUCTION-CREDENTIALS.md) before running this script.",
+    );
+    process.exit(1);
+  }
+}
+
 async function testRole(email, password, roleName) {
   console.log(`\n========================================`);
   console.log(`Testing ${roleName} (${email})...`);
@@ -74,8 +102,8 @@ async function testRole(email, password, roleName) {
 }
 
 async function main() {
-  await testRole("admin@mbventuresgh.com", "MBVentures2025!Admin#Secure", "Admin");
-  await testRole("staff@mbventuresgh.com", "MBVentures2025!Staff#Secure", "Staff");
+  await testRole("admin@mbventuresgh.com", ADMIN_PASSWORD, "Admin");
+  await testRole("staff@mbventuresgh.com", STAFF_PASSWORD, "Staff");
 }
 
 main().catch((err) => {

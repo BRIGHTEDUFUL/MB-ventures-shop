@@ -47,7 +47,6 @@ function formatGhanaPhone(raw: string): string {
 function MessagesPage() {
   const [status, setStatus] = useState<MessageStatus>("all");
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const messagesQuery = useQuery({
     ...convexQueryOptions(api.contact.list, {
@@ -150,7 +149,6 @@ function MessagesPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map((msg) => {
-              const isSelected = selectedId === msg.id;
               const ghanaWaNumber = msg.phone ? formatGhanaPhone(msg.phone) : null;
 
               return (

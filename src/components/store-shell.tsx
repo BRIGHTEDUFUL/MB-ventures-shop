@@ -241,6 +241,11 @@ export function StoreOverlays() {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname, setMenuOpen]);
+  // A closed search starts fresh next time — the old query and its results
+  // must not greet the shopper when they reopen the panel.
+  useEffect(() => {
+    if (!cart.searchOpen) setQuery("");
+  }, [cart.searchOpen]);
   return (
     <>
       <Dialog.Root open={cart.cartOpen} onOpenChange={cart.setCartOpen}>

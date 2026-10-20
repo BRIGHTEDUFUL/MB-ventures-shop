@@ -326,7 +326,11 @@ function Account() {
         </div>
 
         <h2 className="auth-section-heading">Your orders</h2>
-        {orders.isError ? (
+        {orders.isPending ? (
+          // Pending, not empty: without this branch the query's first render
+          // flashed "No orders yet" to shoppers who do have orders.
+          <p className="auth-empty">Loading your orders…</p>
+        ) : orders.isError ? (
           <p className="auth-empty">Orders could not load. Please try again.</p>
         ) : orders.data?.length ? (
           <ul className="auth-orders">
@@ -359,7 +363,9 @@ function Account() {
           <p className="auth-empty">No orders yet. Your first order will appear here.</p>
         )}
         <h2 className="auth-section-heading">Saved addresses</h2>
-        {addresses.data?.length === 0 ? (
+        {addresses.isPending ? (
+          <p className="auth-empty">Loading saved addresses…</p>
+        ) : addresses.data?.length === 0 ? (
           <p className="auth-empty">
             Nothing saved yet. Add the places you deliver to and checkout fills them in.
           </p>

@@ -462,7 +462,9 @@ describe("template preview gallery", () => {
 
     const open = await t.query(api.emails.previewDev, {});
     expect(open.allowed).toBe(true);
-    expect(open.items).toHaveLength(12);
+    // `>=` rather than an exact pin: adding a template must not fail a test
+    // that is really about the gallery gating.
+    expect(open.items.length).toBeGreaterThanOrEqual(12);
     expect(open.items.every((item) => item.html.includes("<!DOCTYPE html>"))).toBe(true);
 
     process.env["SITE_URL"] = "https://mbventuresgh.com";

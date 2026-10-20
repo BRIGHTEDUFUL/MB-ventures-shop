@@ -114,6 +114,7 @@ function EmailsConsole() {
   const [status, setStatus] = useState("");
   const [template, setTemplate] = useState("");
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [previewId, setPreviewId] = useState("");
   const [testTemplate, setTestTemplate] = useState("order-received");
   const [testTo, setTestTo] = useState("");
@@ -126,9 +127,16 @@ function EmailsConsole() {
   const [notice, setNotice] = useState("");
   const [suppression, setSuppression] = useState("");
 
+  // Debounced so typing doesn't fire a query per keystroke — same as the
+  // staff orders list.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [q]);
+
   const config = useQuery({ ...convexQueryOptions(api.emails.config, {}) });
   const logs = useQuery({
-    ...convexQueryOptions(api.emails.list, { status, template, q, limit: 100 }),
+    ...convexQueryOptions(api.emails.list, { status, template, q: debouncedQ, limit: 100 }),
   });
   const suppressed = useQuery({ ...convexQueryOptions(api.emails.suppressed, {}) });
   const preview = useQuery({

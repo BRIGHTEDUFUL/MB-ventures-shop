@@ -466,7 +466,9 @@ export function ProductForm({
       {!isNew ? (
         <div>
           <h3 className="mb-2 font-semibold">Options</h3>
-          <VariantEditor slug={d.id} basePrice={Number(d.price) || 0} />
+          {/* Keyed by slug: the editor seeds its axes/rows once, so a product
+              switch must remount it rather than show the previous draft. */}
+          <VariantEditor key={d.id} slug={d.id} basePrice={Number(d.price) || 0} />
         </div>
       ) : (
         <div>

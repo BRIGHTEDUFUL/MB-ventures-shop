@@ -21,20 +21,20 @@ The following items that were previously "blocked on external information" are n
 
 **What is now configured:**
 
-| Environment     | Deployment                   | Configuration                          |
-| --------------- | ---------------------------- | -------------------------------------- |
-| **Development** | `dev:wonderful-porpoise-243` | ✅ Live mode                           |
-|                 | Access Key                   | `ab22e273-6536-4ae8-af7d-0b8c5013e418` |
-|                 | Site URL                     | `http://localhost:5173`                |
-|                 | Reply-to                     | `info@mbventuresgh.com`                |
-|                 | Admin alerts                 | `info@mbventuresgh.com`                |
-|                 | Daily limit                  | 100 emails                             |
-| **Production**  | `prod:earnest-fennec-109`    | ✅ Live mode                           |
-|                 | Access Key                   | `ab22e273-6536-4ae8-af7d-0b8c5013e418` |
-|                 | Site URL                     | `https://mbventuresgh.com`             |
-|                 | Reply-to                     | `info@mbventuresgh.com`                |
-|                 | Admin alerts                 | `info@mbventuresgh.com`                |
-|                 | Daily limit                  | 250 emails                             |
+| Environment     | Deployment                   | Configuration                 |
+| --------------- | ---------------------------- | ----------------------------- |
+| **Development** | `dev:wonderful-porpoise-243` | ✅ Live mode                  |
+|                 | Access Key                   | `ab22e273-…` (see Convex env) |
+|                 | Site URL                     | `http://localhost:5173`       |
+|                 | Reply-to                     | `info@mbventuresgh.com`       |
+|                 | Admin alerts                 | `info@mbventuresgh.com`       |
+|                 | Daily limit                  | 100 emails                    |
+| **Production**  | `prod:earnest-fennec-109`    | ✅ Live mode                  |
+|                 | Access Key                   | `ab22e273-…` (see Convex env) |
+|                 | Site URL                     | `https://mbventuresgh.com`    |
+|                 | Reply-to                     | `info@mbventuresgh.com`       |
+|                 | Admin alerts                 | `info@mbventuresgh.com`       |
+|                 | Daily limit                  | 250 emails                    |
 
 > **Key rotated 19 Oct 2026** (from `c8395fed-…` to `ab22e273-…`), and the
 > form's Recipient Emails rebound in the Web3Forms dashboard to

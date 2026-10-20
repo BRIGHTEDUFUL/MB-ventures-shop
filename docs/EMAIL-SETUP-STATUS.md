@@ -14,7 +14,7 @@ variables are set in Convex:
 
 | Variable                  | Status                         | Value                                  |
 | ------------------------- | ------------------------------ | -------------------------------------- |
-| `WEB3FORMS_ACCESS_KEY`    | ✅ Set                         | `ab22e273-6536-4ae8-af7d-0b8c5013e418` |
+| `WEB3FORMS_ACCESS_KEY`    | ✅ Set                         | `ab22e273-…` (redacted; in Convex env) |
 | `EMAIL_REPLY_TO`          | ✅ Set                         | `info@mbventuresgh.com`                |
 | `ADMIN_ALERT_EMAIL`       | ✅ Set                         | `info@mbventuresgh.com`                |
 | `EMAIL_DAILY_LIMIT`       | ✅ Set                         | 100 (dev) / 250 (prod)                 |
@@ -105,8 +105,11 @@ Production (`prod:earnest-fennec-109`) is already deployed. To re-apply:
 2. **Set the Web3Forms key for production:**
 
    ```powershell
-   npx convex env set WEB3FORMS_ACCESS_KEY ab22e273-6536-4ae8-af7d-0b8c5013e418 --prod
+   npx convex env set WEB3FORMS_ACCESS_KEY <WEB3FORMS_ACCESS_KEY> --prod
    ```
+
+   (Use the real key from the local-only `docs/PRODUCTION-CREDENTIALS.md` /
+   the Convex env — it is never committed.)
 
 3. **Set email addresses for production:**
 

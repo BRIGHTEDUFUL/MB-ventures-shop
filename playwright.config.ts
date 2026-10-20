@@ -23,8 +23,11 @@ export default defineConfig({
   webServer: {
     command: `npx vite dev --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/`,
-    // A dev server you already have running is reused, so `npm run dev` in one
-    // terminal and `npm run test:e2e` in another just work.
+    // Playwright boots its own dev server on 5173 (`--strictPort`) unless
+    // something already listens there — e.g. a previous Playwright run of this
+    // config. `npm run vite dev` (i.e. `npm run dev`) is pinned to port 8080
+    // by vite.config.ts, so it is never the server reused here; running both
+    // at once simply means two dev servers, on 8080 and on 5173.
     reuseExistingServer: true,
     timeout: 180_000,
   },

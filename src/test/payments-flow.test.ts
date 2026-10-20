@@ -32,10 +32,13 @@ const ENV_KEYS = [
   "PAYSTACK_PENDING_MINUTES",
 ] as const;
 
-/** Any call at all is a bug: this suite must never leave the machine. */
-const fetchSpy = vi.fn(async () => {
-  throw new Error("This suite must never reach the network.");
-});
+/** Any call at all is a bug: this suite must never leave the machine.
+ *  The explicit signature lets individual tests feed a canned gateway reply. */
+const fetchSpy = vi.fn<(input: string | URL | Request, init?: RequestInit) => Promise<Response>>(
+  async () => {
+    throw new Error("This suite must never reach the network.");
+  },
+);
 
 let savedEnv: Record<string, string | undefined>;
 
@@ -517,5 +520,92 @@ describe("POST /webhooks/paystack", () => {
     const env = await setup();
     const response = await post(env, JSON.stringify({ event: "charge.success" }), "anything");
     expect(response.status).toBe(503);
+  });
+});
+
+describe("payments.initialize / payments.verify — the gateway conversation", () => {
+  /** A well-formed `/transaction/initialize` answer echoing our reference. */
+  const initialized = (reference: string) =>
+    new Response(
+      JSON.stringify({
+        status: true,
+        data: {
+          authorization_url: "https://checkout.paystack.com/unit-test",
+          access_code: "unit_access",
+          reference,
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+
+  it("opens the hosted checkout with the order's locked pesewas amount, then resumes", async () => {
+    process.env["PAYSTACK_SECRET_KEY"] = "sk_test_unit";
+    const env = await setup();
+    const order = await placeOnline(env);
+    const stored = await readOrder(env, order.id);
+
+    fetchSpy.mockResolvedValueOnce(initialized(order.reference));
+    const opened = await env.customer.action(api.payments.initialize, {
+      reference: order.reference,
+    });
+    expect(opened.authorization_url).toBe("https://checkout.paystack.com/unit-test");
+
+    const [url, init] = fetchSpy.mock.calls[0]!;
+    expect(String(url)).toContain("/transaction/initialize");
+    const body = JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>;
+    // The browser never supplies money — the body carries the server's lock.
+    expect(body["amount"]).toBe(stored?.payment_amount_pesewas);
+    expect(body["currency"]).toBe("GHS");
+    expect(body["reference"]).toBe(order.reference);
+
+    // Tapping back out of Paystack and in again resumes the same session
+    // rather than starting a second checkout (and a second hold).
+    const again = await env.customer.action(api.payments.initialize, {
+      reference: order.reference,
+    });
+    expect(again.authorization_url).toBe("https://checkout.paystack.com/unit-test");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirms the order when the verified charge matches, and stays idempotent", async () => {
+    process.env["PAYSTACK_SECRET_KEY"] = "sk_test_unit";
+    const env = await setup();
+    const order = await placeOnline(env);
+    const stored = await readOrder(env, order.id);
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          status: true,
+          data: {
+            status: "success",
+            reference: order.reference,
+            amount: stored?.payment_amount_pesewas,
+            currency: "GHS",
+            channel: "card",
+            paid_at: new Date().toISOString(),
+            id: 987654,
+            authorization: { authorization_code: "AUTH_unit" },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const paid = await env.t.action(api.payments.verify, { reference: order.reference });
+    await drain(env);
+    expect(paid.state).toBe("paid");
+    expect(paid.receipt?.payment_status).toBe("confirmed");
+
+    const after = await readOrder(env, order.id);
+    expect(after?.payment_status).toBe("confirmed");
+    expect(after?.paid_at).toBeTypeOf("number");
+
+    // A second verify finds the order already confirmed and asks the gateway
+    // nothing — money can never be recorded twice.
+    fetchSpy.mockClear();
+    const again = await env.t.action(api.payments.verify, { reference: order.reference });
+    expect(again.state).toBe("paid");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

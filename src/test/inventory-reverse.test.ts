@@ -359,7 +359,14 @@ describe("inventory.count — the stocktake writes an absolute shelf count", () 
 
   it("denies a customer with no staff role", async () => {
     const env = await setup();
-    const stranger = env.t.withIdentity({ subject: "someone-else|s" });
+    // A real `users` row with no `user_roles` entry. `currentUserId` now proves
+    // the account still exists (a deleted account's cookie resolves to null),
+    // so the stranger has to be a genuine account for this to exercise the
+    // role check rather than the sign-in check.
+    const customerId = await env.t.run((ctx) =>
+      ctx.db.insert("users", { name: "Ama", email: "ama-customer@example.com" }),
+    );
+    const stranger = env.t.withIdentity({ subject: `${customerId}|s` });
     const error = await capture(
       stranger.mutation(api.inventory.count, { product_id: "standing-desk", counted: 1 }),
     );

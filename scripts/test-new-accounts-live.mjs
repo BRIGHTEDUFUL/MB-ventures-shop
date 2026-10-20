@@ -1,5 +1,33 @@
 import { chromium } from "@playwright/test";
 
+/**
+ * Live verification of the new manager/attendant accounts on production.
+ *
+ * SECRETS ARE NEVER COMMITTED. Required environment variables (set them from a
+ * local, untracked source — docs/PRODUCTION-CREDENTIALS.md, gitignored):
+ *
+ *   MB_MANAGER_PASSWORD   (manager@mbventuresgh.com)
+ *   MB_ATTENDANT_PASSWORD (attendant@mbventuresgh.com)
+ *
+ * The script exits with an error naming any missing variable.
+ */
+
+const MANAGER_PASSWORD = process.env["MB_MANAGER_PASSWORD"] ?? "";
+const ATTENDANT_PASSWORD = process.env["MB_ATTENDANT_PASSWORD"] ?? "";
+for (const [name, value] of [
+  ["MB_MANAGER_PASSWORD", MANAGER_PASSWORD],
+  ["MB_ATTENDANT_PASSWORD", ATTENDANT_PASSWORD],
+]) {
+  if (!value) {
+    console.error(
+      `Missing required environment variable ${name}. ` +
+        "Passwords are never committed; set it from a local, untracked source " +
+        "(docs/PRODUCTION-CREDENTIALS.md) before running this script.",
+    );
+    process.exit(1);
+  }
+}
+
 async function testAdminFlow() {
   console.log(`\n========================================`);
   console.log(`Testing NEW ADMIN: manager@mbventuresgh.com`);
@@ -16,7 +44,7 @@ async function testAdminFlow() {
   });
 
   await page.locator('input[type="email"]').fill("manager@mbventuresgh.com");
-  await page.locator('input[type="password"]').fill("MBVentures2025!Manager#Admin");
+  await page.locator('input[type="password"]').fill(MANAGER_PASSWORD);
   await page.locator("form.auth-form button").click();
 
   console.log("Waiting for admin session to resolve...");
@@ -68,7 +96,7 @@ async function testStaffFlow() {
   });
 
   await page.locator('input[type="email"]').fill("attendant@mbventuresgh.com");
-  await page.locator('input[type="password"]').fill("MBVentures2025!Attendant#Staff");
+  await page.locator('input[type="password"]').fill(ATTENDANT_PASSWORD);
   await page.locator("form.auth-form button").click();
 
   console.log("Waiting for staff session to resolve...");

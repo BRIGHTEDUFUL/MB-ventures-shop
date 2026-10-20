@@ -12,7 +12,7 @@ Everything is set up and the store is live (https://mbventuresgh.com):
 
 1. ✅ **Email system** - Configured with Web3Forms, live and sending
 2. ✅ **Domain** - mbventuresgh.com integrated throughout
-3. ✅ **Tests** - 189 unit tests + 32 E2E tests, all passing
+3. ✅ **Tests** — Vitest suite + Playwright read-only and live suites, all passing (current counts in AGENTS.md §7)
 4. ✅ **Mobile** - Responsive design, automated checks passing
 5. ✅ **Documentation** - Complete guides in `docs/` directory
 
@@ -21,17 +21,18 @@ Everything is set up and the store is live (https://mbventuresgh.com):
 ## 🚀 Deploy in 3 Commands
 
 ```powershell
-# 1. Deploy backend
-npx convex deploy --prod
+# 1. Deploy backend (prod Convex)
+npx convex deploy --env-file .env.prod.local
 
-# 2. Build frontend
-npm run build
+# 2. Commit first, then archive the committed tree
+node scripts/pack-deploy.mjs
 
-# 3. Deploy .output/ to your hosting provider
-# (Netlify, Vercel, Cloudflare Pages, etc.)
+# 3. Upload -> server-side build -> publish (Hostinger API)
+node scripts/deploy-hostinger-api.mjs
 ```
 
-Then point DNS to your hosting and you're live!
+The GitHub Actions deploy step is not configured (`HOSTINGER_*` secrets missing) —
+the script above is the production deploy path.
 
 ---
 
@@ -44,7 +45,7 @@ npm install
 # Start dev server (runs both Vite and Convex)
 npm run dev
 
-# Visit: http://localhost:5173
+# Visit: http://localhost:8080
 ```
 
 ---
@@ -61,10 +62,11 @@ node scripts/verify-production-config.mjs
 # Run all tests
 npm test
 
-# Run E2E tests (32 checks)
+# Run E2E tests (read-only)
 npm run test:e2e
 
-# Place a real test order (opt-in)
+# Prepare the dev deployment, then run the live suite (opt-in, self-cleaning)
+node scripts/setup-dev-e2e.mjs
 npm run test:e2e:live
 ```
 
@@ -88,8 +90,10 @@ Once deployed:
 2. Go to Customization → Ordering
 3. Toggle "Accept orders" to ON
 
-Payment details are never entered in the app: pickup orders pay at the shop
-counter, delivery orders pay cash on arrival.
+Payments: pickup orders pay at the shop counter, delivery orders pay cash on
+arrival, and — when the staff switch is on — shoppers can pay online through
+Paystack's hosted checkout. The shop never adds a delivery fee; riders collect
+theirs from the customer directly.
 
 ---
 
@@ -97,7 +101,7 @@ counter, delivery orders pay cash on arrival.
 
 **Mode:** Live (sending real emails)  
 **Inbox:** info@mbventuresgh.com  
-**Daily Limit:** 250 emails/day (production)
+**Plan limit:** 250 emails/month (Web3Forms free plan)
 
 All customer emails (order confirmations, password resets) are forwarded to your inbox. Reply directly from your email client.
 
@@ -111,5 +115,5 @@ All customer emails (order confirmations, password resets) are forwarded to your
 
 ---
 
-**Last Updated:** October 9, 2026  
+**Last Updated:** October 20, 2026  
 **Status:** Production Ready ✅

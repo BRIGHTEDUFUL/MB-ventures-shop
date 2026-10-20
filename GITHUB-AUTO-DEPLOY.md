@@ -1,5 +1,11 @@
 # GitHub Auto-Deploy to Hostinger
 
+> **Not active.** The `HOSTINGER_*` GitHub secrets were never configured, so the
+> deploy step in `.github/workflows/deploy-hostinger.yml` skips on every push.
+> Production frontend deploys run locally via `node scripts/pack-deploy.mjs` then
+> `node scripts/deploy-hostinger-api.mjs`. This guide documents the optional SSH
+> setup only.
+
 **Automatic deployment on every push to main branch**
 
 ---

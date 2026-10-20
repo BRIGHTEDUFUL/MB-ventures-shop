@@ -276,7 +276,11 @@ test.describe("Live options journey", () => {
     await page.getByLabel("Search stock").fill("Luminous");
     const row = page.locator("li").filter({ hasText: /^Black \/ XL/ });
     await expect(row.getByText("1 on hand")).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("White / XL0 on hand")).toBeVisible();
+    // Scoped the same way as the row above: a concatenated
+    // "White / XL0 on hand" only matches when the two strings happen to sit
+    // next to each other with no markup between them.
+    const whiteXlRow = page.locator("li").filter({ hasText: /^White \/ XL/ });
+    await expect(whiteXlRow.getByText("0 on hand")).toBeVisible({ timeout: 20_000 });
 
     // 3. The editor shows the same story, with the total kept for you.
     await page.goto(`/staff/products/${PAD}`);
@@ -325,6 +329,74 @@ test.describe("Live options journey", () => {
         .getByRole("button", { name: "Black, 2 in stock" }),
     ).toBeEnabled();
     await expect(page.getByText("In stock · 2 available · Black / XL")).toBeVisible();
+  });
+
+  /**
+   * Regression: the counter-order picker once left every option chip greyed —
+   * `findVariantByOptions` resolves each chip against the *whole* options
+   * set, so an empty selection meant nothing ever resolved and the form was
+   * unusable for any product that sells in options. Prove the picker seeds
+   * itself the moment a product is chosen, then take a real sale through it
+   * (the sweep below cancels it, so the run still leaves dev as it found it).
+   */
+  test("staff can still build a counter order for a product with options", async ({ page }) => {
+    await staffSignIn(page);
+    await page.goto("/staff/orders/new");
+    await waitForHydration(page);
+
+    // The form only renders once `users.myPermissions` and the catalogue have
+    // both answered, so wait for the product picker itself. Scoped to the
+    // combobox role: a bare "Product" label also matches the header's
+    // "Search products" button and the "Product categories" nav.
+    const productSelect = page.getByRole("combobox", { name: "Product", exact: true });
+    await expect(productSelect).toBeVisible({ timeout: 20_000 });
+
+    // Choose the prepared fixture. Its option value is the slug the server
+    // looks stock up by; the visible label carries name, price and stock.
+    const padValue = await productSelect
+      .locator("option")
+      .filter({ hasText: "Luminous" })
+      .getAttribute("value");
+    expect(padValue).toBe(PAD);
+    await productSelect.selectOption(padValue!);
+
+    // (a) The CTA is live immediately — no chip has been touched yet, so this
+    //     fails if the selection seed ever stops resolving.
+    const addToOrder = page.getByRole("button", { name: "Add to order" });
+    await expect(addToOrder).toBeEnabled();
+
+    // (b) Every axis still offers at least one clickable chip.
+    for (const axisName of ["Colour", "Size"]) {
+      const chips = page.getByRole("group", { name: axisName }).getByRole("button");
+      const chipCount = await chips.count();
+      expect(chipCount, `${axisName} should render its chips`).toBeGreaterThan(0);
+      let enabledCount = 0;
+      for (let i = 0; i < chipCount; i++) {
+        if (await chips.nth(i).isEnabled()) enabledCount += 1;
+      }
+      expect(enabledCount, `${axisName} should offer at least one enabled chip`).toBeGreaterThan(0);
+    }
+
+    // Add the seeded combination, then record the sale. The name is exact: the
+    // final sweep of this file cancels every order carrying it.
+    await addToOrder.click();
+    const createOrder = page.getByRole("button", { name: "Create order" });
+    await expect(createOrder).toBeEnabled();
+    await page.getByRole("textbox", { name: "Customer name" }).fill("E2E Options Shopper");
+    // Role-scoped: the channel radios include one literally labelled "Phone".
+    await page.getByRole("textbox", { name: "Phone" }).fill("0240000777");
+    await createOrder.click();
+
+    // Success: the toast, then the jump to the order's own detail page.
+    await expect(page.getByText("Order recorded")).toBeVisible({ timeout: 30_000 });
+    await page.waitForURL(
+      (url) => url.pathname.startsWith("/staff/orders/") && !url.pathname.endsWith("/new"),
+      { timeout: 30_000 },
+    );
+    await waitForHydration(page);
+    await expect(page.getByRole("heading", { name: "Update order" })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   /**

@@ -280,6 +280,11 @@ await setPermission({
 
 ### Available Permissions
 
+The closed set lives in `convex/schema.ts → PERMISSION_KEYS`; labels, groups
+and the admin/staff defaults live in `convex/lib/permission_catalog.ts` (pure
+data, browser-safe). The `/staff → Team` screen renders this matrix for admins
+to tick or reset per person; the CLI `users:setPermission` is the escape hatch.
+
 **Catalogue:**
 
 - `catalogue.view` - View products
@@ -288,23 +293,40 @@ await setPermission({
 - `catalogue.bulk` - Bulk operations
 - `catalogue.categories` - Manage categories
 - `catalogue.settings` - Storefront copy, featured picks
-- `catalogue.delivery` - Delivery zone fees
+- `catalogue.delivery` - Inert legacy (zone fees were removed; no UI reaches it)
 
 **Inventory:**
 
 - `inventory.view` - View stock levels
 - `inventory.adjust` - Adjust stock manually
 - `inventory.stocktake` - Perform stocktakes
+- `inventory.health` - Run data-health scans and fixes
 
 **Orders:**
 
 - `orders.view` - View orders
-- `orders.update` - Update order status
+- `orders.update` - Update order status and payment
+- `orders.create` - Record a counter order (staff floor by default)
+- `orders.discount` - Apply a counter discount (server-bounded to the subtotal)
+
+**Reports and activity:**
+
+- `reports.view` - Dashboard stats and trends
+- `activity.view` - Staff activity feed
+
+**Uploads:**
+
+- `uploads.create` - Upload product photos
 
 **Team:**
 
-- `team.view` - View team roster
-- `team.manage` - Add/remove/edit team members (admin-only by default)
+- `team.view` - View the team roster
+- `team.manage` - Add/remove/edit team members and permissions (admin-only by default)
+
+**Email:**
+
+- `emails.admin` - Email logs, config and test sends (admin-only by default)
+- `emails.note` - Add notes to email records
 
 ---
 

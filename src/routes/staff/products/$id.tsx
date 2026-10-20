@@ -52,7 +52,11 @@ function EditProduct() {
         ← Back to products
       </Link>
       <div className="mt-4">
+        {/* Keyed on the product: TanStack Router reuses the component instance
+            when navigating A → B, and the form seeds its draft once — without
+            the key, product B would open on product A's draft. */}
         <ProductForm
+          key={id}
           product={product}
           master={detail.data}
           categories={store.data.categories}

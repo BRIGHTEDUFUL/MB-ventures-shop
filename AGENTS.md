@@ -45,7 +45,7 @@ from the Abelenkpe taxi rank shop in Accra, Ghana.
 | Client data | TanStack Query via `@convex-dev/react-query`                                                                            |
 | Email       | Web3Forms — dry-run until `WEB3FORMS_ACCESS_KEY` is set                                                                 |
 | Payments    | Paystack online (opt-in, gated on `PAYSTACK_SECRET_KEY` + staff switch) · pay-on-delivery / pay-at-shop stay            |
-| Tests       | Vitest (326 tests, 20 files) + Playwright (36 read-only + 11 live checks)                                               |
+| Tests       | Vitest (331 tests, 20 files) + Playwright (36 read-only + 12 live checks)                                               |
 | CI/CD       | Hostinger Node.js hosting via API script (`scripts/deploy-hostinger-api.mjs`) · GitHub Actions (secrets missing, skips) |
 
 ---
@@ -71,7 +71,9 @@ convex/
   categories.ts           CRUD for product categories
   activity.ts             Activity log query
   uploads.ts              generateUploadUrl, savePhoto
-  migrations.ts           backfillReservations (internal)
+  migrations.ts           backfillReservations (internal) · rewriteStorageHost
+  photos.ts               Storage-photo retarget + unreferenced-delete sweep
+  addresses.ts            Saved delivery addresses (validated, owner-only)
   crons.ts                Scheduled health checks
   auth.ts / auth.config.ts  Convex Auth setup
   http.ts                 HTTP endpoint wiring
@@ -117,6 +119,7 @@ src/
     robots[.]txt.tsx      Dynamic robots.txt
     sitemap[.]xml.tsx     Dynamic XML sitemap
     $page.tsx             Catch-all for informational pages
+    admin-hub.$token.tsx  Admin console unlock → /staff (sessionStorage)
     auth/
       signin.tsx          Auth sign-in page
       signup.tsx          Auth sign-up page
@@ -148,6 +151,7 @@ src/
     store.ts              storeQuery, money(), pageHead(), delivery(), errorMessage()
     convex.ts             Convex client setup + query options
     use-session.ts        Session hook
+    admin-token.ts        Admin hub unlock token constant
     cart.ts               Cart types and helpers
     home-content.ts       Homepage content helpers
     error-capture.ts      Error boundary capture
@@ -205,6 +209,8 @@ scripts/
   deploy-hostinger-api.mjs     Hostinger API deploy (upload -> build -> poll)
   setup-production-env.sh      VPS environment setup
   pack-deploy.mjs              Build artifact packaging
+  setup-dev-e2e.mjs            Idempotent dev bootstrap (keys + e2e staff + fixture)
+  optimize-product-images.mjs  Re-encode oversized storage photos (dry-run default)
 
 e2e/
   storefront.spec.ts      Head, outline, SEO, sitemap, robots, badges, contact checks
@@ -550,26 +556,32 @@ so the SSH deploy step skips. Use the API script above for frontend deploys.
 
 ### Full production deploy (both layers)
 
-```sh
-npx convex deploy --env-file .env.prod.local   # backend first
-git add -A; git push origin main               # triggers GitHub Actions for frontend
+```powershell
+npx convex deploy --env-file .env.prod.local   # 1. backend
+node scripts/pack-deploy.mjs                   # 2. archive the committed tree (git HEAD)
+node scripts/deploy-hostinger-api.mjs          # 3. upload -> server-side build -> publish
 ```
 
-### Inventory migration (idempotent — safe to re-run anytime)
+The GitHub Actions `HOSTINGER_*` secrets are **not** configured, so pushing to
+`main` does not deploy the frontend — that workflow step skips. Use the API
+script above. Commit first: `pack-deploy.mjs` archives `git HEAD`, so
+uncommitted work is never shipped.
+
+### Dev fixture catalogue (seed only — NEVER run against production)
 
 ```sh
-npx convex run inventory_import:apply --env-file .env.prod.local
+npx convex run inventory_import:apply   # DEV deployment only — no --env-file
 ```
 
-Hides demo products, upserts 11 real products, sets stock to 10 each,
-enables ordering, sets hero image + featured product IDs.
+Seeds the **dev** deployment with the 11-product fixture catalogue (light local
+images) that the read-only Playwright suite runs against. **Never point this at
+production**: production carries the ~79-product supplier catalogue (19–20 Oct
+2026), and re-applying this would re-add superseded slugs and overwrite stock.
+`convex/inventory_import.ts` carries the same warning at the top.
 
-Homepage copy refresh (pay-later wording; only replaces the exact old strings,
-so deliberate staff edits survive — run once on production with the deploy):
-
-```sh
-npx convex run inventory_import:patchHomeCopy --env-file .env.prod.local
-```
+`patchHomeCopy` (pay-later wording) and `patchHeroImage` are one-off historical
+corrections already applied in production. Only re-run them deliberately, and
+only when the target deployment actually still holds the exact old strings.
 
 ### Seeding
 
@@ -593,17 +605,25 @@ npx convex run users:grantStaff '{\"email\":\"you@example.com\",\"role\":\"admin
 ```sh
 npx tsc --noEmit          # 0 errors
 npm run lint              # 0 errors (7 pre-existing react-refresh warnings are OK)
-npm test                  # 326/326 across 20 test files
+npm test                  # 331/331 across 20 test files
 npx prettier --check .    # clean
 npm run build             # succeeds
 npm run test:e2e          # 36/36 Playwright checks (read-only)
 ```
 
-Optional (writes a real order + option fixture to dev — opt-in only, self-cleaning):
+Optional (writes real orders + option fixtures to dev — opt-in only,
+self-cleaning). The dev deployment must be prepared first (idempotent — sets
+the dev env keys, creates the `e2e.staff@example.com` staff account and the
+options fixture):
 
 ```sh
-npm run test:e2e:live     # 11/11 live journey checks (purchase + options)
+node scripts/setup-dev-e2e.mjs
+npm run test:e2e:live     # live journey checks (purchase + options + counter order)
 ```
+
+`scripts/run-live-e2e.mjs` refuses to start when the resolved
+`VITE_CONVEX_URL` is not the dev deployment, so a fresh clone without
+`.env.local` cannot write test orders into production.
 
 Optional (needs a dev server or a live URL; run it whenever layout, CSS or
 mobile navigation is touched):
@@ -622,12 +642,13 @@ node scripts/mobile-audit.mjs https://mbventuresgh.com --email=… --password=�
 > account migration the old deployment's catalogue was replaced with a
 > **~79-product supplier catalogue** (AOC / ASUS / Royalstar / Lenovo / …)
 > whose photos live in Convex storage; only `electric-standing-desk-rgb-160`
-> kept its slug. The 5 hidden demo products are still preserved. The table
+> kept its slug. The 10 hidden demo products are still preserved. The table
 > below is therefore **historical** — query `store:get` for current live
 > state. Two practical consequences: the live product pages serve ~2MB photos
-> per image (consider a downscale/WebP pass), and the read-only Playwright
-> suite keeps its fixture slugs because it runs against **dev**, which is
-> seeded from `inventory_import` (light local images) — never re-run
+> per image (regression measured 215 MB / 109 images on 20 Oct 2026 — use
+> `scripts/optimize-product-images.mjs` to re-encode them), and the read-only
+> Playwright suite keeps its fixture slugs because it runs against **dev**,
+> which is seeded from `inventory_import` (light local images) — never re-run
 > `inventory_import:apply` against production (see the warning in that file).
 
 ### Real products — all visible, active, 10 units each
@@ -693,19 +714,26 @@ wireless-mouse, monitor-arm, laptop-stand, usb-microphone, stream-controller
 Full credentials and recovery steps: `docs/TEST-ACCOUNTS.md` and `docs/PRODUCTION-CREDENTIALS.md`.
 Sign in at `/account`. Staff/admin see a "Store staff hub" button to `/staff`.
 
+Admin-only consoles (e.g. `/admin/emails`) additionally require a
+sessionStorage unlock: visit `/admin-hub/<ADMIN_HUB_TOKEN>` once per browser
+session. Staff-floor accounts bypass the hub. The token value lives in the
+local `docs/PRODUCTION-CREDENTIALS.md`; the code constant is in
+`src/lib/admin-token.ts` (check this name on disk).
+
 ---
 
 ## 10. Environment files
 
-| File             | Purpose                                | In git?         |
-| ---------------- | -------------------------------------- | --------------- |
-| .env             | Shared VITE_CONVEX_URL (production)    | Yes             |
-| .env.development | VITE_SITE_URL=http://localhost:5173    | Yes             |
-| .env.production  | VITE_SITE_URL=https://mbventuresgh.com | Yes             |
-| .env.local       | Dev CONVEX_DEPLOYMENT + secrets        | No (gitignored) |
-| .env.prod.local  | CONVEX_DEPLOY_KEY                      | No (gitignored) |
-| .env.example     | Full variable template                 | Yes             |
-| .env.hostinger   | Hostinger VPS env template             | Yes             |
+| File             | Purpose                                                                              | In git?         |
+| ---------------- | ------------------------------------------------------------------------------------ | --------------- |
+| .env             | Shared VITE_CONVEX_URL (production)                                                  | Yes             |
+| .env.development | VITE_SITE_URL=http://localhost:5173 (the e2e server port; `npm run dev` serves 8080) | Yes             |
+| .env.production  | VITE_SITE_URL=https://mbventuresgh.com                                               | Yes             |
+| .env.local       | Dev CONVEX_DEPLOYMENT + secrets                                                      | No (gitignored) |
+| .env.dev.local   | Dev CONVEX_DEPLOY_KEY (wonderful-porpoise-243)                                       | No (gitignored) |
+| .env.prod.local  | CONVEX_DEPLOY_KEY                                                                    | No (gitignored) |
+| .env.example     | Full variable template                                                               | Yes             |
+| .env.hostinger   | Hostinger VPS env template                                                           | Yes             |
 
 Never commit .env.local or .env.prod.local.
 Never log CONVEX_DEPLOY_KEY, JWT_PRIVATE_KEY, or JWKS.

@@ -199,23 +199,19 @@ verify auth, roles, email, products and payments end to end.
 **Gate:** tsc 0 errors · lint 0 errors (7 known warnings) · 326/326 vitest ·
 prettier clean · production build green · live probes as above.
 
-### Open
+### Open — all three closed (20 October 2026)
 
-- **Dev deployment `wonderful-porpoise-243` not yet linked** — the stored CLI
-  token belongs to the disabled account. Needs one interactive
-  `npx convex login` on this machine (browser OAuth), then
-  `npx convex dev --once` + `seed:seed` + `inventory_import:apply` against
-  dev, after which `npm run test:e2e` (36/36 read-only) and
-  `npm run test:e2e:live` (purchase + options journeys) run normally.
-  `.env.local` already points at the new dev deployment (old values backed
-  up to Temp).
-- **Paystack webhook** still targets the old deployment — update it in the
-  Paystack dashboard (Developers → API configuration) to
-  `https://earnest-fennec-109.convex.site/webhooks/paystack`. Until then
-  online orders confirm only via the return page's `payments.verify` path.
-- **Performance recommendation:** the supplier photos are unoptimised (~2MB
-  PNG/JPG each); a downscale/WebP pass over the 232 storage files would cut
-  catalogue page weight by ~90% for Ghana mobile connections.
+- **Dev deployment `wonderful-porpoise-243` linked.** `scripts/setup-dev-e2e.mjs`
+  bootstraps it with the deploy key (no interactive login): env keys, the
+  `e2e.staff@example.com` staff account and the options fixture. Both dev
+  suites run from a fresh clone with `.env.local` in place.
+- **Paystack webhook** re-registered by hand to
+  `https://earnest-fennec-109.convex.site/webhooks/paystack` — see
+  `docs/PAYMENTS-PAYSTACK.md`.
+- **Photo weight** — `scripts/optimize-product-images.mjs` (sharp, dry-run by
+  default) re-encodes oversized storage photos through the normal upload path;
+  originals are retired only by the verified
+  `photos:deleteStorageIfUnreferenced` sweep.
 
 ---
 
@@ -331,7 +327,7 @@ rider-fee feature from the parallel session (two commits).
 ### What was asked
 
 Connect the store's forms to a new Web3Forms form (`My Form mbventuresgh`,
-form/access key `ab22e273-6536-4ae8-af7d-0b8c5013e418`, website URL
+form/access key `ab22e273-…`, website URL
 `https://mbventuresgh.com`, recipient `abdulganiwufuseini5@gmail.com`).
 
 ### What changed
@@ -342,7 +338,7 @@ keyed by the deployment's `WEB3FORMS_ACCESS_KEY`. Connecting the new form is
 therefore an env-var swap:
 
 - **Convex dev + prod**: `WEB3FORMS_ACCESS_KEY` set to
-  `ab22e273-6536-4ae8-af7d-0b8c5013e418` via `npx convex env set`
+  `ab22e273-…` via `npx convex env set`
   (prod with `--env-file .env.prod.local`), replacing `c8395fed-…`.
 - **Tracked env templates and docs** that carried the old key were updated in
   place so a future re-deploy cannot revert to it: `.env.hostinger`,

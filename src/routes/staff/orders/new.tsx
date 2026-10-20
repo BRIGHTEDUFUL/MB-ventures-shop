@@ -204,6 +204,14 @@ function NewOrder() {
       );
       return;
     }
+    // The server refuses a line over 50 units (`validateManualOrder`) — and
+    // lines merge, so it is the merged total that must stay under the cap.
+    if (already + quantity > 50) {
+      setFormError(
+        `A single item tops out at 50 units${already > 0 ? ` (${already} already in this order)` : ""}.`,
+      );
+      return;
+    }
 
     setLines((current) => {
       const key = lineKey(product.id, variantKey);
@@ -443,7 +451,10 @@ function NewOrder() {
                   type="number"
                   inputMode="numeric"
                   min={1}
-                  max={Math.max(available, 1)}
+                  // Stock, but never past 50: that is the server's per-line
+                  // ceiling (`validateManualOrder`), so the form can't ask for
+                  // a number it would refuse.
+                  max={Math.min(Math.max(available, 1), 50)}
                   value={quantity}
                   onChange={(e) =>
                     setQuantity(Math.max(1, Math.floor(Number(e.target.value) || 1)))

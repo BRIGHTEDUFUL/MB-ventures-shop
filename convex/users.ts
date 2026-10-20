@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { logActivity } from "./lib/activity";
 import { currentUserId, getRole, isStaff as userHasStaffRole } from "./lib/auth";
-import { isValidEmail } from "./lib/rules";
+import { isValidEmail, normalizePhone } from "./lib/rules";
 import {
   defaultPermissions,
   PERMISSION_CATALOG,
@@ -329,9 +329,17 @@ export const updateProfile = mutation({
     }
 
     if (args.phone !== undefined) {
-      const phone = args.phone.trim();
+      // Normalised exactly the way sign-up normalises it (`normalizePhone`,
+      // the shared rule in `lib/rules`), then bounded: E.164 tops out at 15
+      // characters, so a longer paste can never be a dialable number.
+      const phone = normalizePhone(args.phone);
       if (phone.length > 0 && phone.length < 9) {
         throw new ConvexError({ message: "Enter a valid phone number with at least 9 digits." });
+      }
+      if (phone.length > 15) {
+        throw new ConvexError({
+          message: "That phone number is too long — use at most 15 digits.",
+        });
       }
       updates.phone = phone;
     }
@@ -346,11 +354,15 @@ export const updateProfile = mutation({
 
 /**
  * Admin-only: Get detailed user information including role and permissions.
+ *
+ * Guarded by `team.manage` rather than `team.view` because it returns every
+ * account's email and phone — the roster (`users.team`) is the staff-floor
+ * read, and this is the customer-PII one. No screen in `src/` calls it today.
  */
 export const getUserDetails = query({
   args: { user_id: v.string() },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "team.view");
+    await requirePermission(ctx, "team.manage");
     const userId = ctx.db.normalizeId("users", args.user_id);
     if (userId === null) throw new ConvexError({ message: "User not found." });
 
@@ -414,9 +426,17 @@ export const adminUpdateUser = mutation({
     }
 
     if (args.phone !== undefined) {
-      const phone = args.phone.trim();
+      // Normalised exactly the way sign-up normalises it (`normalizePhone`,
+      // the shared rule in `lib/rules`), then bounded: E.164 tops out at 15
+      // characters, so a longer paste can never be a dialable number.
+      const phone = normalizePhone(args.phone);
       if (phone.length > 0 && phone.length < 9) {
         throw new ConvexError({ message: "Enter a valid phone number with at least 9 digits." });
+      }
+      if (phone.length > 15) {
+        throw new ConvexError({
+          message: "That phone number is too long — use at most 15 digits.",
+        });
       }
       updates.phone = phone;
     }
@@ -490,6 +510,10 @@ export const deleteUser = mutation({
 /**
  * Get all users (not just staff) - admin only.
  * Useful for viewing all customer accounts and managing users.
+ *
+ * `team.manage` (not `team.view`): this hands back every customer's email and
+ * phone, which is admin material — the staff roster is `users.team`, and no
+ * `src/` screen calls this query today (only the CLI-style tests do).
  */
 export const allUsers = query({
   args: {
@@ -497,7 +521,7 @@ export const allUsers = query({
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requirePermission(ctx, "team.view");
+    await requirePermission(ctx, "team.manage");
 
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 200);
     const search = (args.search ?? "").trim().toLowerCase();

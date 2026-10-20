@@ -1,5 +1,9 @@
 # Backend Status Report
 
+> **Historical — superseded 20 Oct 2026.** Written before the Convex account
+> migration; the live deployments are now prod `earnest-fennec-109` and dev
+> `wonderful-porpoise-243`. See AGENTS.md §6 for the current state.
+
 **Generated:** 2025-01-10  
 **Project:** Circle Shop Express (MB Ventures GH)
 
@@ -25,7 +29,7 @@
 ### Development Environment Variables
 
 ```
-✓ WEB3FORMS_ACCESS_KEY: ab22e273-6536-4ae8-af7d-0b8c5013e418
+✓ WEB3FORMS_ACCESS_KEY: ab22e273-… (configured; value not stored in git)
 ✓ EMAIL_REPLY_TO: info@mbventuresgh.com
 ✓ ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 ✓ EMAIL_DAILY_LIMIT: 100
@@ -37,7 +41,7 @@
 ### Production Environment Variables
 
 ```
-✓ WEB3FORMS_ACCESS_KEY: ab22e273-6536-4ae8-af7d-0b8c5013e418
+✓ WEB3FORMS_ACCESS_KEY: ab22e273-… (configured; value not stored in git)
 ✓ EMAIL_REPLY_TO: info@mbventuresgh.com
 ✓ ADMIN_ALERT_EMAIL: info@mbventuresgh.com
 ✓ EMAIL_DAILY_LIMIT: 250 (higher for production)

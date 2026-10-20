@@ -72,7 +72,11 @@ function CategoriesPage() {
 
       {editing && (
         <div className="mt-6">
+          {/* Keyed per target: the editor seeds its fields once, so switching
+              straight from category A to B must remount it — otherwise the
+              header names B while the fields (and Save) still hold A. */}
           <CategoryEditor
+            key={editing.isNew ? "new" : editing.id}
             draft={editing}
             onDone={() => setEditing(null)}
             onCancel={() => setEditing(null)}
@@ -177,7 +181,7 @@ function CategoryEditor({
       set("image_key", await uploadImage(file));
       toast.success("Photo uploaded");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed.");
+      toast.error(errorMessage(err, "The photo could not be uploaded."));
     }
     setBusy(false);
   };
