@@ -21,7 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCart } from "./store-provider";
 import { CartLines } from "./store-ui";
-import { money, storeQuery, announcementText, whatsappHref } from "@/lib/store";
+import { money, storeQuery, announcementText, whatsappHref, searchProducts } from "@/lib/store";
+import type { Product } from "@/lib/store";
 import { images, imageSize } from "@/lib/store-images";
 export function StoreHeader() {
   const { data: hd } = useQuery(storeQuery),
@@ -208,9 +209,23 @@ export function StoreOverlays() {
   const s = data?.settings;
   const whatsapp = s ? whatsappHref(s) : null;
   const router = useRouter();
-  const results = (data?.products || [])
-    .filter((p) => `${p.name} ${p.brand}`.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 6);
+  const products = data?.products ?? [];
+  // A query ranks with the same scorer the catalogue grid uses (best match
+  // first, every term must land) — and, like the grid, never surfaces a
+  // hidden/demo row (§4c), which the old `name.includes` filter leaked. With
+  // no query the panel shows the shop's featured products, not an arbitrary
+  // slice of the shelf.
+  const featured = (data?.settings?.featured_ids ?? [])
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is Product => !!p && p.visible !== false);
+  const results = query.trim()
+    ? searchProducts(products, query).slice(0, 6)
+    : [
+        ...featured,
+        ...products
+          .filter((p) => p.visible !== false && !featured.includes(p))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      ].slice(0, 6);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { setMenuOpen } = cart;
   useEffect(() => {
@@ -345,6 +360,22 @@ export function StoreOverlays() {
               <p className="py-8 text-sm text-muted-foreground">
                 No products match “{query}”. Try a different name.
               </p>
+            )}
+            {query.trim() !== "" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 w-full"
+                asChild
+                onClick={() => cart.setSearchOpen(false)}
+              >
+                {/* A fresh search starts from an unfiltered listing: the object
+                    form replaces the whole search, so a stale filter on the
+                    current page cannot hide results for the new query. */}
+                <Link to="/catalogue" search={{ q: query.trim(), category: "" }}>
+                  See all results for “{query.trim()}”
+                </Link>
+              </Button>
             )}
             <div className="mt-5 flex flex-wrap gap-2">
               {categories

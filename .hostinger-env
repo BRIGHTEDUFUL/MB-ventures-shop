@@ -4,9 +4,9 @@
 # =============================================================================
 # CONVEX DEPLOYMENT
 # =============================================================================
-CONVEX_DEPLOYMENT=prod:necessary-newt-861
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
-VITE_CONVEX_SITE_URL=https://necessary-newt-861.convex.site
+CONVEX_DEPLOYMENT=prod:earnest-fennec-109
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
+VITE_CONVEX_SITE_URL=https://earnest-fennec-109.convex.site
 
 # =============================================================================
 # DOMAIN CONFIGURATION

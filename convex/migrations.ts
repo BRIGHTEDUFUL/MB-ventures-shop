@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, type QueryCtx } from "./_generated/server";
+import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { applyStockChange, stockStateOf, variantAggregate } from "./lib/stock";
 
 /**
@@ -277,3 +277,115 @@ async function verify(ctx: QueryCtx, report: Report): Promise<Report> {
   report.orders_stamped = orders.length;
   return report;
 }
+
+/**
+ * Point every Convex-storage image URL at a new deployment host.
+ *
+ * Staff-uploaded photos live on the product / category / order rows as absolute
+ * URLs (`https://<deployment>.convex.cloud/api/storage/<id>`). Moving a database
+ * to a different deployment keeps each file's `_storage` id (the import tool
+ * preserves them) but the baked-in host still names the *old* deployment, so
+ * every image would 404. This swaps that one hostname, string-for-string, deep
+ * into every row that holds one — `gallery[]`, `variants[].image_key` and
+ * `items[].image_key` included.
+ *
+ * - **Idempotent** — a row already on the new host is skipped; re-running finds
+ *   nothing to do.
+ * - **Dry run first** — `{ dry_run: true }` reports exactly what a real run
+ *   would change (218 references across 79 products / variants / categories /
+ *   1 order) without writing.
+ *
+ * The ZIP itself is never edited — Convex documents that as unsupported — so
+ * the snapshot imports pristine and this corrects the host afterwards.
+ *
+ * Run (against the target deployment):
+ *   npx convex run migrations:rewriteStorageHost '{"old_host":"necessary-newt-861.convex.cloud","new_host":"earnest-fennec-109.convex.cloud","dry_run":true}'
+ *   npx convex run migrations:rewriteStorageHost '{"old_host":"…","new_host":"…"}'
+ */
+
+/** Tables that can carry a storage URL on some field. */
+type ImageTable = "products" | "product_variants" | "categories" | "orders" | "store_settings";
+
+/** Replace `oldHost` with `newHost` in every string, at any depth. */
+function deepSwap(value: unknown, oldHost: string, newHost: string): unknown {
+  if (typeof value === "string") return value.split(oldHost).join(newHost);
+  if (Array.isArray(value)) return value.map((item) => deepSwap(item, oldHost, newHost));
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) out[key] = deepSwap(item, oldHost, newHost);
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Swap the host across one table. Called with a concrete table literal so `T`
+ * stays a single table per call — that keeps `ctx.db.replace(id, doc)` exactly
+ * typed instead of a union the compiler cannot line up.
+ */
+async function swapHostsIn<T extends ImageTable>(
+  ctx: MutationCtx,
+  table: T,
+  oldHost: string,
+  newHost: string,
+  dryRun: boolean,
+): Promise<{ docs: number; changed: number; refs: number; touched: string[] }> {
+  const rows = await ctx.db.query(table).take(10_000);
+  let changed = 0;
+  let refs = 0;
+  const touched: string[] = [];
+  for (const row of rows) {
+    const json = JSON.stringify(row);
+    const hits = json.split(oldHost).length - 1;
+    if (hits === 0) continue;
+    refs += hits;
+    changed += 1;
+    touched.push(String(row._id));
+    if (!dryRun) {
+      // deepSwap edits only string contents — the document's shape, `_id` and
+      // `_creationTime` are never touched — so the swapped value is still this
+      // exact row. The structural cast sidesteps `replace`'s generic, which
+      // cannot unify an abstract `Id<T>` with its value while `T` is unresolved.
+      const looseDb = ctx.db as unknown as {
+        replace(id: string, value: object): Promise<void>;
+      };
+      await looseDb.replace(row._id, deepSwap(row, oldHost, newHost) as object);
+    }
+  }
+  return { docs: rows.length, changed, refs, touched };
+}
+
+/**
+ * Sweep the image tables and repoint every storage URL at `new_host`.
+ * Pass `{ dry_run: true }` first: it reports `refs` (how many URLs would move)
+ * and `changed` (how many rows) with no writes.
+ */
+export const rewriteStorageHost = internalMutation({
+  args: {
+    old_host: v.string(),
+    new_host: v.string(),
+    dry_run: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const dryRun = args.dry_run === true;
+    // Explicit literals: one concrete `T` per call (see swapHostsIn).
+    const results = [
+      await swapHostsIn(ctx, "products", args.old_host, args.new_host, dryRun),
+      await swapHostsIn(ctx, "product_variants", args.old_host, args.new_host, dryRun),
+      await swapHostsIn(ctx, "categories", args.old_host, args.new_host, dryRun),
+      await swapHostsIn(ctx, "orders", args.old_host, args.new_host, dryRun),
+      await swapHostsIn(ctx, "store_settings", args.old_host, args.new_host, dryRun),
+    ];
+    let docs = 0;
+    let changed = 0;
+    let refs = 0;
+    const touched: string[] = [];
+    for (const result of results) {
+      docs += result.docs;
+      changed += result.changed;
+      refs += result.refs;
+      touched.push(...result.touched);
+    }
+    return { dry_run: dryRun, docs, changed, refs, touched: touched.slice(0, 200) };
+  },
+});

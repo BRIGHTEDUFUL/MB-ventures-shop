@@ -24,7 +24,7 @@ describe("buildGallery", () => {
   });
 
   it("accepts an uploaded https URL as an option photo", () => {
-    const uploaded = "https://necessary-newt-861.convex.cloud/api/storage/abc";
+    const uploaded = "https://earnest-fennec-109.convex.cloud/api/storage/abc";
     expect(buildGallery("desk", [], uploaded)).toEqual([uploaded, "/images/desk.webp"]);
   });
 

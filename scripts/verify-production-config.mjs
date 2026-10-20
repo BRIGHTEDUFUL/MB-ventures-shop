@@ -9,7 +9,7 @@ import { execSync } from "child_process";
 console.log("🏭 Production Configuration Verification\n");
 console.log("Domain: https://mbventuresgh.com");
 console.log("Email: info@mbventuresgh.com");
-console.log("Deployment: prod:necessary-newt-861\n");
+console.log("Deployment: prod:earnest-fennec-109\n");
 console.log("=".repeat(60));
 
 const requiredVars = [
@@ -108,7 +108,7 @@ try {
   const fs = await import("fs");
   const envProd = fs.readFileSync(".env.production", "utf8");
 
-  const hasConvexUrl = envProd.includes("VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud");
+  const hasConvexUrl = envProd.includes("VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud");
   const hasSiteUrl = envProd.includes("VITE_SITE_URL=https://mbventuresgh.com");
 
   console.log(hasConvexUrl ? "✅" : "❌", "VITE_CONVEX_URL points to production");

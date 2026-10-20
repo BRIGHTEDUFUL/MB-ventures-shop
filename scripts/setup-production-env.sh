@@ -52,7 +52,7 @@ cat > "$ENV_FILE" << 'EOF'
 # ============================================
 
 # Convex Backend (Production Deployment)
-VITE_CONVEX_URL=https://necessary-newt-861.convex.cloud
+VITE_CONVEX_URL=https://earnest-fennec-109.convex.cloud
 
 # Site Configuration
 VITE_SITE_URL=https://mbventuresgh.com
@@ -100,7 +100,7 @@ echo ""
 echo -e "${YELLOW}Verifying Convex production environment variables...${NC}"
 echo ""
 echo "The following must be set in Convex dashboard for prod deployment:"
-echo "https://dashboard.convex.dev/t/synthxos/shop/necessary-newt-861"
+echo "https://dashboard.convex.dev/ (deployment: prod:earnest-fennec-109)"
 echo ""
 echo "Required Convex Env Vars:"
 echo "  • WEB3FORMS_ACCESS_KEY = ab22e273-6536-4ae8-af7d-0b8c5013e418"

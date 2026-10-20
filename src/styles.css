@@ -729,6 +729,89 @@ label textarea {
 .filter-line input {
   margin: 0;
 }
+/* ── URL-driven catalogue filters ──────────────────────────────────────
+   The facet list, price presets and removable chips that sit above the
+   grid. Every control clears the 40px tap-target floor the mobile audit
+   enforces, and "on" is signalled by border + weight + background so it
+   never depends on colour alone. */
+.facet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.facet-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+}
+.facet-option:hover {
+  background: var(--secondary);
+}
+.facet-option[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--secondary);
+  font-weight: 600;
+}
+.facet-count {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 400;
+}
+.price-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.price-preset {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  font-size: 12px;
+}
+.price-preset[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--secondary);
+  font-weight: 600;
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12px;
+}
+.filter-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.filter-chip:hover {
+  background: var(--secondary);
+}
+.filter-chip-clear {
+  border-style: dashed;
+  color: var(--muted-foreground);
+}
 .toolbar {
   display: flex;
   align-items: center;
@@ -738,6 +821,11 @@ label textarea {
   padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }
+.toolbar-search {
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
 .toolbar select {
   width: auto;
   font-size: 12px;
@@ -746,6 +834,19 @@ label textarea {
 }
 .listing-layout .product-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Windowed pagination: numbers plus prev/next, wrapping instead of
+   overflowing on a narrow screen. The gap slots are text, not controls. */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pagination-gap {
+  min-width: 20px;
+  text-align: center;
+  color: var(--muted-foreground);
 }
 .drawer-content {
   position: fixed;
@@ -1728,7 +1829,8 @@ h4 {
     gap: 10px;
   }
   .toolbar input,
-  .toolbar select {
+  .toolbar select,
+  .toolbar-search {
     width: 100%;
     max-width: none;
   }

@@ -84,18 +84,114 @@ export type CatalogueFilter = {
  * regression that motivated it stays pinned: a default filter (no price
  * ceiling) must pass every listed product, whatever it costs.
  */
+/** A query split into lowercase terms — the unit every matcher agrees on. */
+export const searchTerms = (q: string): string[] =>
+  q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+/**
+ * The one search matcher behind the header overlay and the catalogue grid.
+ *
+ * A query is a bag of terms: every term must land somewhere (an AND), while
+ * the fields are weighted — a hit in the name outranks a passing mention in
+ * the description — so the same numbers decide both *whether* a product
+ * matches and *how well*, and the overlay can rank by them. Terms match by
+ * case-insensitive substring across the shopper-visible copy: name, brand,
+ * spec keys and values, option names, and description.
+ *
+ * Returns 0 for "no match"; any positive score means the product belongs in
+ * the results for this term list. Hidden rows never score — the visibility
+ * gate lives here too, so a draft/demo product cannot leak into a search the
+ * way a raw `name.includes(query)` once allowed (§4c).
+ */
+export const searchScore = (p: Product, terms: string[]): number => {
+  if (p.visible === false) return 0;
+  if (!terms.length) return 1;
+  const fields: Array<[string, number]> = [
+    [p.name.toLowerCase(), 8],
+    [p.brand.toLowerCase(), 5],
+    [Object.entries(p.specs).flat().join(" ").toLowerCase(), 3],
+    [
+      (p.variants ?? [])
+        .flatMap((v) => [v.name, ...Object.values(v.options)])
+        .join(" ")
+        .toLowerCase(),
+      3,
+    ],
+    [p.description.toLowerCase(), 2],
+  ];
+  let total = 0;
+  for (const term of terms) {
+    let best = 0;
+    for (const [text, weight] of fields) {
+      if (!text.includes(term)) continue;
+      // A word-leading hit is likelier what the shopper meant than a
+      // mid-word substring ("rgb" in "rgb mic" vs. "cable"), so it counts
+      // double — the tiebreaker that puts real matches on top.
+      const lead = text.startsWith(term) || text.includes(` ${term}`) ? 2 : 1;
+      best = Math.max(best, weight * lead);
+    }
+    if (best === 0) return 0;
+    total += best;
+  }
+  return total;
+};
+
+/**
+ * Visible products for a query, best match first — the header overlay's
+ * list. The grid keeps the shopper's chosen sort; this is for "what did you
+ * mean", so `slice(0, 6)` shows the six most relevant products instead of
+ * the six oldest rows on the shelf.
+ */
+export const searchProducts = (products: Product[], q: string): Product[] => {
+  const terms = searchTerms(q);
+  return products
+    .filter((p) => p.visible !== false)
+    .map((p) => ({ p, s: searchScore(p, terms) }))
+    .filter((r) => r.s > 0)
+    .sort((a, b) => b.s - a.s || a.p.name.localeCompare(b.p.name))
+    .map((r) => r.p);
+};
+
 export const filterCatalogue = (products: Product[], f: CatalogueFilter) => {
-  const query = f.q.trim().toLowerCase();
+  const terms = searchTerms(f.q);
   return products.filter(
     (p) =>
       p.visible !== false &&
       (!f.category || p.category === f.category) &&
-      (!query || `${p.name} ${p.brand}`.toLowerCase().includes(query)) &&
+      (!terms.length || searchScore(p, terms) > 0) &&
       p.price <= (f.max ?? Infinity) &&
       (!f.stock || (p.verified && p.stock > 0)) &&
       (!f.sale || (p.original_price && p.original_price > p.price)) &&
       (!f.brand || p.brand === f.brand),
   );
+};
+
+/**
+ * The pagination row's shape: page numbers with `null` marking a gap the UI
+ * renders as an ellipsis. First and last are always present, plus a window
+ * around the current page — the old code rendered every page number, which
+ * overruns the footer the moment the catalogue outgrows a couple of pages.
+ */
+export const pageWindow = (page: number, pageCount: number, size = 7): (number | null)[] => {
+  if (pageCount <= size) return Array.from({ length: pageCount }, (_, i) => i + 1);
+  const inner = size - 2;
+  let from = Math.max(2, page - 1);
+  let to = Math.min(pageCount - 1, page + 1);
+  if (to - from + 1 < inner) {
+    if (from <= 2) to = Math.min(pageCount - 1, 2 + inner - 1);
+    else if (to >= pageCount - 1) from = Math.max(2, pageCount - inner);
+    else {
+      from = Math.max(2, page - Math.floor(inner / 2));
+      to = Math.min(pageCount - 1, from + inner - 1);
+      from = Math.max(2, to - inner + 1);
+    }
+  }
+  const out: (number | null)[] = [1];
+  if (from > 2) out.push(null);
+  for (let i = from; i <= to; i++) out.push(i);
+  if (to < pageCount - 1) out.push(null);
+  out.push(pageCount);
+  return out;
 };
 
 /**

@@ -39,7 +39,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_CONVEX_URL: https://necessary-newt-861.convex.cloud
+          VITE_CONVEX_URL: https://earnest-fennec-109.convex.cloud
           # NOTE (domain cutover, docs/DOMAIN-MIGRATION.md): the site URL now
           # targets the NEW Hostinger account's domain. The HOSTINGER_* secrets
           # must be created for the new VPS (runbook §5.4) before this workflow

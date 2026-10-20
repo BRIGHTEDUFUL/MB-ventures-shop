@@ -25,7 +25,7 @@ describe("isLocalhostOrDevSite", () => {
   });
 
   it("rejects production origins and empty values", () => {
-    expect(isLocalhostOrDevSite("https://necessary-newt-861.convex.site")).toBe(false);
+    expect(isLocalhostOrDevSite("https://earnest-fennec-109.convex.site")).toBe(false);
     expect(isLocalhostOrDevSite("https://mbventuresgh.com")).toBe(false);
     expect(isLocalhostOrDevSite("")).toBe(false);
     expect(isLocalhostOrDevSite("   ")).toBe(false);
@@ -131,7 +131,7 @@ describe("emailConfigView", () => {
 describe("assertEmailEnv", () => {
   it("is silent unless code logging was asked for", () => {
     expect(() =>
-      assertEmailEnv(env({ SITE_URL: "https://necessary-newt-861.convex.site" })),
+      assertEmailEnv(env({ SITE_URL: "https://earnest-fennec-109.convex.site" })),
     ).not.toThrow();
     expect(() =>
       assertEmailEnv(env({ EMAIL_DRY_RUN_LOG_CODES: "false", SITE_URL: "https://shop.example" })),
@@ -154,7 +154,7 @@ describe("assertEmailEnv", () => {
       assertEmailEnv(
         env({
           EMAIL_DRY_RUN_LOG_CODES: "true",
-          SITE_URL: "https://necessary-newt-861.convex.site",
+          SITE_URL: "https://earnest-fennec-109.convex.site",
         }),
       ),
     ).toThrow(/EMAIL_DRY_RUN_LOG_CODES/);

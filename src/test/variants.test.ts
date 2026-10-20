@@ -522,7 +522,7 @@ describe("catalogue.saveVariants — options become the unit of stock", () => {
 
   it("keeps an option's photo across the save — and honours its removal", async () => {
     const env = await setup();
-    const photo = "https://necessary-newt-861.convex.cloud/api/storage/some-photo";
+    const photo = "https://earnest-fennec-109.convex.cloud/api/storage/some-photo";
     const black = {
       key: "black",
       name: "Black",
