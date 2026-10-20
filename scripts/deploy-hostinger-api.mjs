@@ -137,7 +137,7 @@ const BUILD_SETTINGS = {
   app_type: process.env.HOSTINGER_APP_TYPE ?? "nitro",
   output_directory: process.env.HOSTINGER_OUTPUT_DIR ?? ".output",
   build_script: process.env.HOSTINGER_BUILD_SCRIPT ?? "build",
-  entry_file: process.env.HOSTINGER_ENTRY_FILE ?? ".output/server/index.mjs",
+  entry_file: process.env.HOSTINGER_ENTRY_FILE ?? "server/index.mjs",
   package_manager: process.env.HOSTINGER_PACKAGE_MANAGER ?? "npm",
 };
 const detected = BUILD_SETTINGS;
