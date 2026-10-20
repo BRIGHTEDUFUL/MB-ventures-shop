@@ -28,19 +28,32 @@ type SortKey = "relevance" | "name" | "low" | "high";
  * sensible default, never to a broken grid.
  *
  * The params beyond `category`/`q` are optional in the *type* so the links
- * all over the app keep setting just those two; `validateSearch` still fills
- * every default at parse time and the component tightens them right back.
+ * all over the app keep setting just those two. `validateSearch` keeps the URL
+ * clean by **omitting** empty/default values instead of writing `sort=null` —
+ * the component below fills the defaults it works with.
  */
 type CatalogueSearch = {
-  category: string;
-  q: string;
-  sort?: SortKey | null;
-  /** Upper price bound; absent/`null` = no ceiling. */
-  max?: number | null;
+  category?: string;
+  q?: string;
+  sort?: SortKey;
+  /** Upper price bound; absent = no ceiling. */
+  max?: number;
   stock?: boolean;
   sale?: boolean;
   brand?: string;
   page?: number;
+};
+
+/** Every field with its default applied — what the panel renders from. */
+type ResolvedSearch = {
+  category: string;
+  q: string;
+  sort: SortKey | null;
+  max: number | null;
+  stock: boolean;
+  sale: boolean;
+  brand: string;
+  page: number;
 };
 
 /** `max` arrives as a number from the URL but may be anything a human types. */
@@ -55,23 +68,30 @@ const parseMax = (raw: unknown): number | null => {
 };
 
 export const Route = createFileRoute("/catalogue")({
-  validateSearch: (s: Record<string, unknown>): CatalogueSearch => ({
-    category: typeof s["category"] === "string" ? s["category"] : "",
-    q: typeof s["q"] === "string" ? s["q"] : "",
-    sort:
+  validateSearch: (s: Record<string, unknown>): CatalogueSearch => {
+    const search: CatalogueSearch = {};
+    if (typeof s["category"] === "string" && s["category"] !== "") {
+      search.category = s["category"];
+    }
+    if (typeof s["q"] === "string" && s["q"] !== "") search.q = s["q"];
+    if (
       s["sort"] === "relevance" ||
       s["sort"] === "name" ||
       s["sort"] === "low" ||
       s["sort"] === "high"
-        ? s["sort"]
-        : null,
-    max: parseMax(s["max"]),
-    stock: s["stock"] === true || s["stock"] === "true",
-    sale: s["sale"] === true || s["sale"] === "true",
-    brand: typeof s["brand"] === "string" ? s["brand"] : "",
-    page:
-      typeof s["page"] === "number" && Number.isInteger(s["page"]) && s["page"] > 0 ? s["page"] : 1,
-  }),
+    ) {
+      search.sort = s["sort"];
+    }
+    const max = parseMax(s["max"]);
+    if (max !== null) search.max = max;
+    if (s["stock"] === true || s["stock"] === "true") search.stock = true;
+    if (s["sale"] === true || s["sale"] === "true") search.sale = true;
+    if (typeof s["brand"] === "string" && s["brand"] !== "") search.brand = s["brand"];
+    if (typeof s["page"] === "number" && Number.isInteger(s["page"]) && s["page"] > 1) {
+      search.page = s["page"];
+    }
+    return search;
+  },
   loader: ({ context }) => context.queryClient.ensureQueryData(storeQuery),
   head: ({ match, loaderData }) =>
     pageHead(
@@ -98,10 +118,10 @@ function Catalogue() {
   // and this tightens them right back so the panel code never sees undefined.
   // Memoised on the fields (not the object) so `setParams` below keeps a
   // stable dependency across renders.
-  const search: Required<CatalogueSearch> = useMemo(
+  const search: ResolvedSearch = useMemo(
     () => ({
-      category: rawSearch.category,
-      q: rawSearch.q,
+      category: rawSearch.category ?? "",
+      q: rawSearch.q ?? "",
       sort: rawSearch.sort ?? null,
       max: rawSearch.max ?? null,
       stock: rawSearch.stock ?? false,
@@ -131,8 +151,8 @@ function Catalogue() {
    * and any filter change restarts the listing at page 1.
    */
   const setParams = useCallback(
-    (patch: Partial<CatalogueSearch>, replace = false) => {
-      const merged: Required<CatalogueSearch> = { ...search, ...patch, page: patch.page ?? 1 };
+    (patch: Partial<ResolvedSearch>, replace = false) => {
+      const merged: ResolvedSearch = { ...search, ...patch, page: patch.page ?? 1 };
       const next: Record<string, string | number | boolean> = {};
       if (merged.category) next["category"] = merged.category;
       if (merged.q) next["q"] = merged.q;
