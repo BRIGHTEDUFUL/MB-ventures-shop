@@ -159,14 +159,15 @@ test.describe("Storefront badges & contact", () => {
   });
 
   test("an options product offers only combinations it can actually sell", async ({ page }) => {
-    await page.goto("/product/rgb-dynamic-usb-microphone");
+    await page.goto("/product/luminous-rgb-mouse-pad");
     const group = page.getByRole("group", { name: "Colour" });
-    // The options fixture lives in the dev deployment; the live spec
-    // (`npm run test:e2e:live`) exercises it. Until then this check has
-    // nothing to look at.
+    // The prepared options fixture (`luminous-rgb-mouse-pad`, Black/White x
+    // Standard/XL) lives in the dev deployment — `scripts/setup-dev-e2e.mjs`
+    // creates it. On a fresh dev that has not been prepared yet there is
+    // nothing to look at, so the check bows out instead of failing.
     test.skip(
       (await group.count()) === 0,
-      "no options fixture in dev yet — run the live suite once",
+      "options fixture not prepared yet — run scripts/setup-dev-e2e.mjs",
     );
     const chips = group.getByRole("button");
     expect(await chips.count(), "the Colour axis should offer its values").toBeGreaterThan(1);

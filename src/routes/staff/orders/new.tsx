@@ -137,12 +137,24 @@ function NewOrder() {
   const product = products.find((p) => p.id === productId) ?? null;
   const variants = product?.variants ?? [];
   const axes = product?.axes ?? [];
+  // Every chip resolves against a FULL options set — `findVariantByOptions`
+  // compares whole signatures — so a bare `{}` selection would make each
+  // chip's probe miss the other axes and grey out the entire picker (nothing
+  // clickable, ever). Seed from the first sellable variant the way the
+  // product page does; explicit picks override the seed, and switching
+  // product clears them (`resetPicker`) so the new product reseeds itself.
+  const seedOptions =
+    variants.find((v) => v.visible && v.stock > 0)?.options ??
+    variants.find((v) => v.visible)?.options ??
+    variants[0]?.options ??
+    {};
+  const activeSelection = axes.length > 0 ? { ...seedOptions, ...selected } : selected;
   const chosenVariant =
     product === null || variants.length === 0
       ? null
-      : (findVariantByOptions(variants, selected) ?? null);
+      : (findVariantByOptions(variants, activeSelection) ?? null);
   const picking = product !== null && axes.length > 0;
-  const allAxesChosen = axes.every((axis) => (selected[axis.name] ?? "") !== "");
+  const allAxesChosen = axes.every((axis) => (activeSelection[axis.name] ?? "") !== "");
   const available = product === null ? 0 : ((picking ? chosenVariant?.stock : product.stock) ?? 0);
 
   const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
@@ -410,7 +422,7 @@ function NewOrder() {
             {product !== null && picking ? (
               <VariantPicker
                 product={product}
-                selected={selected}
+                selected={activeSelection}
                 onSelect={(axis, value) => {
                   setSelected((prev) => ({ ...prev, [axis]: value }));
                   setFormError(null);
