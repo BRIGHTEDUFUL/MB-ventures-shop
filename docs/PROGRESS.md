@@ -5,6 +5,52 @@ still open is listed under **Open**.
 
 ---
 
+## Official release 1.0 — production cleanup and staff welcome (20 October 2026)
+
+**Status:** Complete — the storefront, payments, email and staff hub were
+re-verified green, production was cleared of everything created during testing,
+and admins and staff now get a proper v1.0 welcome the first time they open the
+hub.
+
+### Verified before touching data
+
+All quality gates passed on the release tree (tsc, lint, 331 unit tests,
+prettier, build, 36 read-only Playwright checks) and the live checks confirmed
+8/8 pages 200, 28/28 assets, 217/217 product photos, 74 visible products.
+
+### Production cleanup (`migrations:cleanTestRecords`)
+
+An internal, dry-run-first mutation with an **explicit allowlist** (order
+reference, exact email/name) plus a release cutoff. It removed:
+
+- 6 test orders (4 "MB Test Shopper", 2 operator smoke purchases), with their
+  16 timeline rows and 24 email-log entries;
+- 3 test contact messages (2 Kofi Mensah fixtures, 1 "E2E Probe");
+- 2 staff roles that had been granted to real customer accounts while testing
+  the permission matrix (`cutepeggy856@gmail.com`, `fganiw@gmail.com`) — the
+  accounts remain as customers;
+- 3 throwaway accounts (`smoke-prod@example.com`, `e2e.staff@example.com`, the
+  "MB Test Shopper" account that used `info@mbventuresgh.com`).
+
+The one completed test order had already taken its unit off the shelf, so the
+mutation returned it through `applyStockChange` (1 unit restocked, ledger row
+included). A second dry run reports zeros, confirming idempotency.
+
+**Kept:** Razik's confirmed COD order (GH₵610, stock reserved), Richard Kumah's
+three cancelled attempts, the one spam inquiry, and the four official
+`@mbventuresgh.com` accounts with their roles.
+
+### Staff welcome
+
+`src/components/staff/release-welcome.tsx` renders a one-time dialog over the
+staff hub for admins and staff: release badge, personalized greeting, the four
+things the hub does, the v1.0 highlights, and two actions ("Open today's
+orders", "Record a counter sale"). It is remembered per browser in
+`localStorage` (`mbvg-store-hub-release`) and re-appears when `RELEASE_VERSION`
+is bumped. The shell header carries a small `v1.0` badge.
+
+---
+
 ## Audit fixes, image diet, and a deploy that can fail loudly (20 October 2026)
 
 **Status:** Complete — every defect from the multi-agent audit is fixed and

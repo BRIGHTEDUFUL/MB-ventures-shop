@@ -389,3 +389,166 @@ export const rewriteStorageHost = internalMutation({
     return { dry_run: dryRun, docs, changed, refs, touched: touched.slice(0, 200) };
   },
 });
+
+/**
+ * One-off tidy-up before the official release: delete the rows created while
+ * the shop was being tested. Internal-only and **dry-run by default**.
+ *
+ * Every deletion is an explicit allowlist (order reference, exact email or
+ * exact name), never a pattern, so a re-run after launch can only ever report
+ * zeros on these same rows. Real customer data is deliberately out of scope:
+ * the confirmed COD order, Richard Kumah's cancelled attempts and the spam
+ * inquiry stay.
+ *
+ * The completed test order had already taken its unit off the shelf, so
+ * removing it puts the unit back through `applyStockChange` — one ledger row
+ * explains the correction.
+ *
+ * Run:
+ *   npx convex run migrations:cleanTestRecords '{"apply":false}'   # report
+ *   npx convex run migrations:cleanTestRecords '{"apply":true}'    # delete
+ */
+const TEST_ORDER_REFERENCES = [
+  "MB-924D190BAB13ED97", // owner's smoke purchase (0240000002)
+  "MB-CDAC0F82A614AE2A", // legacy admin smoke purchase (0240000001)
+  "MB-45492DC80F6E2472", // MB Test Shopper
+  "MB-399C9CBB0B06A623", // MB Test Shopper (completed; restocked on delete)
+  "MB-7B9553F7A4C0724A", // MB Test Shopper
+  "MB-DB9936E7F19B79E5", // MB Test Shopper
+] as const;
+const TEST_MESSAGE_EMAILS = ["kofi.mensah@example.com"] as const;
+const TEST_MESSAGE_NAMES = ["E2E Probe"] as const;
+/** Customer accounts that were given a staff role only to test the matrix. */
+const TEST_STAFF_ROLE_EMAILS = ["cutepeggy856@gmail.com", "fganiw@gmail.com"] as const;
+/** Throwaway accounts with no business value (roles/addresses go too). */
+const TEST_USER_EMAILS = [
+  "smoke-prod@example.com",
+  "e2e.staff@example.com",
+  "info@mbventuresgh.com", // "MB Test Shopper"
+] as const;
+/** Nothing younger than this release cutoff is ever touched. */
+const RELEASE_CUTOFF = Date.parse("2026-10-21T00:00:00Z");
+
+export const cleanTestRecords = internalMutation({
+  args: { apply: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const apply = args.apply === true;
+    const before = (created: number) => created < RELEASE_CUTOFF;
+    const report = {
+      dry_run: !apply,
+      orders: 0,
+      order_history: 0,
+      email_logs: 0,
+      messages: 0,
+      staff_roles: 0,
+      addresses: 0,
+      users: 0,
+      units_restocked: 0,
+      problems: [] as string[],
+    };
+
+    for (const reference of TEST_ORDER_REFERENCES) {
+      const order = await ctx.db
+        .query("orders")
+        .withIndex("by_reference", (q) => q.eq("reference", reference))
+        .first();
+      if (order === null || !before(order._creationTime)) continue;
+
+      // Put the shelf back before the order disappears, so the ledger keeps
+      // explaining every unit. Only a completed order had left the shop.
+      if (stockStateOf(order) === "committed") {
+        for (const item of order.items) {
+          try {
+            await applyStockChange(ctx, {
+              slug: item.id,
+              variant_key: item.variant_key,
+              command: { kind: "restock", quantity: item.quantity },
+              movement_type: "restock",
+              source: "system",
+              reason: `Removed test order ${order.reference}`,
+              reference: order.reference,
+              operation_key: `test-cleanup:${order.reference}:${item.id}:${item.variant_key ?? ""}`,
+            });
+            report.units_restocked += item.quantity;
+          } catch (error) {
+            report.problems.push(`${reference}: restock ${item.id} — ${String(error)}`);
+          }
+        }
+      }
+
+      const history = await ctx.db
+        .query("order_history")
+        .withIndex("by_order", (q) => q.eq("order_id", order._id))
+        .collect();
+      const logs = await ctx.db
+        .query("emailLogs")
+        .withIndex("by_order", (q) => q.eq("order_id", order._id))
+        .collect();
+
+      if (apply) {
+        for (const row of history) await ctx.db.delete(row._id);
+        for (const row of logs) await ctx.db.delete(row._id);
+        await ctx.db.delete(order._id);
+      }
+      report.orders += 1;
+      report.order_history += history.length;
+      report.email_logs += logs.length;
+    }
+
+    const messages = await ctx.db.query("contact_messages").take(1000);
+    for (const message of messages) {
+      const isTest =
+        (TEST_MESSAGE_EMAILS as readonly string[]).includes(message.email) ||
+        (TEST_MESSAGE_NAMES as readonly string[]).includes(message.name);
+      if (!isTest) continue;
+      if (!before(message._creationTime)) continue;
+      if (apply) await ctx.db.delete(message._id);
+      report.messages += 1;
+    }
+
+    for (const email of TEST_STAFF_ROLE_EMAILS) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", email))
+        .first();
+      if (user === null) continue;
+      const role = await ctx.db
+        .query("user_roles")
+        .withIndex("by_user", (q) => q.eq("user_id", user._id))
+        .first();
+      if (role === null) continue;
+      if (!before(user._creationTime)) continue;
+      if (apply) await ctx.db.delete(role._id);
+      report.staff_roles += 1;
+    }
+
+    for (const email of TEST_USER_EMAILS) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", email))
+        .first();
+      if (user === null || !before(user._creationTime)) continue;
+      const roles = await ctx.db
+        .query("user_roles")
+        .withIndex("by_user", (q) => q.eq("user_id", user._id))
+        .collect();
+      const addresses = await ctx.db
+        .query("saved_addresses")
+        .withIndex("by_user", (q) => q.eq("user_id", user._id))
+        .collect();
+      if (apply) {
+        for (const row of roles) await ctx.db.delete(row._id);
+        for (const row of addresses) await ctx.db.delete(row._id);
+        // Convex Auth rows (`authAccounts`/`authSessions`) are framework-owned;
+        // like `users.deleteUser`, sign-in already fails once the user row is
+        // gone (see the comment there).
+        await ctx.db.delete(user._id);
+      }
+      report.users += 1;
+      report.staff_roles += roles.length;
+      report.addresses += addresses.length;
+    }
+
+    return report;
+  },
+});

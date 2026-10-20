@@ -28,6 +28,7 @@ import {
 import { useSession } from "@/lib/use-session";
 import { cn } from "@/lib/utils";
 import { lockAdmin } from "@/lib/admin-token";
+import { ReleaseWelcome } from "@/components/staff/release-welcome";
 
 type NavItem = {
   to: string;
@@ -178,6 +179,9 @@ export function StaffShell({ role, children }: { role: "admin" | "staff"; childr
           >
             {role}
           </span>
+          <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+            v1.0
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Who is on the till right now — and the door out, so nobody has
@@ -252,6 +256,7 @@ export function StaffShell({ role, children }: { role: "admin" | "staff"; childr
       </div>
 
       <StaffMobileNav items={items} />
+      <ReleaseWelcome />
     </div>
   );
 }

@@ -71,7 +71,7 @@ convex/
   categories.ts           CRUD for product categories
   activity.ts             Activity log query
   uploads.ts              generateUploadUrl, savePhoto
-  migrations.ts           backfillReservations (internal) · rewriteStorageHost
+  migrations.ts           backfillReservations · rewriteStorageHost · cleanTestRecords
   photos.ts               Storage-photo retarget + unreferenced-delete sweep
   addresses.ts            Saved delivery addresses (validated, owner-only)
   crons.ts                Scheduled health checks
@@ -175,6 +175,7 @@ src/
       home-editor.tsx     Homepage content editor (hero, trust, featured)
       product-form.tsx    Product create/edit form with validation
       variant-editor.tsx  Variant CRUD inside the product editor
+      release-welcome.tsx One-time v1.0 greeting over the staff hub
     ui/                   shadcn/ui primitives (Button, Dialog, Sheet, etc.)
 
 public/images/
@@ -661,6 +662,20 @@ node scripts/mobile-audit.mjs https://mbventuresgh.com --email=… --password=�
 ---
 
 ## 8. Live store state (as of 15 Oct 2026)
+
+> **Release 1.0 (20 Oct 2026).** Production was cleared of the data created
+> while the shop was being built: 6 test orders (with their history and email
+> logs), 3 test contact messages, 2 staff roles that had been granted to
+> customer accounts while testing the permission matrix, and 3 throwaway
+> accounts. The one completed test order's unit was returned to the shelf
+> through `applyStockChange`, so the ledger still explains every number.
+> What remains is real: 4 orders (Razik's confirmed COD order plus Richard
+> Kumah's three cancelled attempts), one spam inquiry, 13 user accounts and the
+> four official staff/admin roles. The cleanup is an explicit allowlist and
+> re-runnable — `npx convex run migrations:cleanTestRecords '{"apply":false}'`
+> must report zeros. The staff hub greets each browser once with the v1.0
+> welcome (`release-welcome.tsx`, localStorage key `mbvg-store-hub-release`);
+> bump `RELEASE_VERSION` there to greet everyone again after a release.
 
 > **Catalogue change (19–20 Oct 2026):** between this snapshot and the Convex
 > account migration the old deployment's catalogue was replaced with a

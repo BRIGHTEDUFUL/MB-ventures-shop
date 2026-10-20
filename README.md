@@ -8,7 +8,12 @@ Ghana cedis, and order for delivery across Ghana or collection from the Abelenkp
 
 ## Current status
 
-**Ordering is LIVE.** Real inventory is stocked and customers can place orders now.
+**Version 1.0 — official release (20 October 2026).** Ordering is LIVE, the
+back office is in daily use, and production carries only real data (the test
+orders, messages and accounts from the build-up were removed). Staff and admins
+get a one-time welcome the first time they open the store hub.
+
+Real inventory is stocked and customers can place orders now.
 
 - Production carries a ~79-product supplier catalogue with real photos in Convex storage
 - 10 demo products hidden from the storefront (kept as drafts)
