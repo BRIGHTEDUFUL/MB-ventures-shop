@@ -36,6 +36,19 @@ verify auth, roles, email, products and payments end to end.
 - Verified: `store:get` serves the catalogue with 0 old-host references, a
   storage file GET returns 200, `auth:signIn` (manager@) returns session
   tokens on the new backend.
+- End-to-end verification on production: browser UI sign-in (manager@)
+  succeeds over the client's WebSocket transport — staff hub appears, zero
+  console errors; the REST+JWT layer answers correctly (401 for malformed
+  tokens, anonymous callers get null identities); `users:team` shows the full
+  roster (2 admins, 4 staff, fine-grained overrides intact); `emails:config`
+  reports **live** mode, `info@mbventuresgh.com` as the alert inbox, every
+  template present and the 250/day Web3Forms cap. One drift fixed to match
+  the documented state (§9): `manager@` had `role=staff` in the migrated data
+  (the drift predates the migration) and was restored to `admin` via
+  `users:grantStaff`. Note for future agents: `auth:signIn` over the raw REST
+  `/api/mutation` endpoint returns a generic Server Error envelope — the app
+  never uses that path (browser auth goes over WebSocket; the admin CLI path
+  works), so it is not a production defect.
 
 **Frontend (Hostinger, `mbventuresgh.com`):**
 
